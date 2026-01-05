@@ -1,4 +1,4 @@
-import { LucideIcon, Server, Database, Activity, Network, Layers, Code, GitBranch, List, Hash } from "lucide-react";
+import { LucideIcon, Server, Database, Activity, Network, Layers, Code, GitBranch, List, Hash, Zap } from "lucide-react";
 
 export type TopicItem = {
   id: string;
@@ -71,6 +71,14 @@ export const TOPICS: TopicSection[] = [
           { id: "queues", title: "Message Queues", href: "/system-design/queues" },
           { id: "pub-sub", title: "Pub-Sub", href: "/system-design/pub-sub" },
         ]
+      },
+      {
+        id: "challenges",
+        title: "Gamified Challenges",
+        icon: Zap,
+        items: [
+          { id: "architect-challenge", title: "System Architect Challenge", href: "/system-design/challenge" },
+        ]
       }
     ]
   },
@@ -119,6 +127,14 @@ export const TOPICS: TopicSection[] = [
         icon: Network,
         items: [
           { id: "bfs-dfs", title: "BFS & DFS", href: "/data-structures/bfs-dfs" },
+        ]
+      },
+      {
+        id: "ds-challenges",
+        title: "Gamified Challenges",
+        icon: Zap,
+        items: [
+          { id: "algorithm-arena", title: "Algorithm Arena", href: "/data-structures/challenge" },
         ]
       }
     ]

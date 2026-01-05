@@ -1,12 +1,41 @@
-
-import { ArrayVisual } from "@/components/visuals/ArrayVisual";
+import { AlgorithmVisualizer } from "@/components/gamification/AlgorithmVisualizer";
 
 // Placeholder content map
 const CONTENT_MAP: Record<string, { title: string; description: string; visual?: React.ReactNode }> = {
     "arrays": {
         title: "Static vs Dynamic Arrays",
         description: "Understanding how arrays are stored in memory and how they resize.",
-        visual: <ArrayVisual />,
+        visual: (
+            <div className="h-[300px] border rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-900">
+                <AlgorithmVisualizer
+                    nodes={[
+                        { id: "a0", type: "array-node", value: 10, x: 50, y: 120 },
+                        { id: "a1", type: "array-node", value: 20, x: 110, y: 120 },
+                        { id: "a2", type: "array-node", value: 30, x: 170, y: 120 },
+                        { id: "a3", type: "array-node", value: 40, x: 230, y: 120 },
+                        { id: "a4", type: "array-node", value: "", x: 290, y: 120 },
+                        { id: "a5", type: "array-node", value: "", x: 350, y: 120 },
+                    ]}
+                    readOnly
+                />
+            </div>
+        ),
+    },
+    "singly-doubly": {
+        title: "Linked Lists",
+        description: "A linear collection of data elements whose order is not given by their physical placement in memory.",
+        visual: (
+            <div className="h-[300px] border rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-900">
+                <AlgorithmVisualizer
+                    nodes={[
+                        { id: "n1", type: "list-node", value: "A", x: 50, y: 120, nextId: "n2" },
+                        { id: "n2", type: "list-node", value: "B", x: 180, y: 120, nextId: "n3" },
+                        { id: "n3", type: "list-node", value: "C", x: 310, y: 120 },
+                    ]}
+                    readOnly
+                />
+            </div>
+        ),
     },
 };
 
