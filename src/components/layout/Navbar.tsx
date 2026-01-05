@@ -29,9 +29,9 @@ export function Navbar() {
             <div className="flex h-16 items-center px-4 max-w-7xl mx-auto">
                 <Link href="/" className="mr-6 flex items-center space-x-2 font-bold text-xl">
                     <div className="h-8 w-8 bg-black dark:bg-white rounded-lg flex items-center justify-center">
-                        <span className="text-white dark:text-black font-mono text-lg">V</span>
+                        <span className="text-white dark:text-black font-mono text-lg">P</span>
                     </div>
-                    <span className="hidden sm:inline-block">VisualConcepts</span>
+                    <span className="hidden sm:inline-block">ProtoPlay</span>
                 </Link>
                 <div className="flex items-center space-x-4 lg:space-x-6 mx-6">
                     {routes.map((route) => (
