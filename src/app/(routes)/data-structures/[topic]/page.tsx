@@ -1,4 +1,9 @@
 import { AlgorithmVisualizer } from "@/components/gamification/AlgorithmVisualizer";
+import { ArrayVisual } from "@/components/visuals/ArrayVisual";
+import { ArrayMemorySimulation } from "@/components/visuals/ArrayMemorySimulation";
+import { TwoPointersVisual } from "@/components/visuals/TwoPointersVisual";
+import { LinkedListTripleVisual } from "@/components/visuals/LinkedListTripleVisual";
+import { FastSlowVisual } from "@/components/visuals/FastSlowVisual";
 
 // Placeholder content map
 const CONTENT_MAP: Record<string, { title: string; description: string; visual?: React.ReactNode }> = {
@@ -6,36 +11,41 @@ const CONTENT_MAP: Record<string, { title: string; description: string; visual?:
         title: "Static vs Dynamic Arrays",
         description: "Understanding how arrays are stored in memory and how they resize.",
         visual: (
-            <div className="h-[300px] border rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-900">
-                <AlgorithmVisualizer
-                    nodes={[
-                        { id: "a0", type: "array-node", value: 10, x: 50, y: 120 },
-                        { id: "a1", type: "array-node", value: 20, x: 110, y: 120 },
-                        { id: "a2", type: "array-node", value: 30, x: 170, y: 120 },
-                        { id: "a3", type: "array-node", value: 40, x: 230, y: 120 },
-                        { id: "a4", type: "array-node", value: "", x: 290, y: 120 },
-                        { id: "a5", type: "array-node", value: "", x: 350, y: 120 },
-                    ]}
-                    readOnly
-                />
+            <div className="space-y-12">
+                <section className="space-y-4">
+                    <h2 className="text-2xl font-bold tracking-tight">1. Contiguous Memory Allocation</h2>
+                    <p className="text-muted-foreground">
+                        Unlike other data structures, arrays are stored in a single, unbroken block of memory.
+                        This is why we can access any element in O(1) time using its physical address index.
+                    </p>
+                    <ArrayMemorySimulation />
+                </section>
+
+                <section className="space-y-4">
+                    <h2 className="text-2xl font-bold tracking-tight">2. Performance & Operations</h2>
+                    <p className="text-muted-foreground">
+                        Interact with high-level array operations below. Notice the difference in "cost"
+                        between end operations (Push/Pop) and beginning operations (Shift/Unshift).
+                    </p>
+                    <ArrayVisual />
+                </section>
             </div>
         ),
+    },
+    "two-pointers": {
+        title: "Two Pointers Technique",
+        description: "An optimization technique that uses two pointers to process linear data structures in O(n) time.",
+        visual: <TwoPointersVisual />,
     },
     "singly-doubly": {
         title: "Linked Lists",
         description: "A linear collection of data elements whose order is not given by their physical placement in memory.",
-        visual: (
-            <div className="h-[300px] border rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-900">
-                <AlgorithmVisualizer
-                    nodes={[
-                        { id: "n1", type: "list-node", value: "A", x: 50, y: 120, nextId: "n2" },
-                        { id: "n2", type: "list-node", value: "B", x: 180, y: 120, nextId: "n3" },
-                        { id: "n3", type: "list-node", value: "C", x: 310, y: 120 },
-                    ]}
-                    readOnly
-                />
-            </div>
-        ),
+        visual: <LinkedListTripleVisual />,
+    },
+    "fast-slow": {
+        title: "Fast & Slow Pointers",
+        description: "A pattern that uses two pointers moving at different speeds to solve complex linked list problems like cycle detection and finding the middle node.",
+        visual: <FastSlowVisual />,
     },
 };
 
