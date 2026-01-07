@@ -87,17 +87,17 @@ export function ArrayVisual() {
                                     className="flex-1"
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <Button variant="outline" size="sm" onClick={unshift} className="gap-2">
+                            <div className="flex flex-wrap gap-2">
+                                <Button variant="outline" size="sm" onClick={unshift} className="flex-1 min-w-[120px] gap-2 font-bold">
                                     <ArrowLeft className="w-3 h-3" /> Unshift <span className="text-[10px] opacity-50 font-mono">O(n)</span>
                                 </Button>
-                                <Button size="sm" onClick={push} className="gap-2">
+                                <Button size="sm" onClick={push} className="flex-1 min-w-[120px] gap-2 font-bold">
                                     Push <ArrowRight className="w-3 h-3" /> <span className="text-[10px] opacity-50 font-mono">O(1)</span>
                                 </Button>
-                                <Button variant="destructive" size="sm" onClick={shift} className="gap-2">
+                                <Button variant="destructive" size="sm" onClick={shift} className="flex-1 min-w-[120px] gap-2 font-bold">
                                     <ArrowRight className="w-3 h-3 rotate-180" /> Shift <span className="text-[10px] opacity-50 font-mono">O(n)</span>
                                 </Button>
-                                <Button variant="destructive" size="sm" onClick={pop} className="gap-2">
+                                <Button variant="destructive" size="sm" onClick={pop} className="flex-1 min-w-[120px] gap-2 font-bold">
                                     Pop <ArrowLeft className="w-3 h-3 rotate-180" /> <span className="text-[10px] opacity-50 font-mono">O(1)</span>
                                 </Button>
                             </div>

@@ -303,29 +303,31 @@ export function FastSlowVisual() {
             {/* Dash Controls */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                         <Button
                             onClick={togglePlayback}
                             disabled={isFinished}
-                            className={cn("flex-1 h-12 gap-2 text-lg font-bold transition-all", isPlaying ? "bg-amber-600 hover:bg-amber-500" : "bg-indigo-600 hover:bg-indigo-500")}
+                            className={cn("flex-1 min-w-[140px] h-12 gap-2 text-lg font-bold transition-all", isPlaying ? "bg-amber-600 hover:bg-amber-500" : "bg-indigo-600 hover:bg-indigo-500")}
                         >
                             {isPlaying ? <><Pause className="w-5 h-5" /> Pause</> : <><Play className="w-5 h-5" /> Auto-Play</>}
                         </Button>
-                        <Button
-                            variant="outline"
-                            onClick={step}
-                            disabled={isPlaying || isFinished}
-                            className="h-12 w-16"
-                        >
-                            <SkipForward className="w-5 h-5" />
-                        </Button>
-                        <Button
-                            variant="outline"
-                            onClick={reset}
-                            className="h-12 w-16"
-                        >
-                            <RotateCcw className="w-5 h-5" />
-                        </Button>
+                        <div className="flex gap-2 grow sm:grow-0">
+                            <Button
+                                variant="outline"
+                                onClick={step}
+                                disabled={isPlaying || isFinished}
+                                className="h-12 flex-1 sm:w-16 sm:flex-none border-2"
+                            >
+                                <SkipForward className="w-5 h-5" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={reset}
+                                className="h-12 flex-1 sm:w-16 sm:flex-none border-2"
+                            >
+                                <RotateCcw className="w-5 h-5" />
+                            </Button>
+                        </div>
                     </div>
 
                     <div className="space-y-2">

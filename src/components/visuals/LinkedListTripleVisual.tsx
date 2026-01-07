@@ -84,8 +84,8 @@ function TraversalFreedomSim() {
                 ))}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                <div className="relative group">
+            <div className="flex flex-wrap gap-4">
+                <div className="flex-1 min-w-[160px] relative group">
                     <Button
                         variant="outline"
                         onClick={handleBackward}
@@ -103,7 +103,7 @@ function TraversalFreedomSim() {
                 <Button
                     onClick={handleForward}
                     disabled={currentIndex === nodes.length - 1}
-                    className="h-14 text-lg font-bold gap-2 bg-indigo-600 hover:bg-indigo-500 border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1 transition-all"
+                    className="flex-1 min-w-[160px] h-14 text-lg font-bold gap-2 bg-indigo-600 hover:bg-indigo-500 border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1 transition-all"
                 >
                     Move Forward <ArrowRight className="w-5 h-5" />
                 </Button>
@@ -196,18 +196,18 @@ function DeletionRealitySim() {
             </div>
 
             <div className="space-y-4">
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-4">
                     <Button
                         variant="outline"
                         onClick={handleRestart}
-                        className="flex-1 h-12 gap-2"
+                        className="flex-1 min-w-[140px] h-12 gap-2 font-bold"
                     >
-                        <RotateCcw className="w-4 h-4" /> Restart from Head
+                        <RotateCcw className="w-4 h-4" /> Restart
                     </Button>
                     <Button
                         onClick={() => currentIndex < nodes.length - 1 && setCurrentIndex(currentIndex + 1)}
                         disabled={currentIndex === nodes.length - 1}
-                        className="flex-1 h-12 gap-2"
+                        className="flex-1 min-w-[140px] h-12 gap-2 font-bold"
                     >
                         Forward <ArrowRight className="w-4 h-4" />
                     </Button>

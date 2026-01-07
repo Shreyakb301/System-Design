@@ -118,7 +118,7 @@ export const TOPICS: TopicSection[] = [
         icon: GitBranch,
         items: [
           { id: "bst", title: "Binary Search Tree", href: "/data-structures/bst" },
-          { id: "traversals", title: "Traversals", href: "/data-structures/traversals" },
+          { id: "traversals", title: "Tree Traversals", href: "/data-structures/traversals" },
         ]
       },
       {
@@ -126,7 +126,7 @@ export const TOPICS: TopicSection[] = [
         title: "Graphs",
         icon: Network,
         items: [
-          { id: "bfs-dfs", title: "BFS & DFS", href: "/data-structures/bfs-dfs" },
+          { id: "bfs-dfs", title: "BFS vs. DFS", href: "/data-structures/bfs-dfs" },
         ]
       },
       {

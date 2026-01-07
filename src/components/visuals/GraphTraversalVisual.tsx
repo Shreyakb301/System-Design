@@ -1,0 +1,584 @@
+"use client";
+
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+    Play,
+    Pause,
+    SkipForward,
+    RotateCcw,
+    Layers,
+    Activity,
+    Database,
+    Clock,
+    Zap,
+    Split,
+    MousePointer2,
+    Info,
+    MoveRight
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// --- Types ---
+interface Node {
+    id: string;
+    x: number;
+    y: number;
+}
+
+interface Edge {
+    from: string;
+    to: string;
+}
+
+type TraversalMode = "bfs" | "dfs" | "comparison";
+type NodeStatus = "unvisited" | "discovered" | "visited";
+
+interface TraversalState {
+    discovered: Set<string>;
+    visited: Set<string>;
+    dataStructure: string[]; // Stack or Queue
+    visitOrder: string[];
+    parentPointers: Record<string, string | null>;
+    distances?: Record<string, number>;
+    currentProcessingNode: string | null;
+    message: string;
+}
+
+// --- Graph Data (A bit more complex than a tree) ---
+const NODES: Node[] = [
+    { id: "A", x: 350, y: 50 },
+    { id: "B", x: 200, y: 120 },
+    { id: "C", x: 500, y: 120 },
+    { id: "D", x: 120, y: 220 },
+    { id: "E", x: 280, y: 220 },
+    { id: "F", x: 420, y: 220 },
+    { id: "G", x: 580, y: 220 },
+    { id: "H", x: 350, y: 290 },
+];
+
+const EDGES: Edge[] = [
+    { from: "A", to: "B" }, { from: "A", to: "C" },
+    { from: "B", to: "D" }, { from: "B", to: "E" },
+    { from: "C", to: "F" }, { from: "C", to: "G" },
+    { from: "E", to: "H" }, { from: "F", to: "H" },
+    { from: "D", to: "E" }, // Cycle/Alternative path
+    { from: "G", to: "F" }  // Another cross-edge
+];
+
+const ADJ: Record<string, string[]> = {};
+NODES.forEach(n => ADJ[n.id] = []);
+EDGES.forEach(e => {
+    ADJ[e.from].push(e.to);
+    ADJ[e.to].push(e.from); // Undirected for simulation
+});
+
+export function GraphTraversalVisual() {
+    const [mode, setMode] = useState<TraversalMode>("comparison");
+    const [startNode, setStartNode] = useState<string | null>(null);
+    const [speed, setSpeed] = useState([800]);
+    const [isPlaying, setIsPlaying] = useState(false);
+
+    // Independent states for BFS and DFS
+    const [bfsState, setBfsState] = useState<TraversalState | null>(null);
+    const [dfsState, setDfsState] = useState<TraversalState | null>(null);
+
+    const bfsHistory = useRef<TraversalState[]>([]);
+    const dfsHistory = useRef<TraversalState[]>([]);
+    const [stepIdx, setStepIdx] = useState(0);
+
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // --- Algorithm Generators ---
+
+    const generateBFS = useCallback((start: string) => {
+        const history: TraversalState[] = [];
+        const visited = new Set<string>();
+        const discovered = new Set<string>();
+        const queue: string[] = [start];
+        const parentPointers: Record<string, string | null> = { [start]: null };
+        const distances: Record<string, number> = { [start]: 0 };
+
+        discovered.add(start);
+        history.push({
+            discovered: new Set(discovered),
+            visited: new Set(visited),
+            dataStructure: [...queue],
+            visitOrder: [],
+            parentPointers: { ...parentPointers },
+            distances: { ...distances },
+            currentProcessingNode: null,
+            message: `BFS: Initialized Queue with start node ${start}.`
+        });
+
+        const visitOrder: string[] = [];
+
+        while (queue.length > 0) {
+            const current = queue.shift()!;
+
+            history.push({
+                discovered: new Set(discovered),
+                visited: new Set(visited),
+                dataStructure: [...queue],
+                visitOrder: [...visitOrder],
+                parentPointers: { ...parentPointers },
+                distances: { ...distances },
+                currentProcessingNode: current,
+                message: `BFS: Dequeued ${current}. Preparing to visit neighbors.`
+            });
+
+            visited.add(current);
+            visitOrder.push(current);
+
+            history.push({
+                discovered: new Set(discovered),
+                visited: new Set(visited),
+                dataStructure: [...queue],
+                visitOrder: [...visitOrder],
+                parentPointers: { ...parentPointers },
+                distances: { ...distances },
+                currentProcessingNode: current,
+                message: `BFS: Visited ${current}. Checking all unvisited neighbors.`
+            });
+
+            for (const neighbor of ADJ[current]) {
+                if (!discovered.has(neighbor)) {
+                    discovered.add(neighbor);
+                    queue.push(neighbor);
+                    parentPointers[neighbor] = current;
+                    distances[neighbor] = distances[current] + 1;
+
+                    history.push({
+                        discovered: new Set(discovered),
+                        visited: new Set(visited),
+                        dataStructure: [...queue],
+                        visitOrder: [...visitOrder],
+                        parentPointers: { ...parentPointers },
+                        distances: { ...distances },
+                        currentProcessingNode: current,
+                        message: `BFS: Found new neighbor ${neighbor}. Adding to Queue (Level ${distances[neighbor]}).`
+                    });
+                }
+            }
+        }
+
+        history.push({
+            discovered: new Set(discovered),
+            visited: new Set(visited),
+            dataStructure: [],
+            visitOrder: [...visitOrder],
+            parentPointers: { ...parentPointers },
+            distances: { ...distances },
+            currentProcessingNode: null,
+            message: "BFS: Traversal complete. All reachable nodes visited."
+        });
+
+        return history;
+    }, []);
+
+    const generateDFS = useCallback((start: string) => {
+        const history: TraversalState[] = [];
+        const visited = new Set<string>();
+        const discovered = new Set<string>();
+        const stack: string[] = [start];
+        const parentPointers: Record<string, string | null> = { [start]: null };
+
+        discovered.add(start);
+        history.push({
+            discovered: new Set(discovered),
+            visited: new Set(visited),
+            dataStructure: [...stack],
+            visitOrder: [],
+            parentPointers: { ...parentPointers },
+            currentProcessingNode: null,
+            message: `DFS: Initialized Stack with start node ${start}.`
+        });
+
+        const visitOrder: string[] = [];
+
+        while (stack.length > 0) {
+            const current = stack.pop()!;
+
+            // In DFS, a node might be added to stacks multiple times in some implementations, 
+            // but here we mark discovered immediately to prevent duplicates in stack view.
+
+            if (visited.has(current)) continue;
+
+            history.push({
+                discovered: new Set(discovered),
+                visited: new Set(visited),
+                dataStructure: [...stack],
+                visitOrder: [...visitOrder],
+                parentPointers: { ...parentPointers },
+                currentProcessingNode: current,
+                message: `DFS: Popped ${current} from stack. Visiting now.`
+            });
+
+            visited.add(current);
+            visitOrder.push(current);
+
+            history.push({
+                discovered: new Set(discovered),
+                visited: new Set(visited),
+                dataStructure: [...stack],
+                visitOrder: [...visitOrder],
+                parentPointers: { ...parentPointers },
+                currentProcessingNode: current,
+                message: `DFS: Visited ${current}. Exploring its neighbors to dive deeper.`
+            });
+
+            // Iterate neighbors (reverse to match natural stack behavior if needed, but here we just go)
+            for (const neighbor of [...ADJ[current]].reverse()) {
+                if (!visited.has(neighbor)) {
+                    if (!discovered.has(neighbor)) {
+                        parentPointers[neighbor] = current;
+                    }
+                    discovered.add(neighbor);
+                    stack.push(neighbor);
+
+                    history.push({
+                        discovered: new Set(discovered),
+                        visited: new Set(visited),
+                        dataStructure: [...stack],
+                        visitOrder: [...visitOrder],
+                        parentPointers: { ...parentPointers },
+                        currentProcessingNode: current,
+                        message: `DFS: Found neighbor ${neighbor}. Pushing onto Stack.`
+                    });
+                }
+            }
+        }
+
+        history.push({
+            discovered: new Set(discovered),
+            visited: new Set(visited),
+            dataStructure: [],
+            visitOrder: [...visitOrder],
+            parentPointers: { ...parentPointers },
+            currentProcessingNode: null,
+            message: "DFS: Traversal complete. Explored as deep as possible."
+        });
+
+        return history;
+    }, []);
+
+    // --- Interaction ---
+
+    const handleStart = (nodeId: string) => {
+        setStartNode(nodeId);
+        bfsHistory.current = generateBFS(nodeId);
+        dfsHistory.current = generateDFS(nodeId);
+        setStepIdx(0);
+        setBfsState(bfsHistory.current[0]);
+        setDfsState(dfsHistory.current[0]);
+        setIsPlaying(false);
+    };
+
+    const handleNext = useCallback(() => {
+        const nextIdx = stepIdx + 1;
+        const maxIdx = Math.max(bfsHistory.current.length, dfsHistory.current.length) - 1;
+
+        if (nextIdx <= maxIdx) {
+            setStepIdx(nextIdx);
+            setBfsState(bfsHistory.current[Math.min(nextIdx, bfsHistory.current.length - 1)]);
+            setDfsState(dfsHistory.current[Math.min(nextIdx, dfsHistory.current.length - 1)]);
+        } else {
+            setIsPlaying(false);
+        }
+    }, [stepIdx]);
+
+    const handleReset = () => {
+        setStartNode(null);
+        setBfsState(null);
+        setDfsState(null);
+        setStepIdx(0);
+        setIsPlaying(false);
+        bfsHistory.current = [];
+        dfsHistory.current = [];
+    };
+
+    useEffect(() => {
+        if (isPlaying) {
+            timerRef.current = setInterval(handleNext, speed[0]);
+        } else if (timerRef.current) {
+            clearInterval(timerRef.current);
+        }
+        return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    }, [isPlaying, handleNext, speed]);
+
+    // --- Sub-Components ---
+
+    const GraphCanvas = ({ state, title, type }: { state: TraversalState | null, title: string, type: "bfs" | "dfs" }) => (
+        <div className="flex-1 flex flex-col bg-white dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 shadow-inner relative overflow-hidden min-h-[400px]">
+            <div className="flex justify-between items-center mb-4 z-10">
+                <Badge variant="outline" className={cn(
+                    "font-bold px-3 py-1",
+                    type === "bfs" ? "border-amber-500 text-amber-600 bg-amber-50" : "border-indigo-500 text-indigo-600 bg-indigo-50"
+                )}>
+                    {title}
+                </Badge>
+                {state && (
+                    <span className="text-[10px] font-mono font-bold text-slate-400">
+                        {state.visited.size} / {NODES.length} Visited
+                    </span>
+                )}
+            </div>
+
+            <div className="flex-1 relative">
+                <svg className="w-full h-full" viewBox="0 0 700 400">
+                    {/* Edges */}
+                    <g>
+                        {EDGES.map((edge, i) => {
+                            const from = NODES.find(n => n.id === edge.from)!;
+                            const to = NODES.find(n => n.id === edge.to)!;
+
+                            // Check if this edge is part of the traversal tree (Parent Pointer)
+                            const isTraversalEdge = state?.parentPointers[edge.to] === edge.from || state?.parentPointers[edge.from] === edge.to;
+                            const isVisited = state?.visited.has(edge.from) && state?.visited.has(edge.to);
+
+                            return (
+                                <motion.line
+                                    key={`edge-${i}`}
+                                    x1={from.x} y1={from.y}
+                                    x2={to.x} y2={to.y}
+                                    initial={{ opacity: 0.2 }}
+                                    animate={{
+                                        opacity: isTraversalEdge ? 1 : 0.1,
+                                        stroke: isTraversalEdge ? (type === "bfs" ? "#f59e0b" : "#6366f1") : "#94a3b8",
+                                        strokeWidth: isTraversalEdge ? 3 : 1
+                                    }}
+                                    transition={{ duration: 0.5 }}
+                                />
+                            );
+                        })}
+                    </g>
+
+                    {/* Nodes */}
+                    <g>
+                        {NODES.map(node => {
+                            const status: NodeStatus = state?.visited.has(node.id) ? "visited" : (state?.discovered.has(node.id) ? "discovered" : "unvisited");
+                            const isCurrent = state?.currentProcessingNode === node.id;
+
+                            return (
+                                <g key={`node-${node.id}`} onClick={() => !startNode && handleStart(node.id)} className={cn(!startNode && "cursor-pointer")}>
+                                    <motion.circle
+                                        cx={node.x} cy={node.y} r="22"
+                                        initial={{ scale: 1 }}
+                                        animate={{
+                                            scale: isCurrent ? 1.2 : 1,
+                                            fill: status === "visited" ? (type === "bfs" ? "#fef3c7" : "#e0e7ff") : (status === "discovered" ? "#f1f5f9" : "#ffffff"),
+                                            stroke: status === "visited" ? (type === "bfs" ? "#f59e0b" : "#6366f1") : (status === "discovered" ? "#94a3b8" : "#e2e8f0"),
+                                            strokeWidth: isCurrent ? 4 : (status !== "unvisited" ? 3 : 1.5)
+                                        }}
+                                        className="dark:fill-slate-900"
+                                    />
+                                    <text
+                                        x={node.x} y={node.y} textAnchor="middle" dy=".3em"
+                                        className={cn(
+                                            "font-bold text-sm",
+                                            status === "visited" ? (type === "bfs" ? "fill-amber-700" : "fill-indigo-700") : "fill-slate-500"
+                                        )}
+                                    >
+                                        {node.id}
+                                    </text>
+
+                                    {/* Distance Labels for BFS */}
+                                    {type === "bfs" && state?.distances?.[node.id] !== undefined && (
+                                        <motion.text
+                                            x={node.x + 25} y={node.y - 15}
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            className="text-[10px] font-mono font-bold fill-amber-500"
+                                        >
+                                            d={state.distances[node.id]}
+                                        </motion.text>
+                                    )}
+
+                                    {/* Current Node Pulse */}
+                                    <AnimatePresence>
+                                        {isCurrent && (
+                                            <motion.circle
+                                                cx={node.x} cy={node.y} r="30"
+                                                initial={{ scale: 0.8, opacity: 0.5 }}
+                                                animate={{ scale: 1.4, opacity: 0 }}
+                                                transition={{ repeat: Infinity, duration: 1 }}
+                                                stroke={type === "bfs" ? "#f59e0b" : "#6366f1"}
+                                                strokeWidth="2"
+                                                fill="none"
+                                            />
+                                        )}
+                                    </AnimatePresence>
+                                </g>
+                            );
+                        })}
+                    </g>
+                </svg>
+            </div>
+
+            {/* Intuition Message */}
+            <AnimatePresence mode="wait">
+                {state && (
+                    <motion.div
+                        key={`${type}-${stepIdx}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 text-[11px] font-medium text-slate-600 dark:text-slate-300 flex items-start gap-2 min-h-[48px]"
+                    >
+                        <Zap className={cn("w-3.5 h-3.5 mt-0.5", type === "bfs" ? "text-amber-500" : "text-indigo-500")} />
+                        {state.message}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+
+    const DataStructureView = ({ state, type }: { state: TraversalState | null, type: "bfs" | "dfs" }) => (
+        <div className="p-4 rounded-xl bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col h-full overflow-hidden">
+            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-4">
+                {type === "bfs" ? <Database className="w-3.5 h-3.5" /> : <Layers className="w-3.5 h-3.5" />}
+                {type === "bfs" ? "Queue (FIFO)" : "Stack (LIFO)"}
+            </h4>
+            <div className={cn(
+                "flex-1 flex gap-2 overflow-auto",
+                type === "bfs" ? "flex-row items-center" : "flex-col-reverse items-center pt-2"
+            )}>
+                <AnimatePresence mode="popLayout">
+                    {state?.dataStructure.map((id, idx) => (
+                        <motion.div
+                            key={`${type}-${id}-${idx}`}
+                            layout
+                            initial={{ scale: 0.5, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.5, opacity: 0 }}
+                            className={cn(
+                                "w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm border-2 flex-shrink-0",
+                                idx === 0 && type === "bfs" ? "bg-amber-500 text-white border-amber-600" :
+                                    idx === state.dataStructure.length - 1 && type === "dfs" ? "bg-indigo-500 text-white border-indigo-600" :
+                                        "bg-slate-50 dark:bg-slate-900 text-slate-600 border-slate-100"
+                            )}
+                        >
+                            {id}
+                        </motion.div>
+                    ))}
+                    {(!state?.dataStructure.length) && (
+                        <p className="text-[10px] text-slate-300 italic text-center w-full">Empty</p>
+                    )}
+                </AnimatePresence>
+            </div>
+            <div className="flex justify-between text-[8px] font-bold text-slate-300 uppercase mt-2">
+                <span>{type === "bfs" ? "Front" : "Bottom"}</span>
+                <span>{type === "bfs" ? "Rear" : "Top"}</span>
+            </div>
+        </div>
+    );
+
+    return (
+        <Card className="p-6 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-2xl relative overflow-hidden flex flex-col gap-6">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 via-indigo-500 to-purple-500" />
+
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-indigo-600 p-1.5 rounded-lg">
+                            <Split className="w-4 h-4 text-white" />
+                        </div>
+                        <h2 className="text-2xl font-bold tracking-tight">BFS vs. DFS</h2>
+                    </div>
+                    <p className="text-sm text-slate-500">Compare Graph Traversal strategies on the same topology.</p>
+                </div>
+
+                {!startNode ? (
+                    <div className="flex items-center gap-3 animate-pulse bg-indigo-50 dark:bg-indigo-900/20 px-4 py-2 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                        <MousePointer2 className="w-4 h-4 text-indigo-500" />
+                        <span className="text-xs font-bold text-indigo-700 dark:text-indigo-400">Select a start node on any graph to begin</span>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2 bg-white dark:bg-slate-950 p-2 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800">
+                        <Button
+                            size="sm"
+                            onClick={() => setIsPlaying(!isPlaying)}
+                            className={cn("h-8 font-bold gap-2 min-w-[90px]", isPlaying ? "bg-amber-500" : "bg-emerald-600")}
+                        >
+                            {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                            {isPlaying ? "Pause" : "Play"}
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={handleNext} disabled={isPlaying} className="h-8 w-8 hover:bg-slate-100">
+                            <SkipForward className="w-4 h-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={handleReset} className="h-8 w-8 hover:text-red-500">
+                            <RotateCcw className="w-4 h-4" />
+                        </Button>
+                    </div>
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
+                {/* BFS Section */}
+                <div className="space-y-4 flex flex-col">
+                    <GraphCanvas state={bfsState} title="Breadth-First Search" type="bfs" />
+                    <div className="grid grid-cols-2 gap-4 h-32">
+                        <DataStructureView state={bfsState} type="bfs" />
+                        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30">
+                            <h4 className="text-[10px] font-bold text-amber-500 uppercase flex items-center gap-1 mb-2">
+                                <Info className="w-3 h-3" /> Layers
+                            </h4>
+                            <div className="flex flex-wrap gap-1">
+                                {bfsState?.visitOrder.map((id, i) => (
+                                    <Badge key={id} variant="secondary" className="bg-white/80 text-[10px] h-5 px-1.5 font-mono shadow-sm">
+                                        {id}
+                                    </Badge>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* DFS Section */}
+                <div className="space-y-4 flex flex-col">
+                    <GraphCanvas state={dfsState} title="Depth-First Search" type="dfs" />
+                    <div className="grid grid-cols-2 gap-4 h-32">
+                        <DataStructureView state={dfsState} type="dfs" />
+                        <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30">
+                            <h4 className="text-[10px] font-bold text-indigo-500 uppercase flex items-center gap-1 mb-2">
+                                <Info className="w-3 h-3" /> Stack Trace
+                            </h4>
+                            <div className="flex flex-wrap gap-1">
+                                {dfsState?.visitOrder.map((id, i) => (
+                                    <Badge key={id} variant="secondary" className="bg-white/80 text-[10px] h-5 px-1.5 font-mono shadow-sm">
+                                        {id}
+                                    </Badge>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Bottom Insight */}
+            <div className="bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-start gap-4">
+                <div className="p-2 bg-indigo-500/10 rounded-xl mt-0.5">
+                    <span className="text-xl">💡</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                    <div className="space-y-1">
+                        <h4 className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">BFS Intuition</h4>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                            BFS explores level-by-level using a <strong>Queue</strong>. It is guaranteed to find the <strong>shortest path</strong> in unweighted graphs. Notice how it expands like a ripple in a pond.
+                        </p>
+                    </div>
+                    <div className="space-y-1">
+                        <h4 className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">DFS Intuition</h4>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                            DFS dives deep into a branch using a <strong>Stack</strong> before backtracking. It's often used for pathfinding, topological sorting, and solving puzzles where you explore a path until a dead end.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </Card>
+    );
+}

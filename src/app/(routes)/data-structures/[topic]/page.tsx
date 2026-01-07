@@ -4,6 +4,10 @@ import { ArrayMemorySimulation } from "@/components/visuals/ArrayMemorySimulatio
 import { TwoPointersVisual } from "@/components/visuals/TwoPointersVisual";
 import { LinkedListTripleVisual } from "@/components/visuals/LinkedListTripleVisual";
 import { FastSlowVisual } from "@/components/visuals/FastSlowVisual";
+import { HashTableVisual } from "@/components/visuals/HashTableVisual";
+import { BSTVisual } from "@/components/visuals/BSTVisual";
+import { TreeTraversalVisual } from "@/components/visuals/TreeTraversalVisual";
+import { GraphTraversalVisual } from "@/components/visuals/GraphTraversalVisual";
 
 // Placeholder content map
 const CONTENT_MAP: Record<string, { title: string; description: string; visual?: React.ReactNode }> = {
@@ -46,6 +50,26 @@ const CONTENT_MAP: Record<string, { title: string; description: string; visual?:
         title: "Fast & Slow Pointers",
         description: "A pattern that uses two pointers moving at different speeds to solve complex linked list problems like cycle detection and finding the middle node.",
         visual: <FastSlowVisual />,
+    },
+    "hash-tables": {
+        title: "Hash Tables",
+        description: "A data structure that implements an associative array abstract data type, a structure that can map keys to values.",
+        visual: <HashTableVisual />,
+    },
+    "bst": {
+        title: "Binary Search Tree",
+        description: "A node-based binary tree data structure which has the following properties: The left subtree of a node contains only nodes with keys lesser than the node's key. The right subtree of a node contains only nodes with keys greater than the node's key.",
+        visual: <BSTVisual />,
+    },
+    "traversals": {
+        title: "Tree Traversals",
+        description: "Tree traversal (also known as tree search) is a form of graph traversal and refers to the process of visiting (checking and/or updating) each node in a tree data structure, exactly once.",
+        visual: <TreeTraversalVisual />,
+    },
+    "bfs-dfs": {
+        title: "BFS vs. DFS (Graphs)",
+        description: "Compare the two fundamental graph traversal algorithms: Breadth-First Search and Depth-First Search. See how they explore the same graph differently using Queues and Stacks.",
+        visual: <GraphTraversalVisual />,
     },
 };
 

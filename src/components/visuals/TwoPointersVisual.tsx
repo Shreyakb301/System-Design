@@ -93,18 +93,18 @@ export function TwoPointersVisual() {
                         Visualize pointer collaboration logic step-by-step.
                     </p>
                 </div>
-                <div className="flex p-1 bg-slate-100 dark:bg-slate-900 rounded-lg">
+                <div className="flex flex-wrap p-1 bg-slate-100 dark:bg-slate-900 rounded-lg">
                     <button
                         onClick={() => setPattern("opposite")}
                         className={cn(
-                            "px-4 py-2 text-xs font-bold rounded-md transition-all",
+                            "flex-1 px-4 py-2 text-xs font-bold rounded-md transition-all whitespace-nowrap",
                             pattern === "opposite" ? "bg-white dark:bg-slate-800 shadow-sm text-indigo-600" : "text-muted-foreground hover:text-slate-900 dark:hover:text-slate-200"
                         )}
                     >Opposite Direction</button>
                     <button
                         onClick={() => setPattern("same")}
                         className={cn(
-                            "px-4 py-2 text-xs font-bold rounded-md transition-all",
+                            "flex-1 px-4 py-2 text-xs font-bold rounded-md transition-all whitespace-nowrap",
                             pattern === "same" ? "bg-white dark:bg-slate-800 shadow-sm text-indigo-600" : "text-muted-foreground hover:text-slate-900 dark:hover:text-slate-200"
                         )}
                     >Same Direction</button>
@@ -239,8 +239,8 @@ return slow + 1;`}
             </div>
 
             {/* Controls */}
-            <div className="flex justify-center items-center gap-4">
-                <Button variant="outline" size="sm" onClick={reset} className="gap-2">
+            <div className="flex flex-wrap justify-center items-center gap-4">
+                <Button variant="outline" size="sm" onClick={reset} className="gap-2 font-bold min-w-[100px]">
                     <RotateCcw className="w-4 h-4" /> Reset
                 </Button>
                 <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-full px-4">
@@ -253,7 +253,7 @@ return slow + 1;`}
                     >
                         <ChevronLeft className="w-4 h-4" />
                     </Button>
-                    <span className="text-xs font-mono w-12 text-center">
+                    <span className="text-xs font-mono w-12 text-center font-bold">
                         {currentStep + 1} / {steps.length}
                     </span>
                     <Button
@@ -271,7 +271,7 @@ return slow + 1;`}
                     size="sm"
                     onClick={nextStep}
                     disabled={currentStep === steps.length - 1}
-                    className="gap-2"
+                    className="gap-2 font-bold min-w-[100px]"
                 >
                     <Play className="w-3 h-3" /> Step
                 </Button>
