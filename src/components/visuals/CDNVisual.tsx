@@ -200,7 +200,6 @@ export function CDNVisual() {
                     to: ORIGIN_SERVER,
                     via: { x: region.x + 5, y: region.y + 5 },
                 };
-                shouldUpdateCache = true;
                 setRegions(prev => {
                     const next = [...prev];
                     const edge = next[regionIndex].edgeServer!;

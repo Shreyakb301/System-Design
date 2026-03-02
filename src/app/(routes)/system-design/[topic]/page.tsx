@@ -8,6 +8,10 @@ import { ScalingVisual } from "@/components/visuals/ScalingVisual";
 import { LoadBalancingVisual } from "@/components/visuals/LoadBalancingVisual";
 import { CachingVisual } from "@/components/visuals/CachingVisual";
 import { CDNVisual } from "@/components/visuals/CDNVisual";
+import { SQLNoSQLVisual } from "@/components/visuals/SQLNoSQLVisual";
+import { ReplicationVisual } from "@/components/visuals/ReplicationVisual";
+import { MessageQueueVisual } from "@/components/visuals/MessageQueueVisual";
+import { PubSubVisual } from "@/components/visuals/PubSubVisual";
 
 // Helper to create simple configs
 const DEMO_CONFIGS: Record<string, { title: string; description: string; visual?: React.ReactNode }> = {
@@ -25,6 +29,26 @@ const DEMO_CONFIGS: Record<string, { title: string; description: string; visual?
         title: "Content Delivery Network (CDN)",
         description: "Visualize how CDNs reduce latency by serving content from edge locations closer to users, with real-time cache behavior and performance metrics.",
         visual: <CDNVisual />,
+    },
+    "sql-nosql": {
+        title: "SQL vs NoSQL",
+        description: "Compare relational and non-relational database models, their schemas, query patterns, and use cases.",
+        visual: <SQLNoSQLVisual />,
+    },
+    "replication": {
+        title: "Replication & Sharding",
+        description: "Understand data replication strategies (master-slave, master-master) and horizontal partitioning (sharding) for scalability.",
+        visual: <ReplicationVisual />,
+    },
+    "queues": {
+        title: "Message Queues",
+        description: "Explore asynchronous message processing, queue types (FIFO, priority, delayed), and producer-consumer patterns.",
+        visual: <MessageQueueVisual />,
+    },
+    "pub-sub": {
+        title: "Pub-Sub (Publish-Subscribe)",
+        description: "Understand event-driven messaging with topics, publishers, and subscribers for one-to-many message distribution.",
+        visual: <PubSubVisual />,
     },
     "load-balancing": {
         title: "Load Balancer",
