@@ -164,15 +164,15 @@ export function ScalingVisual() {
             {/* Main Simulation Area */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                 {/* Visual Canvas */}
-                <div className="lg:col-span-8 relative bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] border-2 border-slate-100 dark:border-slate-800 shadow-2xl min-h-[500px] flex flex-col items-center justify-center overflow-hidden">
+                <div className="lg:col-span-8 relative bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[2.5rem] border-2 border-slate-100 dark:border-slate-800 shadow-2xl min-h-[500px] flex flex-col items-center justify-start overflow-hidden">
                     <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#334155_1.5px,transparent_1.5px)] [background-size:40px_40px]" />
 
                     {/* Traffic Source */}
-                    <div className="absolute top-10 flex flex-col items-center gap-2 z-20">
-                        <div className="p-5 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-700 shadow-xl">
-                            <Users className="w-8 h-8 text-slate-600" />
+                    <div className="flex flex-col items-center gap-2 z-20 mt-4">
+                        <div className="p-3 md:p-5 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-700 shadow-xl">
+                            <Users className="w-6 md:w-8 h-6 md:h-8 text-slate-600" />
                         </div>
-                        <Badge variant="outline" className="font-black">USER TRAFFIC</Badge>
+                        <Badge variant="outline" className="font-black text-[10px]">USER TRAFFIC</Badge>
                     </div>
 
                     {/* Load Balancer (Horizontal Only) */}
@@ -180,7 +180,7 @@ export function ScalingVisual() {
                         <motion.div
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="absolute top-44 z-20 flex flex-col items-center gap-1"
+                            className="z-20 flex flex-col items-center gap-1 my-6"
                         >
                             <div className="p-3 bg-indigo-600 rounded-xl shadow-lg border-2 border-indigo-400">
                                 <Network className="w-5 h-5 text-white" />
@@ -191,7 +191,7 @@ export function ScalingVisual() {
 
                     {/* Servers Grid */}
                     <div className={cn(
-                        "mt-32 w-full flex flex-wrap items-center justify-center gap-8 pr-10",
+                        "w-full flex flex-wrap items-center justify-center gap-4 md:gap-8 mt-8",
                         strategy === "vertical" ? "flex-col" : "flex-row"
                     )}>
                         <AnimatePresence mode="popLayout">
@@ -203,7 +203,7 @@ export function ScalingVisual() {
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.5 }}
                                     className={cn(
-                                        "relative flex flex-col gap-3 p-6 rounded-[2rem] border-4 transition-all duration-500",
+                                        "relative flex flex-col gap-2 md:gap-3 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border-4 transition-all duration-500",
                                         s.status === "healthy" ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-xl" :
                                             s.status === "stressed" ? "bg-amber-50 dark:bg-amber-950/20 border-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.2)]" :
                                                 "bg-red-50 dark:bg-red-950/20 border-red-500 shadow-[0_0_40px_rgba(239,68,68,0.3)]"
@@ -214,40 +214,40 @@ export function ScalingVisual() {
                                     }}
                                 >
                                     <div className="flex justify-between items-start">
-                                        <div className={cn("p-2 rounded-lg", s.status === "healthy" ? "bg-slate-100 dark:bg-slate-900" : "bg-white/20")}>
-                                            <Server className={cn("w-5 h-5", s.status === "healthy" ? "text-slate-500" : "text-current")} />
+                                        <div className={cn("p-1.5 md:p-2 rounded-lg", s.status === "healthy" ? "bg-slate-100 dark:bg-slate-900" : "bg-white/20")}>
+                                            <Server className={cn("w-4 md:w-5 h-4 md:h-5", s.status === "healthy" ? "text-slate-500" : "text-current")} />
                                         </div>
-                                        <Badge variant="outline" className="text-[9px] font-black">NODE-{i + 1}</Badge>
+                                        <Badge variant="outline" className="text-[8px] md:text-[9px] font-black">NODE-{i + 1}</Badge>
                                     </div>
 
-                                    <div className="flex-1 flex flex-col justify-center gap-2">
+                                    <div className="flex-1 flex flex-col justify-center gap-1.5 md:gap-2">
                                         <div className="space-y-1">
-                                            <div className="flex justify-between items-center text-[9px] font-black">
+                                            <div className="flex justify-between items-center text-[8px] md:text-[9px] font-black">
                                                 <span>CPU</span>
                                                 <span>{s.cpu.toFixed(0)}%</span>
                                             </div>
-                                            <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                            <div className="h-1 md:h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                                                 <motion.div animate={{ width: `${s.cpu}%` }} className={cn("h-full", s.cpu > 80 ? "bg-red-500" : "bg-indigo-500")} />
                                             </div>
                                         </div>
                                         <div className="space-y-1">
-                                            <div className="flex justify-between items-center text-[9px] font-black">
+                                            <div className="flex justify-between items-center text-[8px] md:text-[9px] font-black">
                                                 <span>RAM</span>
                                                 <span>{s.ram.toFixed(0)}%</span>
                                             </div>
-                                            <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                            <div className="h-1 md:h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                                                 <motion.div animate={{ width: `${s.ram}%` }} className={cn("h-full", s.ram > 80 ? "bg-red-500" : "bg-emerald-500")} />
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="text-center text-[9px] font-black text-slate-400">
+                                    <div className="text-center text-[8px] md:text-[9px] font-black text-slate-400">
                                         {s.maxCpu} vCPU / {s.maxRam}GB
                                     </div>
 
                                     {s.status === "failed" && (
-                                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-3 -right-3 p-1.5 bg-red-600 rounded-full text-white shadow-lg">
-                                            <AlertCircle className="w-4 h-4" />
+                                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-3 -right-3 p-1 bg-red-600 rounded-full text-white shadow-lg">
+                                            <AlertCircle className="w-3 md:w-4 h-3 md:h-4" />
                                         </motion.div>
                                     )}
                                 </motion.div>
@@ -260,14 +260,14 @@ export function ScalingVisual() {
                         {requests.map(req => (
                             <motion.div
                                 key={req.id}
-                                initial={{ top: 100, x: 0, opacity: 0 }}
+                                initial={{ top: "10%", left: "50%", opacity: 0 }}
                                 animate={{
-                                    top: strategy === "horizontal" && servers.length > 1 ? 500 : 450,
+                                    top: ["10%", "90%"],
                                     opacity: [0, 1, 1, 0]
                                 }}
                                 transition={{ duration: 0.8, ease: "linear" }}
                                 onAnimationComplete={() => setRequests(prev => prev.filter(r => r.id !== req.id))}
-                                className="absolute left-[50%] w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)] z-10"
+                                className="absolute left-[50%] w-2 h-2 bg-amber-500 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)] z-10 -translate-x-1/2"
                             />
                         ))}
                     </AnimatePresence>

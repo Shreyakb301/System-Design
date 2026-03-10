@@ -269,7 +269,7 @@ export function CapacityEstimationVisual() {
                             {/* Connection Client -> App */}
                             <div className="flex-1 h-0.5 bg-slate-200 dark:bg-slate-700 relative overflow-hidden">
                                 <motion.div
-                                    animate={{ x: [-100, 400], opacity: [0, 1, 0] }}
+                                    animate={{ left: ["-100%", "100%"], opacity: [0, 1, 0] }}
                                     transition={{ repeat: Infinity, duration: isPeakTraffic ? 0.3 : 1.5, ease: "linear" }}
                                     className="absolute inset-y-0 w-20 bg-gradient-to-r from-transparent via-indigo-500 to-transparent"
                                 />
@@ -315,7 +315,7 @@ export function CapacityEstimationVisual() {
                             <div className="flex-1 h-0.5 bg-slate-200 dark:bg-slate-700 relative overflow-hidden">
                                 <motion.div
                                     animate={{
-                                        x: [-50, 200],
+                                        left: ["-100%", "100%"],
                                         opacity: [0, 1, 0],
                                     }}
                                     transition={{

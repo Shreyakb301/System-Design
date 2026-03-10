@@ -202,19 +202,22 @@ export function LoadBalancingVisual() {
             </div>
 
             {/* Architecture Canvas */}
-            <div className="relative h-[450px] bg-white dark:bg-slate-900 rounded-[2.5rem] border-2 border-slate-100 dark:border-slate-800 shadow-2xl flex items-center justify-center p-10 overflow-hidden">
+            <div className="relative h-[450px] bg-white dark:bg-slate-900 rounded-[2.5rem] border-2 border-slate-100 dark:border-slate-800 shadow-2xl flex items-center justify-between px-6 md:px-20 overflow-hidden">
                 <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#334155_1.5px,transparent_1.5px)] [background-size:40px_40px]" />
 
                 {/* User Source */}
-                <div className="absolute left-10 flex flex-col items-center gap-2 z-20">
+                <div className="flex flex-col items-center gap-2 z-20 shrink-0">
                     <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-700 shadow-xl">
                         <Users className="w-6 h-6 text-slate-600" />
                     </div>
                     <Badge variant="outline" className="text-[9px] font-black">INTERNET</Badge>
                 </div>
 
+                {/* Connection Lineinternet -> lb */}
+                <div className="flex-1 h-0.5 max-w-[100px] border-t-2 border-dashed border-slate-200 dark:border-slate-700 mx-4 hidden md:block" />
+
                 {/* Load Balancer */}
-                <div className="absolute left-48 flex flex-col items-center gap-3 z-30">
+                <div className="flex flex-col items-center gap-3 z-30 shrink-0">
                     <motion.div
                         animate={{ scale: [1, 1.05, 1] }}
                         transition={{ duration: 1, repeat: Infinity }}
@@ -231,22 +234,25 @@ export function LoadBalancingVisual() {
                     </div>
                 </div>
 
+                {/* Connection Line lb -> pool */}
+                <div className="flex-1 h-0.5 border-t-2 border-dashed border-slate-200 dark:border-slate-700 mx-4 hidden md:block" />
+
                 {/* Server Pool */}
-                <div className="ml-80 grid grid-cols-2 gap-8 z-20">
+                <div className="grid grid-cols-2 gap-4 md:gap-8 z-20 shrink-0">
                     <AnimatePresence>
                         {servers.map((s) => (
                             <motion.div
                                 key={s.id}
                                 layout
                                 className={cn(
-                                    "relative w-44 p-5 rounded-3xl border-4 transition-all duration-300 flex flex-col gap-3",
+                                    "relative w-32 md:w-44 p-4 md:p-5 rounded-2xl md:rounded-3xl border-4 transition-all duration-300 flex flex-col gap-2 md:gap-3",
                                     s.status === "healthy" ? "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-xl" :
                                         s.status === "slow" ? "bg-amber-50 dark:bg-amber-950/20 border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)]" :
                                             "bg-red-50 dark:bg-red-950/20 border-red-500 opacity-60"
                                 )}
                             >
                                 <div className="flex justify-between items-start">
-                                    <Server className={cn("w-5 h-5", s.status === "healthy" ? "text-slate-400" : "text-current")} />
+                                    <Server className={cn("w-4 md:w-5 h-4 md:h-5", s.status === "healthy" ? "text-slate-400" : "text-current")} />
                                     <div className="flex gap-1">
                                         <button onClick={() => toggleStatus(s.id, "slow")} className={cn("p-1 rounded-md", s.status === "slow" ? "bg-amber-500 text-white" : "text-amber-500 bg-amber-50 dark:bg-amber-950/50")}>
                                             <Timer className="w-3 h-3" />
@@ -257,24 +263,24 @@ export function LoadBalancingVisual() {
                                     </div>
                                 </div>
 
-                                <div className="space-y-1.5">
+                                <div className="space-y-1 md:space-y-1.5">
                                     <div className="flex justify-between items-end">
-                                        <span className="text-[9px] font-black uppercase text-slate-400">Connections</span>
-                                        <span className="text-xs font-black tabular-nums">{s.connections}</span>
+                                        <span className="text-[8px] md:text-[9px] font-black uppercase text-slate-400">Connections</span>
+                                        <span className="text-[10px] md:text-xs font-black tabular-nums">{s.connections}</span>
                                     </div>
-                                    <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                    <div className="h-1 md:h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                                         <motion.div animate={{ width: `${Math.min(s.connections * 5, 100)}%` }} className={cn("h-full", s.connections > 15 ? "bg-red-500" : "bg-indigo-500")} />
                                     </div>
                                 </div>
 
-                                <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest pt-1">
-                                    <span className="text-slate-400">{s.id} HANDLED</span>
+                                <div className="flex justify-between items-center text-[7px] md:text-[8px] font-black uppercase tracking-widest pt-0.5 md:pt-1">
+                                    <span className="text-slate-400">{s.id}</span>
                                     <span className="text-indigo-500">{s.requestsHandled}</span>
                                 </div>
 
                                 {s.status !== "healthy" && (
                                     <div className="absolute -top-2 -right-2">
-                                        <Badge className={cn("text-[8px] px-2", s.status === "slow" ? "bg-amber-500" : "bg-red-500")}>
+                                        <Badge className={cn("text-[7px] md:text-[8px] px-1 md:px-2", s.status === "slow" ? "bg-amber-500" : "bg-red-500")}>
                                             {s.status.toUpperCase()}
                                         </Badge>
                                     </div>
@@ -287,22 +293,23 @@ export function LoadBalancingVisual() {
                 {/* Animated Requests */}
                 <AnimatePresence>
                     {requests.map(req => {
-                        const targetX = 560 + (req.targetId === "S2" || req.targetId === "S4" ? 200 : 0);
-                        const targetY = req.targetId === "S1" || req.targetId === "S2" ? 120 : 330;
+                        // Coordinates are now based on percentages of the parent relative container
+                        const targetX = req.targetId === "S2" || req.targetId === "S4" ? 85 : 75;
+                        const targetY = req.targetId === "S1" || req.targetId === "S2" ? 30 : 70;
 
                         return (
                             <motion.div
                                 key={req.id}
-                                initial={{ left: 140, top: 225, opacity: 0, scale: 0 }}
+                                initial={{ left: "10%", top: "50%", opacity: 0, scale: 0 }}
                                 animate={{
-                                    left: [140, 230, targetX],
-                                    top: [225, 225, targetY],
+                                    left: ["10%", "30%", `${targetX}%`],
+                                    top: ["50%", "50%", `${targetY}%`],
                                     opacity: [0, 1, 1, 0],
                                     scale: [0, 1.2, 1, 0]
                                 }}
                                 transition={{ duration: 0.6, ease: "circOut" }}
                                 onAnimationComplete={() => setRequests(prev => prev.filter(r => r.id !== req.id))}
-                                className="absolute w-3 h-3 bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(79,70,229,0.5)] z-40 border-2 border-white flex items-center justify-center"
+                                className="absolute w-3 h-3 bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(79,70,229,0.5)] z-40 border-2 border-white flex items-center justify-center -translate-x-1/2 -translate-y-1/2"
                             >
                                 <div className="w-1 h-1 bg-white rounded-full animate-ping" />
                             </motion.div>

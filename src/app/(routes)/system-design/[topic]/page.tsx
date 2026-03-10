@@ -12,9 +12,15 @@ import { SQLNoSQLVisual } from "@/components/visuals/SQLNoSQLVisual";
 import { ReplicationVisual } from "@/components/visuals/ReplicationVisual";
 import { MessageQueueVisual } from "@/components/visuals/MessageQueueVisual";
 import { PubSubVisual } from "@/components/visuals/PubSubVisual";
+import { RequirementsVisual } from "@/components/visuals/RequirementsVisual";
 
 // Helper to create simple configs
 const DEMO_CONFIGS: Record<string, { title: string; description: string; visual?: React.ReactNode }> = {
+    "requirements": {
+        title: "Requirements Gathering",
+        description: "The crucial first step in system design: defining what the system should do (Functional), the constraints it must operate under (Non-Functional), and what to ignore.",
+        visual: <RequirementsVisual />,
+    },
     "capacity": {
         title: "Capacity Estimation",
         description: "The process of estimating the load, traffic, and storage requirements for a system to ensure it can scale effectively.",
