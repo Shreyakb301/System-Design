@@ -7,6 +7,13 @@ import { cn } from "@/lib/utils";
 
 type ViewMode = "syntax" | "execution";
 
+type SyntaxStep = {
+  label: string;
+  description: string;
+  message: string;
+  lineIndex: number | null;
+};
+
 const CODE_LINES = [
   "x = 5",
   "y = x + 2",
@@ -19,6 +26,7 @@ const SYNTAX_STEPS = [
     description: "A program is made of ordered statements that follow grammar rules.",
     message:
       "Syntax defines the structure of the program according to grammar rules.",
+    lineIndex: null,
   },
   {
     label: "assignment: x = 5",
@@ -41,7 +49,7 @@ const SYNTAX_STEPS = [
       "This line is syntactically a function call: a function name followed by parentheses and an argument.",
     lineIndex: 2,
   },
-] as const;
+] as const satisfies readonly SyntaxStep[];
 
 const EXECUTION_STEPS = [
   {

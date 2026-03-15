@@ -1,6 +1,5 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { Space_Grotesk } from "next/font/google";
 import { Button } from "@/components/ui/button";
 import { TOPICS } from "@/lib/topics";
 import {
@@ -10,11 +9,6 @@ import {
   Network,
   Sparkles,
 } from "lucide-react";
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-});
 
 const trackCount = TOPICS.length;
 const lessonCount = TOPICS.reduce(
@@ -101,7 +95,7 @@ export default function Home() {
                 Learn by doing
               </p>
               <h1
-                className={`${spaceGrotesk.className} max-w-4xl text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl lg:text-6xl`}
+                className="max-w-4xl text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl lg:text-6xl"
               >
                 Practice systems and algorithms visually.
               </h1>
@@ -137,7 +131,7 @@ export default function Home() {
                   key={stat.label}
                   className="rounded-3xl border border-black/5 bg-white px-5 py-4 shadow-sm"
                 >
-                  <div className={`${spaceGrotesk.className} text-3xl font-bold tracking-[-0.05em]`}>
+                  <div className="text-3xl font-bold tracking-[-0.05em]">
                     {stat.value}
                   </div>
                   <div className="text-sm text-slate-500">{stat.label}</div>
@@ -154,7 +148,7 @@ export default function Home() {
             <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
               Learning tracks
             </p>
-            <h2 className={`${spaceGrotesk.className} text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl`}>
+            <h2 className="text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl">
               Pick a track and jump in.
             </h2>
           </div>
@@ -175,7 +169,7 @@ export default function Home() {
                       <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-500">
                         {track.eyebrow}
                       </p>
-                      <h3 className={`${spaceGrotesk.className} text-3xl font-bold tracking-[-0.05em] text-slate-950`}>
+                      <h3 className="text-3xl font-bold tracking-[-0.05em] text-slate-950">
                         {track.title}
                       </h3>
                       <p className="max-w-xl text-base leading-7 text-slate-600">
@@ -226,7 +220,7 @@ export default function Home() {
             <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
               Topic map
             </p>
-            <h2 className={`${spaceGrotesk.className} text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl`}>
+            <h2 className="text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl">
               Jump straight to a topic.
             </h2>
           </div>
@@ -246,7 +240,7 @@ export default function Home() {
                                 ? "Foundations track"
                                 : "Language track"}
                     </p>
-                    <h3 className={`${spaceGrotesk.className} mt-2 text-3xl font-bold tracking-[-0.05em] text-slate-950`}>
+                    <h3 className="mt-2 text-3xl font-bold tracking-[-0.05em] text-slate-950">
                       {section.title}
                     </h3>
                   </div>
@@ -295,7 +289,7 @@ export default function Home() {
               <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
                 Ready to start
               </p>
-              <h2 className={`${spaceGrotesk.className} text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl`}>
+              <h2 className="text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl">
                 Start with a challenge or browse all three tracks.
               </h2>
             </div>
