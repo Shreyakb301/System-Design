@@ -4,9 +4,7 @@ import { Space_Grotesk } from "next/font/google";
 import { Button } from "@/components/ui/button";
 import { TOPICS } from "@/lib/topics";
 import {
-  Activity,
   ArrowRight,
-  CheckCircle2,
   Code2,
   Layers,
   Network,
@@ -75,24 +73,6 @@ const tracks = [
   },
 ];
 
-const drillStack = [
-  {
-    title: "Load balancing under burst traffic",
-    detail: "System design challenge",
-    state: "Queued",
-  },
-  {
-    title: "Cache hit ratio tuning",
-    detail: "Latency and reliability",
-    state: "Active",
-  },
-  {
-    title: "Fast and slow pointer tracing",
-    detail: "Algorithm arena",
-    state: "Ready",
-  },
-];
-
 const heroStats = [
   { label: "Tracks", value: trackCount.toString().padStart(2, "0") },
   { label: "Lessons", value: lessonCount.toString().padStart(2, "0") },
@@ -101,8 +81,6 @@ const heroStats = [
 
 const pageStyle: CSSProperties = {
   ["--page-bg" as string]: "linear-gradient(180deg, #f7f7f2 0%, #fbfbf8 42%, #ffffff 100%)",
-  ["--panel-shadow" as string]: "rgba(15, 23, 42, 0.06)",
-  ["--panel-border" as string]: "rgba(15, 23, 42, 0.06)",
 };
 
 export default function Home() {
@@ -111,7 +89,7 @@ export default function Home() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[36rem] bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.08),transparent_28%),radial-gradient(circle_at_80%_10%,rgba(20,184,166,0.06),transparent_30%)]" />
 
       <section className="relative px-4 pb-20 pt-10 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-14 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
+        <div className="mx-auto max-w-4xl">
           <div className="space-y-10">
             <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/70 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm backdrop-blur">
               <Sparkles className="h-4 w-4 text-amber-500" />
@@ -165,108 +143,6 @@ export default function Home() {
                   <div className="text-sm text-slate-500">{stat.label}</div>
                 </div>
               ))}
-            </div>
-          </div>
-
-          <div className="relative">
-            <div className="absolute -left-6 top-12 h-32 w-32 rounded-full bg-slate-200/50 blur-3xl" />
-            <div className="absolute -right-8 bottom-10 h-40 w-40 rounded-full bg-teal-100/50 blur-3xl" />
-
-            <div className="relative rounded-[2rem] border bg-white/80 p-4 [border-color:var(--panel-border)] [box-shadow:0_30px_120px_var(--panel-shadow)] backdrop-blur-xl">
-              <div className="grid gap-4">
-                <div className="rounded-[1.75rem] border border-slate-200 bg-white p-6 text-slate-900">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">
-                        Training board
-                      </p>
-                      <h2 className={`${spaceGrotesk.className} mt-2 text-3xl font-bold tracking-[-0.05em] text-slate-950`}>
-                        Daily drill stack
-                      </h2>
-                    </div>
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                      <Network className="h-6 w-6 text-teal-700" />
-                    </div>
-                  </div>
-
-                  <div className="mt-6 space-y-3">
-                    {drillStack.map((drill, index) => (
-                      <div
-                        key={drill.title}
-                        className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
-                      >
-                        <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-semibold text-teal-700 shadow-sm">
-                          {index + 1}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-slate-900">{drill.title}</p>
-                          <p className="text-sm text-slate-500">{drill.detail}</p>
-                        </div>
-                        <div className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
-                          {drill.state}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-[1.5rem] border border-black/5 bg-slate-50 p-5">
-                    <div className="flex items-center justify-between text-slate-600">
-                      <span className="text-sm font-semibold uppercase tracking-[0.25em]">
-                        Signal check
-                      </span>
-                      <Activity className="h-5 w-5 text-slate-500" />
-                    </div>
-                    <div className="mt-5 space-y-4">
-                      {[
-                        { label: "Architecture recall", value: "86%" },
-                        { label: "Latency drill pace", value: "42 ms" },
-                        { label: "Tree traversal streak", value: "12 runs" },
-                      ].map((signal) => (
-                        <div key={signal.label} className="space-y-2">
-                          <div className="flex items-center justify-between text-sm text-slate-600">
-                            <span>{signal.label}</span>
-                            <span className="font-semibold text-slate-900">{signal.value}</span>
-                          </div>
-                          <div className="h-2 rounded-full bg-white/80">
-                            <div
-                              className="h-full rounded-full bg-slate-400"
-                              style={{
-                                width:
-                                  signal.label === "Architecture recall"
-                                    ? "86%"
-                                    : signal.label === "Latency drill pace"
-                                      ? "68%"
-                                      : "74%",
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[1.5rem] border border-black/5 bg-white p-5">
-                    <div className="flex items-center justify-between text-slate-600">
-                      <span className="text-sm font-semibold uppercase tracking-[0.25em]">
-                        Live focus
-                      </span>
-                      <CheckCircle2 className="h-5 w-5 text-slate-500" />
-                    </div>
-                    <div className="mt-5 flex flex-wrap gap-2">
-                      {["Queues", "Caching", "Graphs", "Two Pointers"].map((item) => (
-                        <span
-                          key={item}
-                          className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600"
-                        >
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>

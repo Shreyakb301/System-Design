@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -40,9 +41,14 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 border-b border-black/5 bg-[#fbfbf8]/90 backdrop-blur-xl supports-[backdrop-filter]:bg-[#fbfbf8]/80">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-[0.85rem] bg-black text-white shadow-sm">
-            <span className="text-lg font-bold leading-none">P</span>
-          </div>
+          <Image
+            src="/logo.png"
+            alt="ProtoPlay logo"
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded-[0.85rem] object-contain shadow-sm"
+            priority
+          />
           <div className="text-[1.35rem] font-bold tracking-tight text-slate-950 sm:text-[1.5rem]">
             ProtoPlay
           </div>
