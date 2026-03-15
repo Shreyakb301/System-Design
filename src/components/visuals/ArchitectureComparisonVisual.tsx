@@ -133,16 +133,13 @@ export function ArchitectureComparisonVisual() {
         <Card className="p-8 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 shadow-3xl overflow-hidden flex flex-col gap-10">
             {/* Header & Mode Switch */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="space-y-2">
+                <div>
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-500/20">
                             <Layers className="w-6 h-6 text-white" />
                         </div>
-                        <h2 className="text-3xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-950 to-slate-600 dark:from-white dark:to-slate-400">
-                            Systems Architect
-                        </h2>
                     </div>
-                    <p className="text-sm text-slate-500 font-semibold tracking-tight">Compare scalability, resilience, and delivery trade-offs.</p>
+                    <p className="mt-2 text-sm text-slate-500 font-semibold tracking-tight">Compare scalability, resilience, and delivery trade-offs.</p>
                 </div>
 
                 <div className="flex p-1.5 bg-slate-200 dark:bg-slate-900 rounded-2xl border border-slate-300 dark:border-slate-800 shadow-inner">

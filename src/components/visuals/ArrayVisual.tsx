@@ -1,212 +1,339 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { InteractiveDiagram } from "./InteractiveDiagram";
+import { useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRightLeft, Plus, RotateCcw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Trash2, Search, ArrowRight, ArrowLeft, Plus, Play } from "lucide-react";
+
+const INITIAL_VALUES = [10, 20, 30, 40];
+const INITIAL_CAPACITY = 8;
+
+interface ArrayItem {
+  id: number;
+  value: number;
+}
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function buildInitialItems() {
+  return INITIAL_VALUES.map((value, index) => ({
+    id: index + 1,
+    value,
+  }));
+}
+
+function parseInteger(value: string) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(trimmed, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+}
 
 export function ArrayVisual() {
-    const [array, setArray] = useState<number[]>([10, 20, 30, 40]);
-    const [capacity, setCapacity] = useState(8);
-    const [inputValue, setInputValue] = useState("");
-    const [searchTarget, setSearchTarget] = useState("");
-    const [activeSearchIndex, setActiveSearchIndex] = useState<number | null>(null);
-    const [isSearching, setIsSearching] = useState(false);
+  const [items, setItems] = useState<ArrayItem[]>(() => buildInitialItems());
+  const [capacity, setCapacity] = useState(INITIAL_CAPACITY);
+  const [inputValue, setInputValue] = useState("");
+  const [searchTarget, setSearchTarget] = useState("");
+  const [activeSearchIndex, setActiveSearchIndex] = useState<number | null>(null);
+  const [foundIndex, setFoundIndex] = useState<number | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [insight, setInsight] = useState(
+    "Push and pop only touch the last filled slot. Shift and unshift move every remaining value, so they cost O(n)."
+  );
+  const nextId = useRef(INITIAL_VALUES.length + 1);
 
-    const checkCapacity = (newSize: number) => {
-        if (newSize > capacity) {
-            setCapacity(capacity * 2);
-        }
-    };
+  const parsedInputValue = parseInteger(inputValue);
+  const parsedSearchTarget = parseInteger(searchTarget);
 
-    const push = () => {
-        if (!inputValue) return;
-        const val = parseInt(inputValue);
-        checkCapacity(array.length + 1);
-        setArray([...array, val]);
-        setInputValue("");
-    };
+  const slots = Array.from({ length: capacity }, (_, index) => ({
+    index,
+    item: items[index] ?? null,
+    isActive: activeSearchIndex === index,
+    isFound: foundIndex === index,
+  }));
 
-    const pop = () => {
-        if (array.length === 0) return;
-        setArray(array.slice(0, -1));
-    };
+  function clearHighlights() {
+    setActiveSearchIndex(null);
+    setFoundIndex(null);
+  }
 
-    const unshift = () => {
-        if (!inputValue) return;
-        const val = parseInt(inputValue);
-        checkCapacity(array.length + 1);
-        setArray([val, ...array]);
-        setInputValue("");
-    };
-
-    const shift = () => {
-        if (array.length === 0) return;
-        setArray(array.slice(1));
-    };
-
-    const removeAt = (index: number) => {
-        setArray(array.filter((_, i) => i !== index));
-    };
-
-    const startSearch = async () => {
-        if (!searchTarget) return;
-        const target = parseInt(searchTarget);
-        setIsSearching(true);
-
-        for (let i = 0; i < array.length; i++) {
-            setActiveSearchIndex(i);
-            await new Promise((resolve) => setTimeout(resolve, 600));
-            if (array[i] === target) break;
-        }
-
-        setIsSearching(false);
-        setTimeout(() => setActiveSearchIndex(null), 1000);
-    };
-
-    return (
-        <InteractiveDiagram>
-            {() => (
-                <div className="flex flex-col items-center gap-10 w-full p-4">
-                    {/* Controls Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-2xl">
-                        {/* Insertion/Deletion Controls */}
-                        <div className="space-y-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                                <Plus className="w-4 h-4" /> Modifiers
-                            </h3>
-                            <div className="flex gap-2">
-                                <Input
-                                    type="number"
-                                    value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
-                                    placeholder="Value"
-                                    className="flex-1"
-                                />
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                <Button variant="outline" size="sm" onClick={unshift} className="flex-1 min-w-[120px] gap-2 font-bold">
-                                    <ArrowLeft className="w-3 h-3" /> Unshift <span className="text-[10px] opacity-50 font-mono">O(n)</span>
-                                </Button>
-                                <Button size="sm" onClick={push} className="flex-1 min-w-[120px] gap-2 font-bold">
-                                    Push <ArrowRight className="w-3 h-3" /> <span className="text-[10px] opacity-50 font-mono">O(1)</span>
-                                </Button>
-                                <Button variant="destructive" size="sm" onClick={shift} className="flex-1 min-w-[120px] gap-2 font-bold">
-                                    <ArrowRight className="w-3 h-3 rotate-180" /> Shift <span className="text-[10px] opacity-50 font-mono">O(n)</span>
-                                </Button>
-                                <Button variant="destructive" size="sm" onClick={pop} className="flex-1 min-w-[120px] gap-2 font-bold">
-                                    Pop <ArrowLeft className="w-3 h-3 rotate-180" /> <span className="text-[10px] opacity-50 font-mono">O(1)</span>
-                                </Button>
-                            </div>
-                        </div>
-
-                        {/* Search Controls */}
-                        <div className="space-y-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                                <Search className="w-4 h-4" /> Operations
-                            </h3>
-                            <div className="flex gap-2">
-                                <Input
-                                    type="number"
-                                    value={searchTarget}
-                                    onChange={(e) => setSearchTarget(e.target.value)}
-                                    placeholder="Target"
-                                    className="flex-1"
-                                />
-                                <Button variant="secondary" onClick={startSearch} disabled={isSearching}>
-                                    <Play className="w-4 h-4" />
-                                </Button>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground italic">
-                                Linear Search: O(n) average/worst case.
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Array Visualization */}
-                    <div className="relative w-full overflow-x-auto pb-12 pt-6 px-4">
-                        <div className="flex gap-3 min-h-[100px] items-center justify-center min-w-max">
-                            <AnimatePresence mode="popLayout">
-                                {Array.from({ length: capacity }).map((_, index) => {
-                                    const hasValue = index < array.length;
-                                    const val = array[index];
-                                    const isActive = activeSearchIndex === index;
-                                    const isFound = isActive && !isSearching && val === parseInt(searchTarget);
-
-                                    return (
-                                        <motion.div
-                                            key={index < array.length ? `val-${index}-${val}` : `empty-${index}`}
-                                            layout
-                                            initial={{ opacity: 0, scale: 0.8 }}
-                                            animate={{
-                                                opacity: 1,
-                                                scale: 1,
-                                                borderColor: isFound ? "#22c55e" : (isActive ? "#3b82f6" : undefined),
-                                                backgroundColor: isFound ? "rgba(34, 197, 94, 0.1)" : (isActive ? "rgba(59, 130, 246, 0.1)" : undefined)
-                                            }}
-                                            className={cn(
-                                                "relative flex h-16 w-16 flex-col items-center justify-center rounded-xl border-2 transition-all duration-300",
-                                                hasValue
-                                                    ? "bg-white dark:bg-slate-950 border-primary/20 shadow-sm cursor-pointer hover:border-red-500/50 group"
-                                                    : "bg-slate-100/50 dark:bg-slate-800/30 border-dashed border-slate-300 dark:border-slate-700 pointer-events-none"
-                                            )}
-                                            onClick={() => hasValue && removeAt(index)}
-                                        >
-                                            {hasValue && (
-                                                <>
-                                                    <span className={cn(
-                                                        "text-xl font-bold transition-colors",
-                                                        isFound ? "text-green-600" : (isActive ? "text-blue-600" : "")
-                                                    )}>
-                                                        {val}
-                                                    </span>
-                                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-red-500/10 rounded-xl transition-opacity">
-                                                        <Trash2 className="w-5 h-5 text-red-500" />
-                                                    </div>
-                                                </>
-                                            )}
-
-                                            <span className="absolute -bottom-7 text-[10px] font-mono text-muted-foreground tabular-nums">
-                                                [{index}]
-                                            </span>
-
-                                            {isActive && isSearching && (
-                                                <motion.div
-                                                    layoutId="search-pointer"
-                                                    className="absolute -top-8 text-blue-500 anima-bounce"
-                                                >
-                                                    <ArrowRight className="w-5 h-5 rotate-90" />
-                                                </motion.div>
-                                            )}
-                                        </motion.div>
-                                    );
-                                })}
-                            </AnimatePresence>
-                        </div>
-                    </div>
-
-                    {/* Capacity Info */}
-                    <div className="w-full max-w-md space-y-2">
-                        <div className="flex justify-between text-xs font-medium">
-                            <span className="text-muted-foreground">Internal Capacity</span>
-                            <span>{array.length} / {capacity}</span>
-                        </div>
-                        <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                            <motion.div
-                                className="h-full bg-gradient-to-r from-blue-500 to-indigo-600"
-                                initial={{ width: 0 }}
-                                animate={{ width: `${(array.length / capacity) * 100}%` }}
-                            />
-                        </div>
-                        <p className="text-[10px] text-center text-muted-foreground italic">
-                            Dynamic arrays often double capacity when full to maintain amortized O(1) insertions.
-                        </p>
-                    </div>
-                </div>
-            )}
-        </InteractiveDiagram>
+  function ensureCapacity(nextSize: number) {
+    setCapacity((currentCapacity) =>
+      nextSize > currentCapacity ? currentCapacity * 2 : currentCapacity
     );
+  }
+
+  function resetDemo() {
+    setItems(buildInitialItems());
+    setCapacity(INITIAL_CAPACITY);
+    setInputValue("");
+    setSearchTarget("");
+    clearHighlights();
+    setIsSearching(false);
+    setInsight(
+      "Push and pop only touch the last filled slot. Shift and unshift move every remaining value, so they cost O(n)."
+    );
+    nextId.current = INITIAL_VALUES.length + 1;
+  }
+
+  function push() {
+    if (parsedInputValue === null || isSearching) {
+      return;
+    }
+
+    clearHighlights();
+    ensureCapacity(items.length + 1);
+    setItems((currentItems) => [
+      ...currentItems,
+      { id: nextId.current++, value: parsedInputValue },
+    ]);
+    setInputValue("");
+    setInsight("Push adds one value at the end, so the existing cells stay in place. That is why push is O(1).");
+  }
+
+  function pop() {
+    if (!items.length || isSearching) {
+      return;
+    }
+
+    clearHighlights();
+    setItems((currentItems) => currentItems.slice(0, -1));
+    setInsight("Pop removes the last value only. No other element has to move, so pop stays O(1).");
+  }
+
+  function unshift() {
+    if (parsedInputValue === null || isSearching) {
+      return;
+    }
+
+    clearHighlights();
+    ensureCapacity(items.length + 1);
+    setItems((currentItems) => [
+      { id: nextId.current++, value: parsedInputValue },
+      ...currentItems,
+    ]);
+    setInputValue("");
+    setInsight(
+      "Unshift inserts at index 0, so every existing element slides one slot to the right. That full-row movement makes it O(n)."
+    );
+  }
+
+  function shift() {
+    if (!items.length || isSearching) {
+      return;
+    }
+
+    clearHighlights();
+    setItems((currentItems) => currentItems.slice(1));
+    setInsight(
+      "Shift removes the front value, so every remaining element slides left to close the gap. That is why shift is O(n)."
+    );
+  }
+
+  async function startSearch() {
+    if (parsedSearchTarget === null || isSearching) {
+      return;
+    }
+
+    const snapshot = [...items];
+
+    clearHighlights();
+    setIsSearching(true);
+    setInsight(`Linear search checks one value at a time from left to right while looking for ${parsedSearchTarget}.`);
+
+    for (let index = 0; index < snapshot.length; index += 1) {
+      setActiveSearchIndex(index);
+      await wait(450);
+
+      if (snapshot[index]?.value === parsedSearchTarget) {
+        setFoundIndex(index);
+        setInsight(
+          `Search found ${parsedSearchTarget} at index ${index} after checking ${index + 1} cells. Linear search is O(n).`
+        );
+        setIsSearching(false);
+        return;
+      }
+    }
+
+    setInsight(
+      `Search checked all ${snapshot.length} cells and did not find ${parsedSearchTarget}. The worst case for search is O(n).`
+    );
+    setIsSearching(false);
+    await wait(700);
+    setActiveSearchIndex(null);
+  }
+
+  return (
+    <section className="relative w-full max-w-5xl overflow-hidden rounded-[1.5rem] border border-slate-800 bg-slate-950 px-5 py-5 text-slate-100 shadow-xl sm:px-6 sm:py-6">
+        <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-800 bg-slate-900">
+          <ArrowRightLeft className="h-4 w-4 text-blue-300" />
+        </div>
+        <div className="min-w-0 flex-1">
+            <p className="max-w-3xl text-sm leading-6 text-slate-400">
+              Push and pop touch the end of the array. Shift and unshift touch the front,
+              so every existing value has to move.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
+              <span>Size: {items.length}</span>
+              <span>Capacity: {capacity}</span>
+              <span>Search: O(n)</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-[1.2rem] border border-slate-800 bg-slate-900/40 p-3">
+          <div className="overflow-x-auto pb-1">
+            <div className="flex w-max min-w-full justify-start gap-2 pr-2">
+              <AnimatePresence initial={false} mode="popLayout">
+                {slots.map((slot) => (
+                  <motion.div
+                    layout
+                    key={slot.item ? slot.item.id : `empty-${slot.index}`}
+                    initial={{ opacity: 0, y: 12, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -12, scale: 0.92 }}
+                    transition={{ type: "spring", stiffness: 260, damping: 24 }}
+                    className={cn(
+                      "h-[5rem] w-[4.8rem] rounded-[0.9rem] border px-1.5 py-1.5",
+                      slot.item ? "border-slate-700 bg-slate-900" : "border-slate-800 bg-slate-900/60",
+                      slot.isActive && "border-blue-400 bg-blue-500/10",
+                      slot.isFound && "border-blue-300 bg-blue-500/15"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="rounded-full bg-slate-950 px-1.5 py-0.5 text-[9px] font-medium text-slate-300">
+                        {`idx ${slot.index}`}
+                      </span>
+                    </div>
+
+                    <div className="mt-2.5 flex h-7 items-center justify-center">
+                      {slot.item ? (
+                        <span className="text-[1.75rem] font-semibold tracking-tight text-white">
+                          {slot.item.value}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-slate-600">
+                          empty
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-5 border-t border-slate-800 pt-5 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="space-y-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                Update Array
+              </p>
+              <p className="mt-2 text-sm text-slate-400">
+                Enter a value, then compare end operations against front operations.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Input
+                type="number"
+                value={inputValue}
+                onChange={(event) => setInputValue(event.target.value)}
+                placeholder="New value"
+                className="h-11 rounded-xl border-slate-800 bg-slate-900 text-slate-100 placeholder:text-slate-500 sm:max-w-[170px]"
+              />
+
+              <div className="grid flex-1 gap-2 sm:grid-cols-2">
+                <Button
+                  className="h-11 rounded-xl bg-blue-600 text-white hover:bg-blue-500"
+                  onClick={push}
+                  disabled={parsedInputValue === null || isSearching}
+                >
+                  <Plus className="h-4 w-4" />
+                  Push (O(1))
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-11 rounded-xl border-blue-500/30 bg-blue-500/10 text-blue-100 hover:bg-blue-500/15 hover:text-white"
+                  onClick={pop}
+                  disabled={!items.length || isSearching}
+                >
+                  Pop (O(1))
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-11 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-100 hover:bg-amber-500/15 hover:text-amber-50"
+                  onClick={unshift}
+                  disabled={parsedInputValue === null || isSearching}
+                >
+                  Unshift (O(n))
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-11 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-100 hover:bg-amber-500/15 hover:text-amber-50"
+                  onClick={shift}
+                  disabled={!items.length || isSearching}
+                >
+                  Shift (O(n))
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                Search
+              </p>
+              <p className="mt-2 text-sm text-slate-400">
+                Linear search checks one array element at a time from left to right.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <Input
+                type="number"
+                value={searchTarget}
+                onChange={(event) => setSearchTarget(event.target.value)}
+                placeholder="Find value"
+                className="h-11 rounded-xl border-slate-800 bg-slate-900 text-slate-100 placeholder:text-slate-500"
+              />
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  className="h-11 rounded-xl border-slate-700 bg-transparent px-5 text-slate-200 hover:bg-slate-900 hover:text-white"
+                  onClick={startSearch}
+                  disabled={parsedSearchTarget === null || isSearching}
+                >
+                  <Search className="h-4 w-4" />
+                  Search (O(n))
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-11 rounded-xl border-slate-700 bg-transparent px-5 text-slate-200 hover:bg-slate-900 hover:text-white"
+                  onClick={resetDemo}
+                  disabled={isSearching}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reset
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-5 border-t border-slate-800 pt-5 text-sm text-slate-400">
+          {insight}
+        </p>
+    </section>
+  );
 }

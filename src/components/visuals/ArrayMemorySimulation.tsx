@@ -1,300 +1,409 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-    Database,
-    ArrowRight,
-    Zap,
-    AlertCircle,
-    ArrowDownToDot,
-    Cpu,
-    Trash2,
-    Copy,
-    RefreshCw
-} from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Cpu, Plus, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface MemoryCell {
-    address: string;
-    value: string | number | null;
-    isOwned: boolean;
-    isNewAllocation?: boolean;
-    isOldAllocation?: boolean;
+const CELL_BYTES = 4;
+const TOTAL_CELLS = 16;
+const RAM_BYTES = TOTAL_CELLS * CELL_BYTES;
+const INITIAL_BASE_ADDRESS = 0x100;
+const ALTERNATE_BASE_ADDRESS = 0x120;
+const MAX_CAPACITY = 16;
+const DEFAULT_VALUES = [18, 55, 77, 36];
+const STATIC_CAPACITY = DEFAULT_VALUES.length;
+const DYNAMIC_INITIAL_CAPACITY = 8;
+const VALUE_SEQUENCE = [18, 55, 77, 36, 91, 42, 63, 28, 74, 11, 57, 88, 96, 33, 67, 52];
+
+type Mode = "static" | "dynamic";
+type RenderCellKind =
+  | "active"
+  | "active-empty"
+  | "preview"
+  | "preview-empty";
+
+interface PreviewBlock {
+  baseAddress: number;
+  capacity: number;
+  copiedCount: number;
+}
+
+interface HoveredCell {
+  index: number;
+  address: number;
+  baseAddress: number;
+  value: number | null;
+  kind: RenderCellKind;
+}
+
+interface RenderCell {
+  address: number;
+  indexLabel: number;
+  value: number | null;
+  kind: RenderCellKind;
+}
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function formatAddress(address: number) {
+  return `0x${address.toString(16).toUpperCase()}`;
+}
+
+function getValueForIndex(index: number) {
+  return VALUE_SEQUENCE[index] ?? 100 + index * 7;
+}
+
+function getInitialCapacity(mode: Mode) {
+  return mode === "static" ? STATIC_CAPACITY : DYNAMIC_INITIAL_CAPACITY;
 }
 
 export function ArrayMemorySimulation() {
-    const [mode, setMode] = useState<"static" | "dynamic">("static");
-    const [memory, setMemory] = useState<MemoryCell[]>([]);
-    const [arraySize, setArraySize] = useState(0);
-    const [capacity, setCapacity] = useState(4);
-    const [baseAddress, setBaseAddress] = useState(0x100);
-    const [status, setStatus] = useState("System Ready");
-    const [isAnimating, setIsAnimating] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>("static");
+  const [arrayValues, setArrayValues] = useState<number[]>(DEFAULT_VALUES);
+  const [capacity, setCapacity] = useState(STATIC_CAPACITY);
+  const [baseAddress, setBaseAddress] = useState(INITIAL_BASE_ADDRESS);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [previewBlock, setPreviewBlock] = useState<PreviewBlock | null>(null);
+  const [hoveredCell, setHoveredCell] = useState<HoveredCell | null>(null);
 
-    // Initialize memory tape (32 cells)
-    useEffect(() => {
-        const initialMemory: MemoryCell[] = Array.from({ length: 32 }).map((_, i) => ({
-            address: `0x${(0x100 + i * 4).toString(16).toUpperCase()}`,
-            value: null,
-            isOwned: false
-        }));
-        setMemory(initialMemory);
-    }, []);
+  const arraySize = arrayValues.length;
+  const isFull = arraySize === capacity;
+  const visibleBlock = previewBlock
+    ? {
+        baseAddress: previewBlock.baseAddress,
+        capacity: previewBlock.capacity,
+        filledCount: previewBlock.copiedCount,
+        filledKind: "preview" as const,
+        emptyKind: "preview-empty" as const,
+      }
+    : {
+        baseAddress,
+        capacity: mode === "static" ? arraySize : capacity,
+        filledCount: arraySize,
+        filledKind: "active" as const,
+        emptyKind: "active-empty" as const,
+      };
 
-    // Helper to get index from address
-    const getIndexFromAddress = (addr: number) => (addr - 0x100) / 4;
+  const visibleSlots = Math.min(visibleBlock.capacity, TOTAL_CELLS);
 
-    // Update memory ownership based on baseAddress, size, and capacity
-    useEffect(() => {
-        if (memory.length === 0) return;
+  const renderCells: RenderCell[] = Array.from({ length: visibleSlots }, (_, index) => ({
+      address: visibleBlock.baseAddress + index * CELL_BYTES,
+      indexLabel: index,
+      value: index < visibleBlock.filledCount ? arrayValues[index] ?? null : null,
+      kind:
+        index < visibleBlock.filledCount ? visibleBlock.filledKind : visibleBlock.emptyKind,
+    }));
 
-        setMemory(prev => prev.map((cell, i) => {
-            const cellAddr = parseInt(cell.address, 16);
-            const isOwned = cellAddr >= baseAddress && cellAddr < baseAddress + capacity * 4;
-            const value = (cellAddr >= baseAddress && cellAddr < baseAddress + arraySize * 4)
-                ? prev[i].value || Math.floor(Math.random() * 90) + 10
-                : null;
+  const fallbackIndex = arraySize > 0 ? arraySize - 1 : 0;
+  const focusedCell =
+    hoveredCell ??
+    ({
+      index: fallbackIndex,
+      address: baseAddress + fallbackIndex * CELL_BYTES,
+      baseAddress,
+      value: arrayValues[fallbackIndex] ?? null,
+      kind: arrayValues.length > 0 ? "active" : "active-empty",
+    } satisfies HoveredCell);
 
-            return { ...cell, isOwned, value };
-        }));
-    }, [baseAddress, capacity, arraySize]);
+  const nextAppendValue = getValueForIndex(arrayValues.length);
+  const helperText = isAnimating
+    ? "Dynamic arrays resize by allocating a larger block and copying elements."
+    : mode === "static"
+      ? "Static arrays cannot grow after allocation."
+      : isFull && capacity >= MAX_CAPACITY
+        ? "This demo reached its maximum dynamic capacity."
+      : isFull
+        ? "Capacity is full. The next append allocates a larger contiguous block."
+        : "Dynamic arrays keep spare capacity, so the next append fills the next open slot.";
 
-    const handleAdd = async () => {
-        if (isAnimating) return;
-        setError(null);
+  function resetSimulation(nextMode = mode) {
+    setPreviewBlock(null);
+    setHoveredCell(null);
+    setBaseAddress(INITIAL_BASE_ADDRESS);
+    setArrayValues(DEFAULT_VALUES);
+    setCapacity(getInitialCapacity(nextMode));
+    setIsAnimating(false);
+  }
 
-        if (arraySize >= capacity) {
-            if (mode === "static") {
-                setError("IndexOutOfBoundsException: Array capacity exceeded");
-                setStatus("Error: Fixed size limit reached");
-                return;
-            } else {
-                await handleResize();
-                return;
-            }
-        }
+  function switchMode(nextMode: Mode) {
+    if (isAnimating || mode === nextMode) {
+      return;
+    }
 
-        setStatus("Appending element...");
-        setArraySize(prev => prev + 1);
-        setStatus("O(1) Append Complete");
-    };
+    setMode(nextMode);
+    resetSimulation(nextMode);
+  }
 
-    const handleResize = async () => {
-        setIsAnimating(true);
-        setStatus("Capacity Reached! Initializing Resize...");
+  async function handleAdd() {
+    if (isAnimating) {
+      return;
+    }
 
-        const newCapacity = capacity * 2;
-        // Find a "new" spot in memory (simulating allocation)
-        const newBaseAddress = baseAddress === 0x100 ? 0x140 : 0x100;
+    if (mode === "static" && arraySize === capacity) {
+      return;
+    }
 
-        // Step 1: Allocate
-        setStatus("Step 1: Allocating new memory block (Size: " + newCapacity + ")...");
-        setMemory(prev => prev.map(cell => {
-            const addr = parseInt(cell.address, 16);
-            if (addr >= newBaseAddress && addr < newBaseAddress + newCapacity * 4) {
-                return { ...cell, isNewAllocation: true };
-            }
-            return cell;
-        }));
-        await new Promise(r => setTimeout(r, 1000));
+    if (arraySize < capacity) {
+      const nextValue = nextAppendValue;
+      const nextIndex = arraySize;
 
-        // Step 2: Copy
-        setStatus("Step 2: Copying elements to new location (O(n))...");
-        for (let i = 0; i < arraySize; i++) {
-            const valToCopy = memory[getIndexFromAddress(baseAddress + i * 4)].value;
-            setMemory(prev => {
-                const next = [...prev];
-                next[getIndexFromAddress(newBaseAddress + i * 4)].value = valToCopy;
-                return next;
-            });
-            await new Promise(r => setTimeout(r, 400));
-        }
+      setArrayValues((currentValues) => [...currentValues, nextValue]);
+      setHoveredCell({
+        index: nextIndex,
+        address: baseAddress + nextIndex * CELL_BYTES,
+        baseAddress,
+        value: nextValue,
+        kind: "active",
+      });
+      return;
+    }
 
-        // Step 3: Update Pointer
-        setStatus("Step 3: Updating base pointer...");
-        await new Promise(r => setTimeout(r, 800));
+    if (mode === "static") {
+      return;
+    }
 
-        // Mark old as "to be freed"
-        setMemory(prev => prev.map(cell => {
-            const addr = parseInt(cell.address, 16);
-            if (addr >= baseAddress && addr < baseAddress + capacity * 4) {
-                return { ...cell, isOldAllocation: true };
-            }
-            return cell;
-        }));
+    if (capacity >= MAX_CAPACITY) {
+      return;
+    }
 
-        setBaseAddress(newBaseAddress);
-        setCapacity(newCapacity);
+    await handleResize(nextAppendValue);
+  }
 
-        // Step 4: Free
-        setStatus("Step 4: Freeing old memory block...");
-        await new Promise(r => setTimeout(r, 1000));
-        setMemory(prev => prev.map(cell => ({ ...cell, isNewAllocation: false, isOldAllocation: false })));
+  async function handleResize(appendedValue: number) {
+    const currentValues = [...arrayValues];
+    const nextCapacity = capacity * 2;
+    const nextBaseAddress =
+      baseAddress === INITIAL_BASE_ADDRESS ? ALTERNATE_BASE_ADDRESS : INITIAL_BASE_ADDRESS;
 
-        setArraySize(prev => prev + 1);
-        setStatus("Resize complete. Amortized O(1) achieved.");
-        setIsAnimating(false);
-    };
+    setIsAnimating(true);
+    setPreviewBlock({
+      baseAddress: nextBaseAddress,
+      capacity: nextCapacity,
+      copiedCount: 0,
+    });
+    setHoveredCell(null);
+    await wait(900);
 
-    const reset = () => {
-        setArraySize(0);
-        setCapacity(4);
-        setBaseAddress(0x100);
-        setStatus("System Ready");
-        setError(null);
-        setMemory(prev => prev.map(c => ({ ...c, value: null, isOwned: false })));
-    };
+    for (let index = 0; index < currentValues.length; index += 1) {
+      setPreviewBlock((currentPreview) =>
+        currentPreview ? { ...currentPreview, copiedCount: index + 1 } : currentPreview
+      );
+      setHoveredCell({
+        index,
+        address: nextBaseAddress + index * CELL_BYTES,
+        baseAddress: nextBaseAddress,
+        value: currentValues[index],
+        kind: "preview",
+      });
+      await wait(450);
+    }
 
-    return (
-        <Card className="p-6 bg-slate-950 text-slate-100 border-slate-800 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+    await wait(700);
 
+    setBaseAddress(nextBaseAddress);
+    setCapacity(nextCapacity);
+    setArrayValues([...currentValues, appendedValue]);
+    setPreviewBlock(null);
+    setHoveredCell({
+      index: currentValues.length,
+      address: nextBaseAddress + currentValues.length * CELL_BYTES,
+      baseAddress: nextBaseAddress,
+      value: appendedValue,
+      kind: "active",
+    });
+    await wait(700);
 
-            <div className="flex flex-col lg:flex-row gap-8">
-                {/* Left Side: Memory Tape */}
-                <div className="flex-1 space-y-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Cpu className="w-5 h-5 text-blue-400" />
-                            <h3 className="font-bold tracking-tight uppercase text-sm text-slate-400">Physical Memory Tape</h3>
-                        </div>
-                        <Badge variant="outline" className="font-mono text-blue-400 border-blue-400/30">
-                            RAM: 128 Bytes
-                        </Badge>
-                    </div>
+    await wait(800);
 
-                    <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-                        {memory.map((cell, i) => (
-                            <motion.div
-                                key={cell.address}
-                                layout
-                                className={cn(
-                                    "relative h-14 flex flex-col items-center justify-center rounded border text-[10px] transition-all duration-500",
-                                    cell.isOwned ? "border-blue-500/50 bg-blue-500/10" : "border-slate-800 bg-slate-900/50 opacity-40",
-                                    cell.isNewAllocation && "border-green-500 ring-2 ring-green-500/20 bg-green-500/5",
-                                    cell.isOldAllocation && "border-red-500 bg-red-500/5 grayscale grayscale-fade"
-                                )}
-                            >
-                                <span className="absolute top-1 left-1 opacity-40 scale-75">{cell.address}</span>
-                                {cell.value && (
-                                    <motion.span
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        className="font-bold text-sm"
-                                    >
-                                        {cell.value}
-                                    </motion.span>
-                                )}
-                                {cell.isOwned && !cell.value && (
-                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500/20" />
-                                )}
-                            </motion.div>
-                        ))}
-                    </div>
+    setIsAnimating(false);
+  }
 
-                    <div className="flex gap-4 pt-4 border-t border-slate-800">
-                        <div className="flex-1 p-3 rounded-lg bg-slate-900/50 border border-slate-800 flex items-center gap-3">
-                            <div className={cn(
-                                "p-2 rounded flex items-center justify-center",
-                                error ? "bg-red-500/20 text-red-400" : (isAnimating ? "bg-purple-500/20 text-purple-400" : "bg-blue-500/20 text-blue-400")
-                            )}>
-                                {error ? <AlertCircle className="w-5 h-5" /> : (isAnimating ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />)}
-                            </div>
-                            <div>
-                                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Status</p>
-                                <p className={cn("text-xs font-medium", error && "text-red-400")}>{status}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+  const formulaResult = focusedCell.baseAddress + focusedCell.index * CELL_BYTES;
+  const focusedValueLabel = focusedCell.value !== null ? focusedCell.value.toString() : "empty";
+  const appendDisabled =
+    isAnimating ||
+    (mode === "static" && isFull) ||
+    (mode === "dynamic" && isFull && capacity >= MAX_CAPACITY);
 
-                {/* Right Side: Inspector & Controls */}
-                <div className="w-full lg:w-80 space-y-6">
-                    <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-4">
-                        <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
-                            <Database className="w-4 h-4" /> Array Inspector
-                        </h4>
-
-                        <div className="space-y-3">
-                            <div className="flex justify-between text-xs">
-                                <span className="text-slate-500">Mode</span>
-                                <div className="flex gap-1 p-0.5 bg-slate-800 rounded-md">
-                                    <button
-                                        onClick={() => setMode("static")}
-                                        className={cn("px-2 py-0.5 rounded text-[10px] transition-colors", mode === "static" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-slate-300")}
-                                    >Static</button>
-                                    <button
-                                        onClick={() => setMode("dynamic")}
-                                        className={cn("px-2 py-0.5 rounded text-[10px] transition-colors", mode === "dynamic" ? "bg-slate-700 text-white" : "text-slate-500 hover:text-slate-300")}
-                                    >Dynamic</button>
-                                </div>
-                            </div>
-                            <div className="flex justify-between text-xs">
-                                <span className="text-slate-500">Base Pointer</span>
-                                <code className="text-blue-400">0x{baseAddress.toString(16).toUpperCase()}</code>
-                            </div>
-                            <div className="flex justify-between text-xs">
-                                <span className="text-slate-500">Size / Capacity</span>
-                                <span className="font-mono text-yellow-500">{arraySize} / {capacity}</span>
-                            </div>
-                            <div className="pt-2">
-                                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                                    <motion.div
-                                        className="h-full bg-yellow-500"
-                                        animate={{ width: `${(arraySize / capacity) * 100}%` }}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-2">
-                        <Button
-                            className="bg-blue-600 hover:bg-blue-500 text-white h-12 gap-2"
-                            onClick={handleAdd}
-                            disabled={isAnimating}
-                        >
-                            <Plus className="w-4 h-4" /> array.append(val)
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="border-slate-800 hover:bg-slate-900 text-slate-300 h-10 gap-2"
-                            onClick={reset}
-                        >
-                            <Trash2 className="w-4 h-4" /> Free Memory
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="border-slate-800 hover:bg-slate-900 text-slate-300 h-10 gap-2"
-                            onClick={reset}
-                        >
-                            <RefreshCw className="w-4 h-4" /> Refresh Simulation
-                        </Button>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 space-y-2">
-                        <div className="flex items-center gap-2 text-xs font-bold text-blue-400">
-                            <ArrowDownToDot className="w-4 h-4" /> Computer Science Tip
-                        </div>
-                        <p className="text-[10px] text-slate-400 leading-relaxed">
-                            {mode === "static"
-                                ? "Static arrays are immutable in length. This allows for extremely fast access but requires you to know your max size upfront."
-                                : "Dynamic arrays (like ArrayList or Vec) double their capacity when full. This means occasional O(n) resizes, but amortized O(1) performance."}
-                        </p>
-                    </div>
-                </div>
+  return (
+    <section className="relative w-full max-w-5xl overflow-hidden rounded-[1.5rem] border border-slate-800 bg-slate-950 px-5 py-5 text-slate-100 shadow-xl sm:px-6 sm:py-6">
+        <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-800 bg-slate-900">
+          <Cpu className="h-4 w-4 text-blue-300" />
+        </div>
+        <div className="min-w-0 flex-1">
+            <p className="max-w-3xl text-sm leading-6 text-slate-400">
+              Switch between static and dynamic arrays to compare a fixed contiguous block
+              with one that keeps spare capacity for future appends.
+            </p>
+            <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/40 p-1">
+              <div className="grid grid-cols-2 gap-1 text-xs">
+                <button
+                  type="button"
+                  disabled={isAnimating}
+                  onClick={() => switchMode("static")}
+                  className={cn(
+                    "rounded-lg px-3 py-2 transition-colors",
+                    mode === "static" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  Static
+                </button>
+                <button
+                  type="button"
+                  disabled={isAnimating}
+                  onClick={() => switchMode("dynamic")}
+                  className={cn(
+                    "rounded-lg px-3 py-2 transition-colors",
+                    mode === "dynamic" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  Dynamic
+                </button>
+              </div>
             </div>
-        </Card>
-    );
-}
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
+              <span>RAM: {RAM_BYTES} bytes</span>
+              <span>{CELL_BYTES} bytes per cell</span>
+              {mode === "dynamic" && (
+                <>
+                  <span>Size: {arraySize}</span>
+                  <span>Capacity: {capacity}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
 
-function Plus({ className }: { className?: string }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14" /><path d="M12 5v14" /></svg>
-    )
+        <div className="mt-6 rounded-[1.2rem] border border-slate-800 bg-slate-900/40 p-3">
+          <div className="overflow-x-auto pb-1">
+            <div className="flex w-max min-w-full justify-start gap-1 pr-2">
+              {renderCells.map((cell) => {
+                const hoverPayload = {
+                  index: cell.indexLabel,
+                  address: cell.address,
+                  baseAddress:
+                    cell.kind === "preview" || cell.kind === "preview-empty"
+                      ? previewBlock?.baseAddress ?? baseAddress
+                      : baseAddress,
+                  value: cell.value,
+                  kind: cell.kind,
+                };
+
+                return (
+                  <Tooltip key={cell.address}>
+                    <TooltipTrigger asChild>
+                      <motion.button
+                        layout
+                        type="button"
+                        onMouseEnter={() => setHoveredCell(hoverPayload)}
+                        onFocus={() => setHoveredCell(hoverPayload)}
+                        onMouseLeave={() => setHoveredCell(null)}
+                        onBlur={() => setHoveredCell(null)}
+                        className={cn(
+                          "relative h-[3.6rem] w-[3.25rem] rounded-[0.8rem] border px-1 py-1 text-left transition-all duration-300",
+                          cell.kind === "active" && "border-slate-700 bg-slate-900",
+                          cell.kind === "active-empty" && "border-slate-800 bg-slate-900/70",
+                          cell.kind === "preview" && "border-blue-500/45 bg-blue-500/5",
+                          cell.kind === "preview-empty" && "border-blue-500/25 bg-blue-500/5",
+                          hoveredCell?.address === cell.address && "border-blue-400 bg-blue-500/8"
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span
+                            className={cn(
+                              "rounded-full px-1.5 py-0.5 text-[7px] font-medium",
+                              "bg-slate-950 text-slate-300"
+                            )}
+                          >
+                            {`idx ${cell.indexLabel}`}
+                          </span>
+                          <span className="text-[7px] text-slate-500">
+                            {formatAddress(cell.address)}
+                          </span>
+                        </div>
+
+                        <div className="mt-1.5 flex h-5 items-center justify-center">
+                          {cell.value !== null ? (
+                            <motion.span
+                              key={`${cell.address}-${cell.value}`}
+                              initial={{ opacity: 0, scale: 0.8, y: 6 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              className="text-[1.1rem] font-semibold tracking-tight text-white"
+                            >
+                              {cell.value}
+                            </motion.span>
+                          ) : cell.kind === "active-empty" || cell.kind === "preview-empty" ? (
+                            <span className="text-[7px] font-medium uppercase tracking-[0.16em] text-slate-500">
+                              empty
+                            </span>
+                          ) : null}
+                        </div>
+                      </motion.button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      sideOffset={8}
+                      className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-slate-100 shadow-xl"
+                    >
+                      <div className="space-y-1 text-xs">
+                        <div className="font-semibold text-slate-100">{`Index ${cell.indexLabel}`}</div>
+                        <div className="text-slate-400">Address: {formatAddress(cell.address)}</div>
+                        <div className="text-slate-400">
+                          Value: {cell.value !== null ? cell.value : "empty"}
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm text-slate-400">{helperText}</p>
+
+        <div className="mt-6 space-y-3 border-t border-slate-800 pt-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+            Address Formula
+          </p>
+          <p className="text-sm text-slate-400">
+            Address = BasePointer + (index x element_size)
+          </p>
+          <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
+            <span>Base pointer: {formatAddress(baseAddress)}</span>
+            <span>Selected index: {focusedCell.index}</span>
+            <span>Selected value: {focusedValueLabel}</span>
+          </div>
+          <div className="rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 font-mono text-sm text-slate-100">
+            {formatAddress(focusedCell.baseAddress)} + ({focusedCell.index} x {CELL_BYTES}) ={" "}
+            {formatAddress(formulaResult)}
+          </div>
+        </div>
+
+        <div className="mt-6 border-t border-slate-800 pt-5">
+          <div className="flex flex-wrap gap-3">
+            <Button
+              className="h-11 rounded-xl bg-blue-600 px-6 text-white hover:bg-blue-500"
+              onClick={handleAdd}
+              disabled={appendDisabled}
+            >
+              <Plus className="h-4 w-4" />
+              Append {nextAppendValue}
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11 rounded-xl border-slate-700 bg-transparent px-5 text-slate-200 hover:bg-slate-900 hover:text-white"
+              onClick={() => resetSimulation()}
+              disabled={isAnimating}
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset
+            </Button>
+          </div>
+        </div>
+    </section>
+  );
 }

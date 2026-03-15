@@ -138,5 +138,22 @@ export const TOPICS: TopicSection[] = [
         ]
       }
     ]
+  },
+  {
+    id: "programming-languages",
+    title: "Programming Languages",
+    categories: [
+      {
+        id: "language-theory",
+        title: "Language Theory",
+        icon: Code,
+        items: [
+          { id: "language-evaluation", title: "Language Evaluation Criteria", href: "/programming-languages/language-evaluation" },
+          { id: "syntax-semantics", title: "Syntax vs Semantics", href: "/programming-languages/syntax-semantics" },
+          { id: "variable-attributes", title: "Attributes of a Variable", href: "/programming-languages/variable-attributes" },
+          { id: "scope-lifetime", title: "Scope and Lifetime", href: "/programming-languages/scope-lifetime" },
+        ]
+      }
+    ]
   }
 ];

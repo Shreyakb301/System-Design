@@ -175,16 +175,13 @@ export function ApiComparisonVisual() {
         <Card className="p-8 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 shadow-3xl overflow-hidden flex flex-col gap-8">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="space-y-2">
+                <div>
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-indigo-600 rounded-xl">
                             <ArrowDownUp className="w-6 h-6 text-white" />
                         </div>
-                        <h2 className="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-950 to-slate-600 dark:from-white dark:to-slate-400">
-                            API Protocol Simulator
-                        </h2>
                     </div>
-                    <p className="text-sm text-slate-500 font-medium tracking-tight italic">Compare payload efficiency and transport optimizations.</p>
+                    <p className="mt-2 text-sm text-slate-500 font-medium tracking-tight italic">Compare payload efficiency and transport optimizations.</p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">

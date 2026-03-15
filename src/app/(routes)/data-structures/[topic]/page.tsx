@@ -1,75 +1,53 @@
-import { AlgorithmVisualizer } from "@/components/gamification/AlgorithmVisualizer";
-import { ArrayVisual } from "@/components/visuals/ArrayVisual";
-import { ArrayMemorySimulation } from "@/components/visuals/ArrayMemorySimulation";
-import { TwoPointersVisual } from "@/components/visuals/TwoPointersVisual";
-import { LinkedListTripleVisual } from "@/components/visuals/LinkedListTripleVisual";
-import { FastSlowVisual } from "@/components/visuals/FastSlowVisual";
-import { HashTableVisual } from "@/components/visuals/HashTableVisual";
-import { BSTVisual } from "@/components/visuals/BSTVisual";
-import { TreeTraversalVisual } from "@/components/visuals/TreeTraversalVisual";
-import { GraphTraversalVisual } from "@/components/visuals/GraphTraversalVisual";
+import { ArraysLesson } from "@/components/lessons/ArraysLesson";
+import { BSTLesson } from "@/components/lessons/BSTLesson";
+import { FastSlowLesson } from "@/components/lessons/FastSlowLesson";
+import { GraphTraversalLesson } from "@/components/lessons/GraphTraversalLesson";
+import { HashTablesLesson } from "@/components/lessons/HashTablesLesson";
+import { LinkedListLesson } from "@/components/lessons/LinkedListLesson";
+import { TreeTraversalLesson } from "@/components/lessons/TreeTraversalLesson";
+import { TwoPointersLesson } from "@/components/lessons/TwoPointersLesson";
 
 // Placeholder content map
 const CONTENT_MAP: Record<string, { title: string; description: string; visual?: React.ReactNode }> = {
     "arrays": {
         title: "Static vs Dynamic Arrays",
         description: "Understanding how arrays are stored in memory and how they resize.",
-        visual: (
-            <div className="space-y-12">
-                <section className="space-y-4">
-                    <h2 className="text-2xl font-bold tracking-tight">1. Contiguous Memory Allocation</h2>
-                    <p className="text-muted-foreground">
-                        Unlike other data structures, arrays are stored in a single, unbroken block of memory.
-                        This is why we can access any element in O(1) time using its physical address index.
-                    </p>
-                    <ArrayMemorySimulation />
-                </section>
-
-                <section className="space-y-4">
-                    <h2 className="text-2xl font-bold tracking-tight">2. Performance & Operations</h2>
-                    <p className="text-muted-foreground">
-                        Interact with high-level array operations below. Notice the difference in "cost"
-                        between end operations (Push/Pop) and beginning operations (Shift/Unshift).
-                    </p>
-                    <ArrayVisual />
-                </section>
-            </div>
-        ),
+        visual: <ArraysLesson />,
     },
     "two-pointers": {
         title: "Two Pointers Technique",
-        description: "An optimization technique that uses two pointers to process linear data structures in O(n) time.",
-        visual: <TwoPointersVisual />,
+        description: "A technique that moves two positions through the same data structure with a rule, often solving the problem in O(n) time.",
+        visual: <TwoPointersLesson />,
     },
     "singly-doubly": {
-        title: "Linked Lists",
+        title: "Singly vs Doubly Linked Lists",
         description: "A linear collection of data elements whose order is not given by their physical placement in memory.",
-        visual: <LinkedListTripleVisual />,
+        visual: <LinkedListLesson />,
     },
     "fast-slow": {
         title: "Fast & Slow Pointers",
         description: "A pattern that uses two pointers moving at different speeds to solve complex linked list problems like cycle detection and finding the middle node.",
-        visual: <FastSlowVisual />,
+        visual: <FastSlowLesson />,
     },
     "hash-tables": {
         title: "Hash Tables",
         description: "A data structure that implements an associative array abstract data type, a structure that can map keys to values.",
-        visual: <HashTableVisual />,
+        visual: <HashTablesLesson />,
     },
     "bst": {
         title: "Binary Search Tree",
         description: "A node-based binary tree data structure which has the following properties: The left subtree of a node contains only nodes with keys lesser than the node's key. The right subtree of a node contains only nodes with keys greater than the node's key.",
-        visual: <BSTVisual />,
+        visual: <BSTLesson />,
     },
     "traversals": {
         title: "Tree Traversals",
         description: "Tree traversal (also known as tree search) is a form of graph traversal and refers to the process of visiting (checking and/or updating) each node in a tree data structure, exactly once.",
-        visual: <TreeTraversalVisual />,
+        visual: <TreeTraversalLesson />,
     },
     "bfs-dfs": {
         title: "BFS vs. DFS (Graphs)",
         description: "Compare the two fundamental graph traversal algorithms: Breadth-First Search and Depth-First Search. See how they explore the same graph differently using Queues and Stacks.",
-        visual: <GraphTraversalVisual />,
+        visual: <GraphTraversalLesson />,
     },
 };
 
@@ -89,7 +67,7 @@ export default async function DataStructureTopicPage(props: { params: Promise<{ 
     }
 
     return (
-        <div className="space-y-8 max-w-4xl">
+        <div className="box-border w-full min-w-0 max-w-5xl space-y-8">
             <div className="space-y-4">
                 <h1 className="text-4xl font-bold tracking-tight">{content.title}</h1>
                 <p className="text-xl text-muted-foreground">
@@ -98,16 +76,10 @@ export default async function DataStructureTopicPage(props: { params: Promise<{ 
             </div>
 
             {content.visual && (
-                <div className="my-8">
+                <div className="my-8 w-full min-w-0 max-w-full">
                     {content.visual}
                 </div>
             )}
-
-            <div className="prose dark:prose-invert max-w-none">
-                <p>
-                    Detailed explanation about {content.title}.
-                </p>
-            </div>
         </div>
     );
 }

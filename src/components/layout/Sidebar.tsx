@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { TOPICS } from "@/lib/topics";
 
 interface SidebarProps {
-    sectionId: "system-design" | "data-structures";
+    sectionId: "system-design" | "data-structures" | "programming-languages";
 }
 
 export function Sidebar({ sectionId }: SidebarProps) {

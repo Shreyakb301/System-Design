@@ -1,135 +1,131 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { RotateCcw, Play, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import {
-    ArrowLeft,
-    ArrowRight,
-    Play,
-    RotateCcw,
-    ChevronRight,
-    ChevronLeft,
-    Info,
-    Timer,
-    Zap
-} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Step = {
-    pointers: { left: number; right: number } | { slow: number; fast: number };
-    highlights: number[];
-    message: string;
-    found?: boolean;
-    array?: number[]; // Used for same-direction to show state changes
+  pointers: { left: number; right: number } | { slow: number; fast: number };
+  highlights: number[];
+  message: string;
+  found?: boolean;
+  array?: number[];
 };
 
 type Pattern = "opposite" | "same";
 
-export function TwoPointersVisual() {
-    const [pattern, setPattern] = useState<Pattern>("opposite");
-    const [currentStep, setCurrentStep] = useState(0);
+const oppositeData = {
+  array: [1, 2, 4, 6, 8, 10],
+  target: 10,
+};
 
-    // Initial states
-    const oppositeData = {
-        array: [1, 2, 4, 6, 8, 10],
-        target: 10,
-    };
+const sameData = {
+  array: [1, 1, 2, 2, 3, 4],
+};
 
-    const sameData = {
-        array: [1, 1, 2, 2, 3, 4],
-    };
+const oppositeSteps: Step[] = [
+  {
+    pointers: { left: 0, right: 5 },
+    highlights: [0, 5],
+    message: "Initialize pointers at both ends. Sum: 1 + 10 = 11",
+  },
+  {
+    pointers: { left: 0, right: 5 },
+    highlights: [0, 5],
+    message: "11 > 10. We need a smaller sum, so move right pointer inward.",
+  },
+  {
+    pointers: { left: 0, right: 4 },
+    highlights: [0, 4],
+    message: "Pointers: 0 and 4. Sum: 1 + 8 = 9",
+  },
+  {
+    pointers: { left: 0, right: 4 },
+    highlights: [0, 4],
+    message: "9 < 10. We need a larger sum, so move left pointer inward.",
+  },
+  {
+    pointers: { left: 1, right: 4 },
+    highlights: [1, 4],
+    message: "Pointers: 1 and 4. Sum: 2 + 8 = 10",
+  },
+  {
+    pointers: { left: 1, right: 4 },
+    highlights: [1, 4],
+    found: true,
+    message: "Target Found! 2 + 8 = 10",
+  },
+];
 
-    const oppositeSteps: Step[] = [
-        { pointers: { left: 0, right: 5 }, highlights: [0, 5], message: "Initialize pointers at both ends. Sum: 1 + 10 = 11" },
-        { pointers: { left: 0, right: 5 }, highlights: [0, 5], message: "11 > 10. We need a smaller sum, so move right pointer inward." },
-        { pointers: { left: 0, right: 4 }, highlights: [0, 4], message: "Pointers: 0 and 4. Sum: 1 + 8 = 9" },
-        { pointers: { left: 0, right: 4 }, highlights: [0, 4], message: "9 < 10. We need a larger sum, so move left pointer inward." },
-        { pointers: { left: 1, right: 4 }, highlights: [1, 4], message: "Pointers: 1 and 4. Sum: 2 + 8 = 10" },
-        { pointers: { left: 1, right: 4 }, highlights: [1, 4], found: true, message: "Target Found! 2 + 8 = 10" },
-    ];
+const sameSteps: Step[] = [
+  {
+    pointers: { slow: 0, fast: 1 },
+    highlights: [0, 1],
+    array: [1, 1, 2, 2, 3, 4],
+    message: "Start slow at 0, fast at 1. Compare values.",
+  },
+  {
+    pointers: { slow: 0, fast: 1 },
+    highlights: [0, 1],
+    array: [1, 1, 2, 2, 3, 4],
+    message: "Values equal (1 == 1). Move fast to find next unique.",
+  },
+  {
+    pointers: { slow: 0, fast: 2 },
+    highlights: [0, 2],
+    array: [1, 1, 2, 2, 3, 4],
+    message: "Values different (2 != 1). Move slow, update value.",
+  },
+  {
+    pointers: { slow: 1, fast: 2 },
+    highlights: [1, 2],
+    array: [1, 2, 2, 2, 3, 4],
+    message: "Updated index 1 with value 2.",
+  },
+  {
+    pointers: { slow: 1, fast: 3 },
+    highlights: [1, 3],
+    array: [1, 2, 2, 2, 3, 4],
+    message: "Scanning...",
+  },
+  {
+    pointers: { slow: 1, fast: 4 },
+    highlights: [1, 4],
+    array: [1, 2, 2, 2, 3, 4],
+    message: "New unique value 3 found. Move slow, update.",
+  },
+  {
+    pointers: { slow: 2, fast: 4 },
+    highlights: [2, 4],
+    array: [1, 2, 3, 2, 3, 4],
+    message: "Updated index 2 with value 3.",
+  },
+  {
+    pointers: { slow: 2, fast: 5 },
+    highlights: [2, 5],
+    array: [1, 2, 3, 2, 3, 4],
+    message: "Final scanning...",
+  },
+  {
+    pointers: { slow: 3, fast: 5 },
+    highlights: [3, 5],
+    array: [1, 2, 3, 4, 3, 4],
+    found: true,
+    message: "Done! Unique prefix: [1, 2, 3, 4]",
+  },
+];
 
-    const sameSteps: Step[] = [
-        { pointers: { slow: 0, fast: 1 }, highlights: [0, 1], array: [1, 1, 2, 2, 3, 4], message: "Start slow at 0, fast at 1. Compare values." },
-        { pointers: { slow: 0, fast: 1 }, highlights: [0, 1], array: [1, 1, 2, 2, 3, 4], message: "Values equal (1 == 1). Move fast to find next unique." },
-        { pointers: { slow: 0, fast: 2 }, highlights: [0, 2], array: [1, 1, 2, 2, 3, 4], message: "Values different (2 != 1). Move slow, update value." },
-        { pointers: { slow: 1, fast: 2 }, highlights: [1, 2], array: [1, 2, 2, 2, 3, 4], message: "Updated index 1 with value 2." },
-        { pointers: { slow: 1, fast: 3 }, highlights: [1, 3], array: [1, 2, 2, 2, 3, 4], message: "Scanning..." },
-        { pointers: { slow: 1, fast: 4 }, highlights: [1, 4], array: [1, 2, 2, 2, 3, 4], message: "New unique value 3 found. Move slow, update." },
-        { pointers: { slow: 2, fast: 4 }, highlights: [2, 4], array: [1, 2, 3, 2, 3, 4], message: "Updated index 2 with value 3." },
-        { pointers: { slow: 2, fast: 5 }, highlights: [2, 5], array: [1, 2, 3, 2, 3, 4], message: "Final scanning..." },
-        { pointers: { slow: 3, fast: 5 }, highlights: [3, 5], array: [1, 2, 3, 4, 3, 4], found: true, message: "Done! Unique prefix: [1, 2, 3, 4]" },
-    ];
-
-    const steps = pattern === "opposite" ? oppositeSteps : sameSteps;
-    const data = pattern === "opposite" ? oppositeData : sameData;
-    const step = steps[currentStep] || steps[0];
-
-    const reset = () => setCurrentStep(0);
-
-    const nextStep = () => {
-        if (currentStep < steps.length - 1) setCurrentStep(prev => prev + 1);
-    };
-
-    const prevStep = () => {
-        if (currentStep > 0) setCurrentStep(prev => prev - 1);
-    };
-
-    useEffect(() => {
-        reset();
-    }, [pattern]);
-
-    return (
-        <Card className="p-8 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 shadow-xl space-y-8">
-            {/* Header / Mode Toggle */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h3 className="text-xl font-bold flex items-center gap-2">
-                        <Timer className="w-5 h-5 text-indigo-500" />
-                        Two Pointers Simulation
-                    </h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Visualize pointer collaboration logic step-by-step.
-                    </p>
-                </div>
-                <div className="flex flex-wrap p-1 bg-slate-100 dark:bg-slate-900 rounded-lg">
-                    <button
-                        onClick={() => setPattern("opposite")}
-                        className={cn(
-                            "flex-1 px-4 py-2 text-xs font-bold rounded-md transition-all whitespace-nowrap",
-                            pattern === "opposite" ? "bg-white dark:bg-slate-800 shadow-sm text-indigo-600" : "text-muted-foreground hover:text-slate-900 dark:hover:text-slate-200"
-                        )}
-                    >Opposite Direction</button>
-                    <button
-                        onClick={() => setPattern("same")}
-                        className={cn(
-                            "flex-1 px-4 py-2 text-xs font-bold rounded-md transition-all whitespace-nowrap",
-                            pattern === "same" ? "bg-white dark:bg-slate-800 shadow-sm text-indigo-600" : "text-muted-foreground hover:text-slate-900 dark:hover:text-slate-200"
-                        )}
-                    >Same Direction</button>
-                </div>
-            </div>
-
-            {/* Pattern Description */}
-            <div className="grid md:grid-cols-2 gap-8 items-center bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-                <div className="space-y-4">
-                    <Badge variant="secondary" className="bg-indigo-500/10 text-indigo-500 border-indigo-500/20">
-                        {pattern === "opposite" ? "Pattern: Two Sum (Sorted)" : "Pattern: Remove Duplicates"}
-                    </Badge>
-                    <h4 className="text-lg font-semibold italic">
-                        {pattern === "opposite"
-                            ? '"Start at both ends and meet in the middle."'
-                            : '"One pointer tracks progress, the other builds the result."'}
-                    </h4>
-                    <pre className="text-[11px] font-mono bg-slate-950 text-slate-300 p-4 rounded-xl border border-slate-800 shadow-inner">
-                        {pattern === "opposite" ? `// Opposite Direction
+const patternCode = {
+  opposite: `// Opposite Direction
 while (left < right) {
   const sum = arr[left] + arr[right];
   if (sum === target) return [left, right];
   if (sum < target) left++;
   else right--;
-}` : `// Same Direction (Slow & Fast)
+}`,
+  same: `// Same Direction (Slow & Fast)
 let slow = 0;
 for (let fast = 1; fast < n; fast++) {
   if (arr[fast] !== arr[slow]) {
@@ -137,157 +133,205 @@ for (let fast = 1; fast < n; fast++) {
     arr[slow] = arr[fast];
   }
 }
-return slow + 1;`}
-                    </pre>
-                </div>
+return slow + 1;`,
+} as const;
 
-                <div className="space-y-4">
-                    <div className="flex items-start gap-3 p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-sm">
-                        <div className="p-2 bg-green-500/10 rounded-lg">
-                            <Zap className="w-4 h-4 text-green-500" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold">Time Complexity: O(n)</p>
-                            <p className="text-[10px] text-muted-foreground leading-relaxed">
-                                Significantly faster than nested loops (Brute Force O(n²)). We only pass through the array once.
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-sm">
-                        <div className="p-2 bg-blue-500/10 rounded-lg">
-                            <Info className="w-4 h-4 text-blue-500" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold">Space Complexity: O(1)</p>
-                            <p className="text-[10px] text-muted-foreground">
-                                No additional storage used. Modifies in-place.
-                            </p>
-                        </div>
-                    </div>
-                </div>
+export function TwoPointersVisual() {
+  const [pattern, setPattern] = useState<Pattern>("opposite");
+  const [currentStep, setCurrentStep] = useState(0);
+
+  const steps = pattern === "opposite" ? oppositeSteps : sameSteps;
+  const data = pattern === "opposite" ? oppositeData : sameData;
+  const step = steps[currentStep] ?? steps[0];
+  const values = step.array ?? data.array;
+
+  const leftLabel = "left" in step.pointers ? "Left" : "Slow";
+  const rightLabel = "right" in step.pointers ? "Right" : "Fast";
+  const patternLabel =
+    pattern === "opposite" ? "Pattern: Two Sum (Sorted)" : "Pattern: Remove Duplicates";
+
+  function reset() {
+    setCurrentStep(0);
+  }
+
+  function nextStep() {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep((previousStep) => previousStep + 1);
+    }
+  }
+
+  return (
+    <section className="relative w-full max-w-5xl overflow-hidden rounded-[1.5rem] border border-slate-800 bg-slate-950 px-5 py-5 text-slate-100 shadow-xl sm:px-6 sm:py-6">
+        <div className="mx-auto max-w-5xl">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-800 bg-slate-900">
+              <Timer className="h-4.5 w-4.5 text-blue-300" />
             </div>
+            <div className="min-w-0 flex-1">
+              <p className="max-w-3xl text-sm leading-6 text-slate-400">
+                Watch two positions in the array move according to a simple rule, one step
+                at a time.
+              </p>
 
-            {/* Simulation Canvas */}
-            <div className="relative pt-12 pb-20">
-                <div className="flex justify-center gap-3">
-                    <AnimatePresence mode="popLayout">
-                        {(step.array || data.array).map((val, idx) => {
-                            const isL = "left" in step.pointers ? step.pointers.left === idx : step.pointers.slow === idx;
-                            const isR = "right" in step.pointers ? step.pointers.right === idx : step.pointers.fast === idx;
-                            const isHighlight = step.highlights.includes(idx);
+              <div className="mt-3 max-w-4xl rounded-xl border border-slate-800 bg-slate-900/40 p-0.5">
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPattern("opposite");
+                      setCurrentStep(0);
+                    }}
+                    className={cn(
+                      "rounded-lg px-3 py-1.5 transition-colors",
+                      pattern === "opposite"
+                        ? "bg-slate-800 text-white"
+                        : "text-slate-400 hover:text-white"
+                    )}
+                  >
+                    Opposite Direction
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPattern("same");
+                      setCurrentStep(0);
+                    }}
+                    className={cn(
+                      "rounded-lg px-3 py-1.5 transition-colors",
+                      pattern === "same"
+                        ? "bg-slate-800 text-white"
+                        : "text-slate-400 hover:text-white"
+                    )}
+                  >
+                    Same Direction
+                  </button>
+                </div>
+              </div>
 
-                            return (
-                                <motion.div
-                                    key={`${idx}-${val}`}
-                                    layout
-                                    className={cn(
-                                        "relative w-14 h-14 flex items-center justify-center rounded-xl border-2 font-bold text-lg transition-all duration-300",
-                                        isHighlight ? "border-indigo-500 bg-indigo-500/10" : "border-slate-200 dark:border-slate-800 opacity-60",
-                                        step.found && isHighlight && "border-green-500 bg-green-500/20 text-green-600"
-                                    )}
+              <div className="mt-2.5 flex max-w-4xl flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
+                <span>{patternLabel}</span>
+                <span>Time Complexity: O(n)</span>
+                <span>Space Complexity: O(1)</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 overflow-x-auto">
+            <div className="mx-auto inline-flex w-max min-w-full justify-center rounded-[1.2rem] border border-slate-800 bg-slate-900/40 p-3.5">
+              <div className="box-border w-full max-w-full">
+                <div className="flex w-full justify-center">
+                  <div className="flex w-max items-center justify-center gap-2.5 px-0.5">
+                    <AnimatePresence initial={false} mode="popLayout">
+                      {values.map((value, index) => {
+                        const isLeft =
+                          ("left" in step.pointers && step.pointers.left === index) ||
+                          ("slow" in step.pointers && step.pointers.slow === index);
+                        const isRight =
+                          ("right" in step.pointers && step.pointers.right === index) ||
+                          ("fast" in step.pointers && step.pointers.fast === index);
+                        const isCompared = step.highlights.includes(index);
+                        const pointerLabel = [isLeft ? leftLabel : null, isRight ? rightLabel : null]
+                          .filter(Boolean)
+                          .join(" / ");
+
+                        return (
+                          <motion.div
+                            layout
+                            key={`${pattern}-${index}-${value}`}
+                            initial={{ opacity: 0, y: 10, scale: 0.96 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ type: "spring", stiffness: 260, damping: 24 }}
+                            className={cn(
+                              "relative h-[4.7rem] w-[4.7rem] rounded-[0.95rem] border px-1.5 py-1.5",
+                              isCompared ? "border-blue-400 bg-blue-500/8" : "border-slate-800 bg-slate-900",
+                              step.found && isCompared && "border-blue-300 bg-blue-500/14"
+                            )}
+                          >
+                            <div className="absolute inset-x-1.5 top-1.5 flex items-start justify-between gap-1">
+                              <span className="rounded-full bg-slate-950 px-1.5 py-0.5 text-[8px] font-medium text-slate-300">
+                                {`idx ${index}`}
+                              </span>
+                              {pointerLabel ? (
+                                <span
+                                  className={cn(
+                                    "pt-0.5 text-[8px] font-medium leading-none",
+                                    isLeft ? "text-blue-300" : "text-slate-300"
+                                  )}
                                 >
-                                    {val}
-                                    <span className="absolute -top-7 text-[10px] font-mono opacity-40">[{idx}]</span>
+                                  {pointerLabel}
+                                </span>
+                              ) : null}
+                            </div>
 
-                                    {/* Pointer Indicators */}
-                                    <AnimatePresence>
-                                        {isL && (
-                                            <motion.div
-                                                layoutId="ptr-left"
-                                                initial={{ y: 0, opacity: 0 }}
-                                                animate={{ y: 60, opacity: 1 }}
-                                                className="absolute flex flex-col items-center gap-1"
-                                            >
-                                                <div className="w-0.5 h-6 bg-blue-500" />
-                                                <Badge className="bg-blue-600 text-[10px] py-0">{"left" in step.pointers ? "Left" : "Slow"}</Badge>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                    <AnimatePresence>
-                                        {isR && (
-                                            <motion.div
-                                                layoutId="ptr-right"
-                                                initial={{ y: 0, opacity: 0 }}
-                                                animate={{ y: 60, opacity: 1 }}
-                                                className="absolute flex flex-col items-center gap-1"
-                                            >
-                                                <div className="w-0.5 h-6 bg-rose-500" />
-                                                <Badge className="bg-rose-600 text-[10px] py-0">{"right" in step.pointers ? "Right" : "Fast"}</Badge>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </motion.div>
-                            );
-                        })}
+                            <div className="absolute inset-x-0 bottom-1.5 top-7 flex items-center justify-center">
+                              <motion.span
+                                key={`${pattern}-${currentStep}-${index}-${value}`}
+                                initial={{ opacity: 0, scale: 0.9, y: 4 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                className="text-[1.5rem] font-semibold tracking-tight text-white"
+                              >
+                                {value}
+                              </motion.span>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
                     </AnimatePresence>
+                  </div>
                 </div>
-
-                {/* Step Description Callout */}
-                <div className="mt-28 flex justify-center">
-                    <motion.div
-                        key={currentStep}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className={cn(
-                            "p-4 rounded-xl border max-w-lg text-center shadow-lg",
-                            step.found ? "border-green-500 bg-green-500/5" : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                        )}
-                    >
-                        <p className="text-sm font-medium">{step.message}</p>
-                    </motion.div>
-                </div>
+              </div>
             </div>
+          </div>
 
-            {/* Controls */}
-            <div className="flex flex-wrap justify-center items-center gap-4">
-                <Button variant="outline" size="sm" onClick={reset} className="gap-2 font-bold min-w-[100px]">
-                    <RotateCcw className="w-4 h-4" /> Reset
-                </Button>
-                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-full px-4">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={prevStep}
-                        disabled={currentStep === 0}
-                        className="rounded-full"
-                    >
-                        <ChevronLeft className="w-4 h-4" />
-                    </Button>
-                    <span className="text-xs font-mono w-12 text-center font-bold">
-                        {currentStep + 1} / {steps.length}
-                    </span>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={nextStep}
-                        disabled={currentStep === steps.length - 1}
-                        className="rounded-full"
-                    >
-                        <ChevronRight className="w-4 h-4" />
-                    </Button>
-                </div>
-                <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={nextStep}
-                    disabled={currentStep === steps.length - 1}
-                    className="gap-2 font-bold min-w-[100px]"
+          <div className="mt-3 flex justify-center">
+            <div className="w-full max-w-4xl rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3">
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={`${pattern}-${currentStep}`}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="text-[15px] text-slate-200"
                 >
-                    <Play className="w-3 h-3" /> Step
-                </Button>
+                  {step.message}
+                </motion.p>
+              </AnimatePresence>
             </div>
-        </Card>
-    );
-}
+          </div>
 
-function Badge({ children, className, variant }: { children: React.ReactNode; className?: string; variant?: "outline" | "secondary" | "default" }) {
-    return (
-        <span className={cn(
-            "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight inline-block",
-            variant === "secondary" ? "" : "bg-primary text-primary-foreground",
-            className
-        )}>
-            {children}
-        </span>
-    );
+          <div className="mx-auto mt-4 max-w-4xl border-t border-slate-800 pt-3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Button
+                variant="outline"
+                className="h-9 rounded-xl border-slate-700 bg-transparent px-4 text-base text-slate-200 hover:bg-slate-900 hover:text-white"
+                onClick={reset}
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset
+              </Button>
+              <Button
+                className="h-9 rounded-xl bg-blue-600 px-5 text-base text-white hover:bg-blue-500"
+                onClick={nextStep}
+                disabled={currentStep === steps.length - 1}
+              >
+                <Play className="h-4 w-4" />
+                Step
+              </Button>
+              <span className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-base text-slate-400">
+                {currentStep + 1} / {steps.length}
+              </span>
+            </div>
+          </div>
+
+          <details className="mx-auto mt-3 max-w-4xl">
+            <summary className="inline-flex cursor-pointer list-none items-center rounded-full border border-slate-800 bg-slate-900/35 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+              Code Example
+            </summary>
+            <pre className="mt-2 overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/35 px-3 py-2 text-[10px] leading-5 text-slate-300">
+              {patternCode[pattern]}
+            </pre>
+          </details>
+        </div>
+    </section>
+  );
 }

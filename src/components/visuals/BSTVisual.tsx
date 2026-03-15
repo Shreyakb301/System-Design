@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useCallback } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
     Plus,
@@ -12,13 +10,7 @@ import {
     Trash2,
     RotateCcw,
     Zap,
-    Info,
-    ChevronRight,
-    Play,
-    Timer,
-    Activity,
-    AlertCircle,
-    Hash
+    Activity
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -279,137 +271,136 @@ export function BSTVisual() {
         setWorstCaseMode(false);
     };
 
+    const latestLog = logs[logs.length - 1];
+
     return (
-        <Card className="p-6 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-2xl relative overflow-hidden h-full flex flex-col">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-500" />
+        <section className="relative w-full max-w-5xl overflow-hidden rounded-[1.5rem] border border-slate-800 bg-slate-950 px-5 py-5 text-slate-100 shadow-xl sm:px-6 sm:py-6">
+            <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-500" />
 
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                        <div className="bg-emerald-500 p-1.5 rounded-lg shadow-lg shadow-emerald-500/20">
-                            <Activity className="w-4 h-4 text-white" />
-                        </div>
-                        <h2 className="text-2xl font-bold tracking-tight">Binary Search Tree</h2>
+            <div>
+                <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-emerald-500 p-2 shadow-lg shadow-emerald-500/20">
+                        <Activity className="h-4 w-4 text-white" />
                     </div>
-                    <p className="text-sm text-slate-500 italic">Visualize traversal, comparisons, and the 3 cases of deletion.</p>
                 </div>
-
-                <div className="flex bg-white dark:bg-slate-950 p-1.5 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 gap-2">
-                    <Button
-                        variant={worstCaseMode ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => { setWorstCaseMode(!worstCaseMode); resetTree(); }}
-                        className={cn("text-xs font-bold gap-2", worstCaseMode && "bg-rose-500 hover:bg-rose-400")}
-                    >
-                        <Zap className="w-3.5 h-3.5" /> Worst-Case Only
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={resetTree} className="text-xs font-bold gap-2">
-                        <RotateCcw className="w-3.5 h-3.5" /> Reset
-                    </Button>
-                </div>
+                <p className="mt-1 text-sm italic text-slate-400">
+                    Visualize traversal, comparisons, and the 3 cases of deletion.
+                </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0">
-                {/* Search/Insert/Delete Controls */}
-                <div className="lg:col-span-1 space-y-4">
-                    <div className="p-4 rounded-2xl bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
-                        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <Hash className="w-3 h-3" /> Input Action
-                        </h3>
+            <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-900/70 p-3.5">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+                    <div className="flex-1 space-y-3">
+                        <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
+                            Controls
+                        </div>
                         <Input
                             type="number"
                             placeholder="Value (e.g. 12)"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
-                            className="bg-slate-50 border-slate-200 dark:bg-slate-900 font-bold h-12"
+                            className="h-11 border-slate-800 bg-slate-950 font-bold text-white placeholder:text-slate-500"
                         />
                         <div className="flex flex-wrap gap-2">
-                            <Button onClick={handleInsert} disabled={isAnimating || !inputValue} className="flex-1 min-w-[80px] bg-emerald-600 hover:bg-emerald-500 h-10 gap-2 font-bold transition-all active:scale-95">
-                                <Plus className="w-4 h-4" /> Insert
+                            <Button
+                                onClick={handleInsert}
+                                disabled={isAnimating || !inputValue}
+                                className="h-10 min-w-[96px] gap-2 bg-emerald-600 font-bold hover:bg-emerald-500"
+                            >
+                                <Plus className="h-4 w-4" /> Insert
                             </Button>
-                            <Button onClick={handleSearch} disabled={isAnimating || !inputValue} variant="outline" className="flex-1 min-w-[80px] h-10 gap-2 font-bold border-2 hover:bg-slate-50 transition-all active:scale-95">
-                                <Search className="w-4 h-4" /> Search
+                            <Button
+                                onClick={handleSearch}
+                                disabled={isAnimating || !inputValue}
+                                variant="outline"
+                                className="h-10 min-w-[96px] gap-2 border-slate-700 bg-slate-950 font-bold text-slate-200 hover:bg-slate-900 hover:text-white"
+                            >
+                                <Search className="h-4 w-4" /> Search
                             </Button>
-                            <Button onClick={handleDelete} disabled={isAnimating || !inputValue} variant="destructive" className="flex-1 min-w-[80px] h-10 gap-2 font-bold bg-rose-500 hover:bg-rose-400 transition-all active:scale-95">
-                                <Trash2 className="w-4 h-4" /> Delete
+                            <Button
+                                onClick={handleDelete}
+                                disabled={isAnimating || !inputValue}
+                                variant="destructive"
+                                className="h-10 min-w-[96px] gap-2 bg-rose-500 font-bold hover:bg-rose-400"
+                            >
+                                <Trash2 className="h-4 w-4" /> Delete
                             </Button>
                         </div>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 space-y-3">
-                        <h4 className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest flex items-center gap-2">
-                            <Timer className="w-3.5 h-3.5" /> Decision Log
-                        </h4>
-                        <div className="space-y-2 min-h-[100px]">
-                            {logs.length === 0 && <p className="text-[10px] text-slate-400 italic">Ready for next command...</p>}
-                            {logs.map((log, i) => (
-                                <motion.div
-                                    key={i}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="flex items-start gap-2 text-[11px]"
-                                >
-                                    <ChevronRight className="w-3 h-3 text-indigo-500 mt-0.5" />
-                                    <span className={cn(
-                                        log.type === "found" ? "text-emerald-500 font-bold" :
-                                            log.type === "delete" ? "text-rose-500 font-bold" :
-                                                log.type === "successor" ? "text-amber-500 font-bold" : "text-slate-600 dark:text-slate-400"
-                                    )}>
-                                        {log.message}
-                                    </span>
-                                </motion.div>
-                            ))}
-                        </div>
+                    <div className="flex flex-wrap gap-2 xl:justify-end">
+                        <Button
+                            variant={worstCaseMode ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => { setWorstCaseMode(!worstCaseMode); resetTree(); }}
+                            className={cn(
+                                "h-10 gap-2 font-bold",
+                                worstCaseMode
+                                    ? "bg-rose-500 text-white hover:bg-rose-400"
+                                    : "border-slate-700 bg-slate-950 text-slate-200 hover:bg-slate-900 hover:text-white"
+                            )}
+                        >
+                            <Zap className="h-3.5 w-3.5" /> Worst Case
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={resetTree}
+                            className="h-10 gap-2 border-slate-700 bg-slate-950 font-bold text-slate-200 hover:bg-slate-900 hover:text-white"
+                        >
+                            <RotateCcw className="h-3.5 w-3.5" /> Reset
+                        </Button>
                     </div>
+                </div>
+            </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 text-center shadow-sm">
-                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Tree Height</p>
-                            <p className="text-lg font-bold text-indigo-600">{metrics.height}</p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 text-center shadow-sm">
-                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Comparisons</p>
-                            <p className="text-lg font-bold text-emerald-600">{metrics.comparisons}</p>
-                        </div>
+            <div className="mt-5 rounded-3xl border border-slate-800 bg-slate-900/60 p-3.5">
+                <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
+                        Tree Visualization
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                        BST rule: left &lt; node &lt; right
                     </div>
                 </div>
 
-                {/* Tree Visualization Area */}
-                <div className="lg:col-span-3 relative bg-white dark:bg-slate-950 rounded-3xl border-2 border-slate-100 dark:border-slate-900 overflow-hidden shadow-inner group">
+                <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-[#0b1120]">
                     <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:24px_24px]" />
 
-                    <svg className="w-full h-full min-h-[400px]" viewBox="0 0 700 450">
-                        {/* Edges first */}
+                    <svg className="h-[290px] w-full" viewBox="0 0 700 450">
                         <g>
-                            {Object.values(nodes).map(node => (
+                            {Object.values(nodes).map((node) => (
                                 <g key={`edges-${node.id}`}>
                                     {node.left !== null && nodes[node.left] && (
                                         <motion.line
                                             initial={{ pathLength: 0, opacity: 0 }}
                                             animate={{ pathLength: 1, opacity: 1 }}
-                                            x1={node.x} y1={node.y}
-                                            x2={nodes[node.left].x} y2={nodes[node.left].y}
-                                            stroke="currentColor" strokeWidth="2"
-                                            className="text-slate-200 dark:text-slate-800"
+                                            x1={node.x}
+                                            y1={node.y}
+                                            x2={nodes[node.left].x}
+                                            y2={nodes[node.left].y}
+                                            stroke="#334155"
+                                            strokeWidth="2"
                                         />
                                     )}
                                     {node.right !== null && nodes[node.right] && (
                                         <motion.line
                                             initial={{ pathLength: 0, opacity: 0 }}
                                             animate={{ pathLength: 1, opacity: 1 }}
-                                            x1={node.x} y1={node.y}
-                                            x2={nodes[node.right].x} y2={nodes[node.right].y}
-                                            stroke="currentColor" strokeWidth="2"
-                                            className="text-slate-200 dark:text-slate-800"
+                                            x1={node.x}
+                                            y1={node.y}
+                                            x2={nodes[node.right].x}
+                                            y2={nodes[node.right].y}
+                                            stroke="#334155"
+                                            strokeWidth="2"
                                         />
                                     )}
                                 </g>
                             ))}
                         </g>
 
-                        {/* Nodes */}
                         <g>
-                            {Object.values(nodes).map(node => (
+                            {Object.values(nodes).map((node) => (
                                 <motion.g
                                     key={`node-${node.id}`}
                                     layout
@@ -420,68 +411,87 @@ export function BSTVisual() {
                                     <motion.circle
                                         cx={node.x}
                                         cy={node.y}
-                                        r="22"
+                                        r="24"
                                         animate={{
-                                            fill: activeNodeId === node.id ? "rgba(16, 185, 129, 0.2)" : (foundNodeId === node.id ? "rgba(16, 185, 129, 0.2)" : "rgba(255, 255, 255, 1)"),
-                                            stroke: activeNodeId === node.id ? "#10b981" : (foundNodeId === node.id ? "#10b981" : "#e2e8f0"),
-                                            strokeWidth: activeNodeId === node.id || foundNodeId === node.id ? 3 : 2
+                                            fill:
+                                                activeNodeId === node.id || foundNodeId === node.id
+                                                    ? "rgba(16, 185, 129, 0.18)"
+                                                    : "#0f172a",
+                                            stroke:
+                                                activeNodeId === node.id || foundNodeId === node.id
+                                                    ? "#10b981"
+                                                    : "#334155",
+                                            strokeWidth:
+                                                activeNodeId === node.id || foundNodeId === node.id ? 3 : 2
                                         }}
-                                        className="dark:fill-slate-900 dark:stroke-slate-800"
                                     />
                                     <text
                                         x={node.x}
                                         y={node.y}
                                         textAnchor="middle"
-                                        dy=".3em"
-                                        className={cn(
-                                            "text-sm font-bold transition-colors",
-                                            activeNodeId === node.id ? "fill-emerald-600" : (foundNodeId === node.id ? "fill-emerald-600" : "fill-slate-600 dark:fill-slate-400")
-                                        )}
+                                        dy=".35em"
+                                        className="fill-slate-100 text-sm font-bold"
                                     >
                                         {node.value}
                                     </text>
 
-                                    {/* Successor Indicator */}
-                                    {logs.some(l => l.type === "successor" && l.nodeId === node.id) && (
+                                    {logs.some((l) => l.type === "successor" && l.nodeId === node.id) && (
                                         <motion.text
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            x={node.x} y={node.y - 35}
+                                            x={node.x}
+                                            y={node.y - 38}
                                             textAnchor="middle"
-                                            className="text-[8px] font-bold fill-amber-500 uppercase"
+                                            className="fill-amber-400 text-[8px] font-bold uppercase"
                                         >
-                                            Successor Candidates
+                                            Successor
                                         </motion.text>
                                     )}
                                 </motion.g>
                             ))}
                         </g>
                     </svg>
+                </div>
 
-                    {/* Watermark/Hint */}
-                    <div className="absolute bottom-6 right-6 flex items-center gap-2 text-slate-300 dark:text-slate-700 pointer-events-none">
-                        <Play className="w-4 h-4" />
-                        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">BST Simulation Engine</span>
+                <div className="mt-3 rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
+                        Current Decision
                     </div>
+                    <p className={cn(
+                        "mt-2 text-sm leading-6",
+                        latestLog?.type === "found" ? "text-emerald-300" :
+                            latestLog?.type === "delete" ? "text-rose-300" :
+                                latestLog?.type === "successor" ? "text-amber-300" :
+                                    "text-slate-200"
+                    )}>
+                        {latestLog?.message || "Enter a value and choose an action to follow one BST decision path from the root."}
+                    </p>
                 </div>
-            </div>
 
-            {/* Footer Insight */}
-            <div className="mt-6 p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 flex items-start gap-4">
-                <div className="p-2 bg-indigo-500/10 rounded-xl mt-1">
-                    <Info className="w-4 h-4 text-indigo-500" />
+                <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-300">
+                    <span>
+                        Tree Height: <span className="font-semibold text-indigo-300">{metrics.height}</span>
+                    </span>
+                    <span className="text-slate-700">|</span>
+                    <span>
+                        Comparisons: <span className="font-semibold text-emerald-300">{metrics.comparisons}</span>
+                    </span>
+                    <span className="text-slate-700">|</span>
+                    <span>
+                        Mode: <span className="font-semibold text-slate-200">{worstCaseMode ? "Worst Case" : "Balanced Example"}</span>
+                    </span>
                 </div>
-                <div className="space-y-1">
-                    <p className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest flex items-center gap-2">
-                        Deep Dive: Why Binary Search Trees?
-                    </p>
-                    <p className="text-[11px] leading-relaxed text-slate-500">
-                        In an ideal (balanced) BST, operations are <strong>O(log N)</strong> because each comparison eliminates half the remaining nodes.
-                        However, if you insert sorted values (Worst-Case Mode), the tree becomes skewed like a linked list, degrading to <strong>O(N)</strong> performance.
-                        This is why techniques like AVL or Red-Black trees are used to keep the height minimal.
-                    </p>
-                </div>
+
             </div>
-        </Card>
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] leading-6 text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+            <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
+                Why BSTs Matter
+            </div>
+            In an ideal (balanced) BST, operations are <strong className="text-slate-900 dark:text-slate-200">O(log N)</strong> because each
+            comparison eliminates half the remaining nodes. If you insert sorted values
+            in <strong className="text-slate-900 dark:text-slate-200">Worst Case</strong> mode, the tree becomes skewed like a linked list,
+            degrading toward <strong className="text-slate-900 dark:text-slate-200">O(N)</strong>.
+        </div>
+        </section>
     );
 }

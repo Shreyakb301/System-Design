@@ -167,16 +167,13 @@ export function CachingVisual() {
         <Card className="p-8 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 shadow-3xl flex flex-col gap-10">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-                <div className="space-y-2">
+                <div>
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-orange-500 rounded-xl shadow-lg shadow-orange-500/20">
                             <Zap className="w-6 h-6 text-white" />
                         </div>
-                        <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-                            Cache Architect
-                        </h2>
                     </div>
-                    <p className="text-sm text-slate-500 font-semibold italic">Can you achieve a 99% hit rate?</p>
+                    <p className="mt-2 text-sm text-slate-500 font-semibold italic">Can you achieve a 99% hit rate?</p>
                 </div>
 
                 <div className="flex flex-wrap gap-4">

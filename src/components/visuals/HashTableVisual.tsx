@@ -1,24 +1,18 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
     Plus,
     Search,
     Trash2,
-    RefreshCw,
     Database,
     Zap,
-    Info,
-    AlertCircle,
-    CheckCircle2,
     Network,
     ArrowRight,
-    ArrowDown,
     Activity
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,6 +27,17 @@ interface HashItem {
 
 type Bucket = HashItem[];
 
+type HashOperation = "insert" | "search" | "delete";
+
+interface HashComputation {
+    operation: HashOperation;
+    key: string;
+    sum: number;
+    index: number | null;
+    phase: "hashing" | "modulo" | "done";
+    currentChar: string | null;
+}
+
 const BUCKET_SIZE = 8;
 
 export function HashTableVisual() {
@@ -43,7 +48,7 @@ export function HashTableVisual() {
     const [isAnimating, setIsAnimating] = useState(false);
     const [activePath, setActivePath] = useState<number[]>([]);
     const [foundId, setFoundId] = useState<string | null>(null);
-    const [hashProcess, setHashProcess] = useState<{ char: string, sum: number } | null>(null);
+    const [hashComputation, setHashComputation] = useState<HashComputation | null>(null);
 
     // Simple Hash Function: Sum of ASCII % BUCKET_SIZE
     const getHashInfo = (key: string) => {
@@ -59,27 +64,52 @@ export function HashTableVisual() {
         setStatus("Ready for operations");
         setActivePath([]);
         setFoundId(null);
-        setHashProcess(null);
+        setHashComputation(null);
     };
 
-    const animateHash = async (key: string) => {
+    const animateHash = async (key: string, operation: HashOperation) => {
         let currentSum = 0;
         for (let i = 0; i < key.length; i++) {
             currentSum += key.charCodeAt(i);
-            setHashProcess({ char: key[i], sum: currentSum });
-            await new Promise(r => setTimeout(r, 200));
+            setHashComputation({
+                operation,
+                key,
+                sum: currentSum,
+                index: null,
+                phase: "hashing",
+                currentChar: key[i]
+            });
+            await new Promise(r => setTimeout(r, 180));
         }
-        await new Promise(r => setTimeout(r, 400));
-        setHashProcess(null);
-        return currentSum % BUCKET_SIZE;
+        const index = currentSum % BUCKET_SIZE;
+        setHashComputation({
+            operation,
+            key,
+            sum: currentSum,
+            index,
+            phase: "modulo",
+            currentChar: null
+        });
+        setActivePath([index]);
+        await new Promise(r => setTimeout(r, 500));
+        setHashComputation({
+            operation,
+            key,
+            sum: currentSum,
+            index,
+            phase: "done",
+            currentChar: null
+        });
+        return index;
     };
 
     const handleInsert = async () => {
         if (!inputKey || isAnimating) return;
         setIsAnimating(true);
+        setFoundId(null);
         setStatus(`Hashing "${inputKey}"...`);
 
-        const index = await animateHash(inputKey);
+        const index = await animateHash(inputKey, "insert");
         const { hash } = getHashInfo(inputKey);
         const newItem: HashItem = { key: inputKey, hash, index, id: Math.random().toString(36).substr(2, 9) };
 
@@ -87,6 +117,7 @@ export function HashTableVisual() {
         const path: number[] = [index];
 
         if (strategy === "chaining") {
+            setActivePath([index]);
             if (newBuckets[index].length > 0) {
                 setStatus(`Collision at index ${index}! Adding to chain.`);
             } else {
@@ -127,7 +158,7 @@ export function HashTableVisual() {
         setIsAnimating(true);
         setFoundId(null);
 
-        const index = await animateHash(inputKey);
+        const index = await animateHash(inputKey, "search");
         const path: number[] = [index];
         setActivePath([index]);
 
@@ -174,9 +205,11 @@ export function HashTableVisual() {
     const handleDelete = async () => {
         if (!inputKey || isAnimating) return;
         setIsAnimating(true);
+        setFoundId(null);
 
-        const index = await animateHash(inputKey);
+        const index = await animateHash(inputKey, "delete");
         const newBuckets = [...buckets];
+        setActivePath([index]);
 
         if (strategy === "chaining") {
             const originalLen = newBuckets[index].length;
@@ -194,6 +227,7 @@ export function HashTableVisual() {
             while (probes < BUCKET_SIZE) {
                 if (newBuckets[current][0]?.key === inputKey) {
                     newBuckets[current] = [];
+                    setActivePath([current]);
                     setStatus(`Deleted "${inputKey}" from index ${current}.`);
                     deleted = true;
                     break;
@@ -215,19 +249,18 @@ export function HashTableVisual() {
     }, [buckets]);
 
     return (
-        <Card className="p-6 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-2xl relative overflow-hidden">
+        <section className="relative w-full max-w-5xl overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-50 px-5 py-5 text-slate-900 shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 sm:px-6 sm:py-6">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500" />
 
             {/* Header */}
-            <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center mb-10">
-                <div className="space-y-1">
+            <div className="mb-4 flex flex-col items-start justify-between gap-3 md:flex-row md:items-center">
+                <div>
                     <div className="flex items-center gap-2">
                         <div className="bg-orange-500 p-1.5 rounded-lg shadow-lg shadow-orange-500/20">
                             <Zap className="w-4 h-4 text-white" />
                         </div>
-                        <h2 className="text-2xl font-bold tracking-tight">Hash Table Explorer</h2>
                     </div>
-                    <p className="text-sm text-muted-foreground italic">Visualizing key allocation & collision strategies.</p>
+                    <p className="mt-1 text-xs italic text-muted-foreground">Visualizing key allocation & collision strategies.</p>
                 </div>
 
                 <div className="flex bg-white dark:bg-slate-950 p-1.5 rounded-2xl shadow-inner border border-slate-100 dark:border-slate-800">
@@ -252,10 +285,9 @@ export function HashTableVisual() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                {/* Left: Input & Hash Machine */}
-                <div className="lg:col-span-4 space-y-8">
-                    <div className="space-y-4 p-5 rounded-2xl bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 shadow-sm">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
+                <div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                    <div className="space-y-3">
                         <Input
                             placeholder="Enter key (e.g. Apple)"
                             value={inputKey}
@@ -263,93 +295,152 @@ export function HashTableVisual() {
                             className="bg-slate-50 border-slate-200 dark:bg-slate-900 font-bold"
                         />
                         <div className="flex flex-wrap gap-2">
-                            <Button onClick={handleInsert} disabled={isAnimating || !inputKey} className="flex-1 min-w-[100px] bg-emerald-600 hover:bg-emerald-500 h-10 gap-2 font-bold">
+                            <Button onClick={handleInsert} disabled={isAnimating || !inputKey} className="h-10 min-w-[100px] flex-1 gap-2 bg-emerald-600 font-bold hover:bg-emerald-500">
                                 <Plus className="w-4 h-4" /> Insert
                             </Button>
-                            <Button onClick={handleSearch} disabled={isAnimating || !inputKey} variant="outline" className="flex-1 min-w-[100px] h-10 gap-2 font-bold border-2">
+                            <Button onClick={handleSearch} disabled={isAnimating || !inputKey} variant="outline" className="h-10 min-w-[100px] flex-1 gap-2 border-2 font-bold">
                                 <Search className="w-4 h-4" /> Search
                             </Button>
-                            <Button onClick={handleDelete} disabled={isAnimating || !inputKey} variant="destructive" className="flex-1 min-w-[100px] h-10 gap-2 font-bold bg-rose-500 hover:bg-rose-400">
+                            <Button onClick={handleDelete} disabled={isAnimating || !inputKey} variant="destructive" className="h-10 min-w-[100px] flex-1 gap-2 bg-rose-500 font-bold hover:bg-rose-400">
                                 <Trash2 className="w-4 h-4" /> Del
                             </Button>
                         </div>
-                    </div>
-
-                    {/* Hash Machine View */}
-                    <div className="relative h-48 rounded-3xl bg-slate-950 border-2 border-slate-800 flex flex-col items-center justify-center overflow-hidden">
-                        <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:20px_20px]" />
-
-                        <AnimatePresence mode="wait">
-                            {hashProcess ? (
+                        <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/70">
+                            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                <span>Table Capacity: {BUCKET_SIZE}</span>
+                                <span>Load Factor: {loadFactor}</span>
+                            </div>
+                            <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-950">
                                 <motion.div
-                                    key="process"
-                                    initial={{ scale: 0.8, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    exit={{ scale: 1.2, opacity: 0 }}
-                                    className="text-center space-y-3"
-                                >
-                                    <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center text-white text-xl font-black shadow-2xl shadow-orange-500/40">
-                                        {hashProcess.char}
-                                    </div>
-                                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">ASCII Sum</div>
-                                    <div className="text-3xl font-black text-white">{hashProcess.sum}</div>
-                                </motion.div>
-                            ) : (
-                                <motion.div
-                                    key="idle"
-                                    className="text-center space-y-2 opacity-40"
-                                >
-                                    <RefreshCw className="w-10 h-10 text-slate-500 mx-auto animate-spin-slow" />
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Hash Machine Idle</p>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-3">
-                        <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                            <span>Table Capacity: {BUCKET_SIZE}</span>
-                            <span>Load Factor: {loadFactor}</span>
-                        </div>
-                        <div className="h-2 bg-slate-200 dark:bg-slate-900 rounded-full overflow-hidden">
-                            <motion.div
-                                animate={{ width: `${parseFloat(loadFactor) * 100}%` }}
-                                className="h-full bg-orange-500 shadow-lg shadow-orange-500/50"
-                            />
+                                    animate={{ width: `${parseFloat(loadFactor) * 100}%` }}
+                                    className="h-full bg-orange-500 shadow-lg shadow-orange-500/40"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Right: Bucket Grid */}
-                <div className="lg:col-span-8">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="rounded-2xl border-2 border-slate-800 bg-slate-950 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                        <div>
+                            <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-500">Hash Computation</div>
+                            <p className="mt-1 text-[11px] text-slate-400">Key -&gt; hash() -&gt; % {BUCKET_SIZE} -&gt; bucket index</p>
+                        </div>
+                        {hashComputation ? (
+                            <div className="rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-300">
+                                {hashComputation.operation}
+                            </div>
+                        ) : null}
+                    </div>
+
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={
+                                hashComputation
+                                    ? `${hashComputation.operation}-${hashComputation.phase}-${hashComputation.sum}-${hashComputation.index ?? "pending"}`
+                                    : "idle"
+                            }
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            className="mt-3 space-y-3"
+                        >
+                            <div className="flex flex-wrap items-stretch gap-2">
+                                <div className="min-w-[120px] flex-1 rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+                                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Input Key</div>
+                                    <div className="mt-1.5 text-base font-black text-white">
+                                        {hashComputation?.key || inputKey || "Apple"}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-center text-orange-400">
+                                    <ArrowRight className="h-4 w-4" />
+                                </div>
+
+                                <div className="min-w-[140px] flex-1 rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+                                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Hash</div>
+                                    <div className="mt-1.5 truncate text-[13px] font-semibold text-slate-200">
+                                        {`hash("${hashComputation?.key || inputKey || "Apple"}")`}
+                                    </div>
+                                    <div className="mt-1.5 text-xl font-black text-white">{hashComputation?.sum ?? "?"}</div>
+                                </div>
+
+                                <div className="flex items-center justify-center text-orange-400">
+                                    <ArrowRight className="h-4 w-4" />
+                                </div>
+
+                                <div className="min-w-[130px] flex-1 rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+                                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Bucket</div>
+                                    <div className="mt-1.5 text-[13px] font-semibold text-slate-200">
+                                        {hashComputation?.sum ?? "hash"} % {BUCKET_SIZE}
+                                    </div>
+                                    <div className="mt-1.5 text-xl font-black text-orange-300">{hashComputation?.index ?? "?"}</div>
+                                </div>
+                            </div>
+
+                            <div className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 font-mono text-[12px] leading-6 text-slate-200">
+                                {`hash("${hashComputation?.key || inputKey || "Apple"}") = ${hashComputation?.sum ?? "?"}  ->  ${hashComputation?.sum ?? "hash"} % ${BUCKET_SIZE} = ${hashComputation?.index ?? "?"}`}
+                            </div>
+
+                            {hashComputation?.currentChar ? (
+                                <div className="text-[10px] text-orange-300">
+                                    Reading: <span className="font-mono">{`"${hashComputation.currentChar}"`}</span>
+                                </div>
+                            ) : null}
+
+                            <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                                <ArrowRight className="h-3.5 w-3.5 text-orange-400" />
+                                <span>
+                                    {hashComputation
+                                        ? `Bucket ${hashComputation.index ?? "?"} is highlighted in the table.`
+                                        : "Insert, search, or delete a key to see how hashing maps it to a bucket."}
+                                </span>
+                            </div>
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+            </div>
+
+            <div className="mt-4">
+                <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 xl:grid-cols-8">
                         {buckets.map((bucket, i) => (
-                            <div key={i} className="space-y-3">
+                            <div key={i}>
                                 <div className={cn(
-                                    "p-3 rounded-2xl border-2 transition-all relative overflow-hidden",
+                                    "relative overflow-hidden rounded-2xl border-2 p-2 transition-all",
                                     activePath.includes(i) ? "border-orange-500 bg-orange-500/5 ring-4 ring-orange-500/10" : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm"
                                 )}>
-                                    <div className="flex justify-between items-center mb-2">
+                                    <div className="mb-1 flex items-center justify-between">
                                         <span className="text-[10px] font-bold text-slate-400">INDEX {i}</span>
-                                        {bucket.length > 0 && <Badge className="text-[8px] h-4 bg-slate-100 dark:bg-slate-800 text-slate-500 border-none">{bucket.length}</Badge>}
+                                        {bucket.length > 0 && (
+                                            <Badge
+                                                className={cn(
+                                                    "h-4 border-none px-1.5 text-[8px]",
+                                                    strategy === "chaining" && bucket.length > 1
+                                                        ? "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300"
+                                                        : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                                                )}
+                                            >
+                                                {bucket.length}
+                                            </Badge>
+                                        )}
                                     </div>
 
-                                    <div className="min-h-[4rem] space-y-2 relative">
+                                    <div className="relative min-h-[2.35rem] space-y-1">
                                         {bucket.length === 0 ? (
                                             <div className="absolute inset-0 flex items-center justify-center opacity-5">
-                                                <Database className="w-8 h-8" />
+                                                <Database className="h-5 w-5" />
                                             </div>
                                         ) : (
                                             <AnimatePresence>
                                                 {strategy === "chaining" ? (
-                                                    bucket.map((item, idx) => (
+                                                    bucket.map((item) => (
                                                         <motion.div
                                                             key={item.id}
                                                             initial={{ x: -20, opacity: 0 }}
                                                             animate={{ x: 0, opacity: 1 }}
                                                             exit={{ scale: 0, opacity: 0 }}
                                                             className={cn(
-                                                                "p-2 rounded-lg text-xs font-bold border flex items-center justify-between",
+                                                                "flex items-center justify-between rounded-lg border p-1.5 text-[10px] font-bold",
                                                                 foundId === item.id ? "bg-emerald-500 border-emerald-400 text-white" : "bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300"
                                                             )}
                                                         >
@@ -362,7 +453,7 @@ export function HashTableVisual() {
                                                         initial={{ scale: 0.8, opacity: 0 }}
                                                         animate={{ scale: 1, opacity: 1 }}
                                                         className={cn(
-                                                            "p-2 rounded-lg text-xs font-bold border h-full flex flex-col justify-center text-center",
+                                                            "flex h-full flex-col justify-center rounded-lg border p-1.5 text-center text-[10px] font-bold",
                                                             foundId === bucket[0]?.id ? "bg-emerald-500 border-emerald-400 text-white shadow-lg" : "bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300"
                                                         )}
                                                     >
@@ -374,38 +465,26 @@ export function HashTableVisual() {
                                         )}
                                     </div>
                                 </div>
-                                {strategy === "chaining" && bucket.length > 1 && (
-                                    <div className="px-3 py-1.5 rounded-lg bg-orange-500/5 border border-orange-500/10 flex items-center justify-between">
-                                        <div className="flex gap-1">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
-                                            <div className="w-1.5 h-1.5 rounded-full bg-orange-300" />
-                                        </div>
-                                        <span className="text-[8px] font-bold text-orange-600 uppercase tracking-tighter">Chain Collision</span>
-                                    </div>
-                                )}
                             </div>
                         ))}
-                    </div>
-
-                    <div className="mt-10 p-5 rounded-3xl bg-slate-950 border-2 border-slate-900 text-slate-400 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <Info className="w-24 h-24 rotate-12" />
-                        </div>
-                        <div className="flex items-center gap-3 mb-4">
-                            <Activity className="w-5 h-5 text-orange-500" />
-                            <h3 className="text-sm font-bold text-white uppercase tracking-widest">System Monitor</h3>
-                        </div>
-                        <p className="text-xs leading-relaxed mb-4">
-                            Status: <span className="text-orange-400 font-mono">{status}</span>
-                        </p>
-                        <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-[11px] font-mono leading-relaxed italic">
-                            {strategy === "chaining"
-                                ? "Insight: Separate chaining maintains an array of linked lists. It handles collisions gracefully but can lead to a 'thick' table where search becomes O(N) if one bucket gets too many items."
-                                : "Insight: Linear probing finds the first available empty slot. This is memory-efficient but causes 'clustering'—packets of filled slots that significantly slow down both inserts and searches."}
-                        </div>
-                    </div>
                 </div>
             </div>
-        </Card>
+        <div className="mt-4 grid gap-3 lg:grid-cols-[auto_minmax(0,1fr)]">
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                <div className="flex items-center gap-3">
+                    <Activity className="h-4 w-4 text-orange-500" />
+                    <h3 className="text-xs font-bold uppercase tracking-[0.25em] text-slate-900 dark:text-white">System Monitor</h3>
+                </div>
+                <p className="mt-2 text-xs leading-relaxed">
+                    Status: <span className="font-mono text-orange-500 dark:text-orange-400">{status}</span>
+                </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] leading-6 text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                {strategy === "chaining"
+                    ? "Separate chaining keeps collided keys in one bucket. It is easy to reason about, but one overloaded bucket can make lookup feel closer to a short list scan."
+                    : "Linear probing keeps everything inside the array. It saves pointer overhead, but nearby occupied buckets create clusters that slow future searches."}
+            </div>
+        </div>
+        </section>
     );
 }

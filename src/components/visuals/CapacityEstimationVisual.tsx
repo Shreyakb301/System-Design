@@ -110,16 +110,13 @@ export function CapacityEstimationVisual() {
             />
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="space-y-2">
+                <div>
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-indigo-600 rounded-lg">
                             <TrendingUp className="w-6 h-6 text-white" />
                         </div>
-                        <h2 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-500 dark:from-white dark:to-slate-400">
-                            Capacity Estimator
-                        </h2>
                     </div>
-                    <p className="text-sm text-slate-500 font-medium">Design for scale by visualizing traffic, storage, and architectural trade-offs.</p>
+                    <p className="mt-2 text-sm text-slate-500 font-medium">Design for scale by visualizing traffic, storage, and architectural trade-offs.</p>
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
