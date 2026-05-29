@@ -220,7 +220,9 @@ interface CommLaneProps {
 }
 
 function CommLane({ isRest, req, phase }: CommLaneProps) {
-  const def = isRest ? req.rest : req.grpc;
+  const restDef = req.rest;
+  const grpcDef = req.grpc;
+  const def = isRest ? restDef : grpcDef;
   const travelS = (def.latencyMs * 6) / 1000;
   const returnS = (def.latencyMs * 4) / 1000;
 
@@ -243,7 +245,7 @@ function CommLane({ isRest, req, phase }: CommLaneProps) {
       {/* Track */}
       <div className="relative h-16 rounded-xl border border-slate-200 bg-slate-50 flex items-center overflow-hidden">
         <div className={cn("relative z-10 mx-2 w-14 h-10 shrink-0 rounded-lg border-2 flex items-center justify-center text-[9px] font-bold",
-          isRest ? "border-blue-200 bg-blue-50 text-blue-700" : "border-violet-200 bg-violet-50 text-violet-700")}>
+          isRest ? "border-blue-200 bg-blue-50 text-blue-700" : "border-violet-200 bg-violet-50 text-violet-700")}> 
           CLIENT
         </div>
 
@@ -257,7 +259,7 @@ function CommLane({ isRest, req, phase }: CommLaneProps) {
             animate={{ left: atRight ? "66%" : "18%" }}
             transition={{ duration: atRight ? travelS : returnS, ease: "linear" }}
           >
-            {isRest ? (def.json.slice(0, 16) + "…") : "pb"}
+            {isRest ? (restDef.json.slice(0, 16) + "…") : "pb"}
           </motion.div>
         )}
 
@@ -280,12 +282,12 @@ function CommLane({ isRest, req, phase }: CommLaneProps) {
       <div className={cn("rounded-lg p-2 text-[8px] leading-relaxed overflow-hidden",
         isRest ? "bg-blue-50 border border-blue-200" : "bg-violet-950 border border-violet-800")}>
         {isRest ? (
-          <pre className="font-mono text-blue-800 whitespace-pre-wrap">{def.json}</pre>
+          <pre className="font-mono text-blue-800 whitespace-pre-wrap">{restDef.json}</pre>
         ) : (
           <div className="space-y-1">
             <p className="text-violet-400">Binary Protobuf · {bytesLabel(def.bytes)}</p>
             <div className="flex flex-wrap gap-0.5">
-              {def.proto.split(" · ").map((f, i) => (
+              {grpcDef.proto.split(" · ").map((f, i) => (
                 <span key={i} className="px-1.5 py-0.5 rounded bg-violet-800 text-violet-200">{f}</span>
               ))}
             </div>

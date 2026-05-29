@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
+import { Space_Grotesk } from "next/font/google";
 import { Button } from "@/components/ui/button";
 import { TOPICS } from "@/lib/topics";
 import {
@@ -10,15 +11,26 @@ import {
   Sparkles,
 } from "lucide-react";
 
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+});
+
 const trackCount = TOPICS.length;
 const lessonCount = TOPICS.reduce(
   (count, section) =>
-    count + section.categories.reduce((categoryCount, category) => categoryCount + category.items.length, 0),
+    count +
+    section.categories.reduce(
+      (categoryCount, category) => categoryCount + category.items.length,
+      0
+    ),
   0
 );
 const challengeCount = TOPICS.reduce(
   (count, section) =>
-    count + section.categories.filter((category) => category.id.includes("challenge")).length,
+    count +
+    section.categories.filter((category) => category.id.includes("challenge"))
+      .length,
   0
 );
 
@@ -51,7 +63,6 @@ const tracks = [
     primaryLabel: "Explore data structures",
     secondaryLabel: "Enter arena mode",
   },
-  /*
   {
     href: "/programming-languages",
     challengeHref: "/programming-languages/language-evaluation",
@@ -66,22 +77,25 @@ const tracks = [
     primaryLabel: "Explore language design",
     secondaryLabel: "Open evaluation lesson",
   },
-  */
 ];
 
 const heroStats = [
   { label: "Tracks", value: trackCount.toString().padStart(2, "0") },
+  { label: "Lessons", value: lessonCount.toString().padStart(2, "0") },
   { label: "Challenges", value: challengeCount.toString().padStart(2, "0") },
-  { label: "Status", value: "Prototypes in Progress" },
 ];
 
 const pageStyle: CSSProperties = {
-  ["--page-bg" as string]: "linear-gradient(180deg, #f7f7f2 0%, #fbfbf8 42%, #ffffff 100%)",
+  ["--page-bg" as string]:
+    "linear-gradient(180deg, #f7f7f2 0%, #fbfbf8 42%, #ffffff 100%)",
 };
 
 export default function Home() {
   return (
-    <div className="relative overflow-x-clip bg-[var(--page-bg)] text-slate-950" style={pageStyle}>
+    <div
+      className="relative overflow-x-clip bg-[var(--page-bg)] text-slate-950"
+      style={pageStyle}
+    >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[36rem] bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.08),transparent_28%),radial-gradient(circle_at_80%_10%,rgba(20,184,166,0.06),transparent_30%)]" />
 
       <section className="relative px-4 pb-20 pt-10 sm:px-6 lg:px-8">
@@ -94,15 +108,15 @@ export default function Home() {
 
             <div className="space-y-6">
               <p className="text-sm font-semibold uppercase tracking-[0.4em] text-slate-500">
-                Visual challenges in development — first prototypes coming
+                Learn by doing
               </p>
               <h1
-                className="max-w-4xl text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl lg:text-6xl"
+                className={`${spaceGrotesk.className} max-w-4xl text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl lg:text-7xl`}
               >
-                Hands-on system design and algorithm simulations (early stage).
+                Practice systems and algorithms visually.
               </h1>
               <p className="max-w-xl text-lg leading-8 text-slate-600 sm:text-xl">
-                Interactive prototypes in progress.
+                Three tracks. Live demos. Challenge modes.
               </p>
             </div>
 
@@ -133,7 +147,9 @@ export default function Home() {
                   key={stat.label}
                   className="rounded-3xl border border-black/5 bg-white px-5 py-4 shadow-sm"
                 >
-                  <div className="text-3xl font-bold tracking-[-0.05em]">
+                  <div
+                    className={`${spaceGrotesk.className} text-3xl font-bold tracking-[-0.05em]`}
+                  >
                     {stat.value}
                   </div>
                   <div className="text-sm text-slate-500">{stat.label}</div>
@@ -150,7 +166,9 @@ export default function Home() {
             <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
               Learning tracks
             </p>
-            <h2 className="text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl">
+            <h2
+              className={`${spaceGrotesk.className} text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl`}
+            >
               Pick a track and jump in.
             </h2>
           </div>
@@ -161,17 +179,23 @@ export default function Home() {
                 key={track.href}
                 className="group relative overflow-hidden rounded-[2rem] border border-black/5 bg-white p-8 shadow-[0_16px_50px_rgba(15,23,42,0.05)]"
               >
-                <div className={`absolute inset-x-0 top-0 h-1 ${track.accentBar}`} />
+                <div
+                  className={`absolute inset-x-0 top-0 h-1 ${track.accentBar}`}
+                />
                 <div className="flex flex-col gap-8">
                   <div className="space-y-4">
-                    <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${track.iconClass}`}>
+                    <div
+                      className={`flex h-14 w-14 items-center justify-center rounded-2xl ${track.iconClass}`}
+                    >
                       <track.icon className="h-7 w-7" />
                     </div>
                     <div className="space-y-3">
                       <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-500">
                         {track.eyebrow}
                       </p>
-                      <h3 className="text-3xl font-bold tracking-[-0.05em] text-slate-950">
+                      <h3
+                        className={`${spaceGrotesk.className} text-3xl font-bold tracking-[-0.05em] text-slate-950`}
+                      >
                         {track.title}
                       </h3>
                       <p className="max-w-xl text-base leading-7 text-slate-600">
@@ -206,7 +230,9 @@ export default function Home() {
                       variant="outline"
                       className="rounded-full border-black/10 bg-white px-6 text-slate-700 hover:bg-slate-50"
                     >
-                      <Link href={track.challengeHref}>{track.secondaryLabel}</Link>
+                      <Link href={track.challengeHref}>
+                        {track.secondaryLabel}
+                      </Link>
                     </Button>
                   </div>
                 </div>
@@ -222,7 +248,9 @@ export default function Home() {
             <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
               Topic map
             </p>
-            <h2 className="text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl">
+            <h2
+              className={`${spaceGrotesk.className} text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl`}
+            >
               Jump straight to a topic.
             </h2>
           </div>
@@ -236,13 +264,15 @@ export default function Home() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-500">
-                            {section.id === "system-design"
-                              ? "Architecture track"
-                              : section.id === "data-structures"
-                                ? "Foundations track"
-                                : "Language track"}
+                      {section.id === "system-design"
+                        ? "Architecture track"
+                        : section.id === "data-structures"
+                          ? "Foundations track"
+                          : "Language track"}
                     </p>
-                    <h3 className="mt-2 text-3xl font-bold tracking-[-0.05em] text-slate-950">
+                    <h3
+                      className={`${spaceGrotesk.className} mt-2 text-3xl font-bold tracking-[-0.05em] text-slate-950`}
+                    >
                       {section.title}
                     </h3>
                   </div>
@@ -269,9 +299,12 @@ export default function Home() {
                           </div>
                         )}
                         <div>
-                          <div className="font-semibold text-slate-900">{category.title}</div>
+                          <div className="font-semibold text-slate-900">
+                            {category.title}
+                          </div>
                           <div className="text-sm text-slate-500">
-                            {category.items.length} {category.items.length === 1 ? "lesson" : "lessons"}
+                            {category.items.length}{" "}
+                            {category.items.length === 1 ? "lesson" : "lessons"}
                           </div>
                         </div>
                       </div>
@@ -288,8 +321,13 @@ export default function Home() {
         <div className="mx-auto max-w-7xl rounded-[2.5rem] border border-black/5 bg-[#f4f4ef] px-8 py-12 text-slate-900 shadow-[0_16px_40px_rgba(15,23,42,0.04)]">
           <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
             <div className="max-w-3xl space-y-4">
-              <h2 className="text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl">
-                Try System Architect Challenge
+              <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
+                Ready to start
+              </p>
+              <h2
+                className={`${spaceGrotesk.className} text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl`}
+              >
+                Start with a challenge or browse all three tracks.
               </h2>
             </div>
 
@@ -300,9 +338,17 @@ export default function Home() {
                 className="h-12 rounded-full bg-slate-900 px-7 text-base font-semibold text-white shadow-sm hover:bg-slate-800"
               >
                 <Link href="/system-design/challenge">
-                  Try System Architect Challenge
+                  Start training
                   <ArrowRight className="h-4 w-4" />
                 </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-12 rounded-full border-black/10 bg-white px-7 text-base font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <Link href="/#tracks">Browse the learning tracks</Link>
               </Button>
             </div>
           </div>
