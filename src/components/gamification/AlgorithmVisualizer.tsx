@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import { DSNode, DSNodeType } from "@/lib/gamification/ds-types";
 import { cn } from "@/lib/utils";
-import { X, ArrowRight } from "lucide-react";
 
 interface AlgorithmVisualizerProps {
     nodes: DSNode[];
@@ -14,9 +13,12 @@ interface AlgorithmVisualizerProps {
 
 export function AlgorithmVisualizer({ nodes, onNodesChange, readOnly = false }: AlgorithmVisualizerProps) {
     const [internalNodes, setInternalNodes] = useState<DSNode[]>(nodes);
-    const [draggingId, setDraggingId] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
     const [connectingSourceId, setConnectingSourceId] = useState<string | null>(null);
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const dragPos = useRef({ startX: 0, startY: 0, nodeX: 0, nodeY: 0 });
 
     useEffect(() => {
         setInternalNodes(nodes);
@@ -27,51 +29,99 @@ export function AlgorithmVisualizer({ nodes, onNodesChange, readOnly = false }: 
         onNodesChange?.(newNodes);
     };
 
-    const handleNodeDrag = (id: string, info: any) => {
-        if (readOnly) return;
-        const newNodes = internalNodes.map((n) => {
-            if (n.id === id) {
-                return { ...n, x: n.x + info.delta.x, y: n.y + info.delta.y };
-            }
-            return n;
-        });
-        setInternalNodes(newNodes);
+    const handlePointerDownNode = (e: React.PointerEvent, id: string) => {
+        if (readOnly || connectingSourceId) return;
+        if ((e.target as HTMLElement).closest('.connect-handle')) return;
+        
+        e.stopPropagation();
+        const node = internalNodes.find(n => n.id === id);
+        if (!node) return;
+        
+        setDraggingNodeId(id);
+        dragPos.current = {
+            startX: e.clientX,
+            startY: e.clientY,
+            nodeX: node.x,
+            nodeY: node.y
+        };
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
     };
 
-    const handleNodeDragEnd = (id: string) => {
-        onNodesChange?.(internalNodes);
-    };
-
-    const handleConnectStart = (e: React.MouseEvent, id: string) => {
+    const handlePointerDownHandle = (e: React.PointerEvent, id: string) => {
         if (readOnly) return;
         e.stopPropagation();
         setConnectingSourceId(id);
+        
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (rect) {
+            setMousePos({
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top,
+            });
+        }
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
     };
 
-    const handleConnectEnd = (e: React.MouseEvent, targetId: string) => {
-        e.stopPropagation();
-        if (connectingSourceId && connectingSourceId !== targetId) {
-            const newNodes = internalNodes.map(n => {
-                if (n.id === connectingSourceId) {
-                    // Basic list logic: update nextId
-                    return { ...n, nextId: targetId };
+    const handlePointerMove = (e: React.PointerEvent) => {
+        if (readOnly) return;
+        
+        if (draggingNodeId) {
+            const dx = e.clientX - dragPos.current.startX;
+            const dy = e.clientY - dragPos.current.startY;
+            const newNodes = internalNodes.map((n) => {
+                if (n.id === draggingNodeId) {
+                    return { ...n, x: dragPos.current.nodeX + dx, y: dragPos.current.nodeY + dy };
                 }
                 return n;
             });
-            handleUpdate(newNodes);
+            setInternalNodes(newNodes);
+        } else if (connectingSourceId) {
+            const rect = containerRef.current?.getBoundingClientRect();
+            if (rect) {
+                setMousePos({
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top,
+                });
+            }
         }
-        setConnectingSourceId(null);
     };
 
-    const handleBackgroundClick = () => {
-        setConnectingSourceId(null);
+    const handlePointerUp = (e: React.PointerEvent) => {
+        if (draggingNodeId) {
+            handleUpdate(internalNodes);
+            setDraggingNodeId(null);
+            (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+        }
+        
+        if (connectingSourceId) {
+            const elements = document.elementsFromPoint(e.clientX, e.clientY);
+            const targetNodeEl = elements.find(el => el.hasAttribute('data-node-id'));
+            
+            if (targetNodeEl) {
+                const targetId = targetNodeEl.getAttribute('data-node-id');
+                if (targetId && targetId !== connectingSourceId) {
+                     const newNodes = internalNodes.map(n => {
+                        if (n.id === connectingSourceId) {
+                            return { ...n, nextId: targetId };
+                        }
+                        return n;
+                    });
+                    handleUpdate(newNodes);
+                }
+            }
+            
+            setConnectingSourceId(null);
+            (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+        }
     };
 
     return (
         <div
             ref={containerRef}
-            className="w-full h-full relative bg-slate-50 dark:bg-slate-900/50 rounded-xl border overflow-hidden cursor-crosshair"
-            onClick={handleBackgroundClick}
+            className="w-full h-full relative bg-slate-50 dark:bg-slate-900/50 rounded-xl border overflow-hidden cursor-crosshair touch-none"
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
         >
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
                 style={{
@@ -85,6 +135,9 @@ export function AlgorithmVisualizer({ nodes, onNodesChange, readOnly = false }: 
                 <defs>
                     <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="28" refY="3.5" orient="auto">
                         <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+                    </marker>
+                    <marker id="arrowhead-draft" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6" />
                     </marker>
                 </defs>
                 {internalNodes.map(node => {
@@ -105,23 +158,28 @@ export function AlgorithmVisualizer({ nodes, onNodesChange, readOnly = false }: 
                 })}
 
                 {/* Draft Connection Line */}
-                {connectingSourceId && (
-                    // In a real app we'd track mouse position for the other end, 
-                    // but for MVP let's just highlight the node or show a partial state.
-                    // Skipping dynamic mouse tracking for simplicity in this artifact, 
-                    // relying on visual 'selection' state of source node.
-                    <></>
-                )}
+                {connectingSourceId && (() => {
+                    const sourceNode = internalNodes.find(n => n.id === connectingSourceId);
+                    if (!sourceNode) return null;
+                    return (
+                        <line
+                            x1={sourceNode.x + 30} y1={sourceNode.y + 30}
+                            x2={mousePos.x} y2={mousePos.y}
+                            stroke="#3b82f6"
+                            strokeWidth="2"
+                            strokeDasharray="5,5"
+                            markerEnd="url(#arrowhead-draft)"
+                        />
+                    );
+                })()}
             </svg>
 
             <AnimatePresence>
                 {internalNodes.map((node) => (
                     <motion.div
                         key={node.id}
-                        drag={!readOnly}
-                        dragMomentum={false}
-                        onDrag={(_, info) => handleNodeDrag(node.id, info)}
-                        onDragEnd={() => handleNodeDragEnd(node.id)}
+                        data-node-id={node.id}
+                        onPointerDown={(e) => handlePointerDownNode(e, node.id)}
                         initial={{ scale: 0, opacity: 0 }}
                         animate={{
                             x: node.x,
@@ -130,21 +188,21 @@ export function AlgorithmVisualizer({ nodes, onNodesChange, readOnly = false }: 
                             opacity: 1,
                             borderColor: connectingSourceId === node.id ? "#3b82f6" : "transparent"
                         }}
+                        transition={draggingNodeId === node.id ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 30 }}
                         className={cn(
-                            "absolute w-[60px] h-[60px] flex items-center justify-center rounded-lg shadow-sm border-2 font-bold text-lg select-none z-10",
-                            node.type === "array-node" ? "bg-emerald-100 dark:bg-emerald-900 border-emerald-200 dark:border-emerald-800 rounded-none transform-none" : "", // Arrays are square blocks
-                            node.type === "list-node" ? "bg-blue-100 dark:bg-blue-900 border-blue-200 dark:border-blue-800 rounded-full" : "", // Lists are circles
+                            "absolute w-[60px] h-[60px] flex items-center justify-center rounded-lg shadow-sm border-2 font-bold text-lg select-none z-10 touch-none",
+                            node.type === "array-node" ? "bg-emerald-100 dark:bg-emerald-900 border-emerald-200 dark:border-emerald-800 rounded-none transform-none" : "",
+                            node.type === "list-node" ? "bg-blue-100 dark:bg-blue-900 border-blue-200 dark:border-blue-800 rounded-full" : "",
                             connectingSourceId === node.id && "ring-2 ring-blue-500 ring-offset-2"
                         )}
-                        onClick={(e) => handleConnectEnd(e, node.id)}
                     >
                         {node.value}
 
                         {/* Connection Handle (Only for lists) */}
                         {!readOnly && node.type === "list-node" && (
                             <div
-                                className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-slate-400 rounded-full cursor-pointer hover:bg-slate-600 hover:scale-125 transition-all"
-                                onClick={(e) => handleConnectStart(e, node.id)}
+                                className="connect-handle absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-slate-400 rounded-full cursor-pointer hover:bg-slate-600 hover:scale-125 transition-all touch-none"
+                                onPointerDown={(e) => handlePointerDownHandle(e, node.id)}
                                 title="Drag to connect"
                             />
                         )}

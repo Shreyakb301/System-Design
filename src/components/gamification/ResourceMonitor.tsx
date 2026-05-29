@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { GameState } from "@/lib/gamification/types";
-import { Activity, DollarSign, Users, Zap } from "lucide-react";
+import { Activity, DollarSign, Gauge, LucideIcon, Users, Zap } from "lucide-react";
 
 interface ResourceMonitorProps {
     metrics: GameState["metrics"];
@@ -31,23 +31,33 @@ export function ResourceMonitor({ metrics, budget }: ResourceMonitorProps) {
             />
 
             <StatsCard
-                label="User Satisfaction"
-                value={`${metrics.userSatisfaction}/100`}
-                icon={Users}
-                color={metrics.userSatisfaction > 80 ? "text-blue-500" : "text-indigo-500"}
+                label="Throughput"
+                value={`${metrics.throughput} RPS`}
+                icon={Gauge}
+                color={metrics.throughput >= 500 ? "text-blue-500" : "text-indigo-500"}
             />
 
             <StatsCard
-                label="Budget Remaining"
-                value={`$${budget}`}
-                icon={DollarSign}
-                color={isBudgetGood ? "text-emerald-500" : "text-red-500"}
+                label={budget >= 0 ? "Budget Remaining" : "Demo Mode"}
+                value={budget >= 0 ? `$${budget}` : "Not tracked"}
+                icon={budget >= 0 ? DollarSign : Users}
+                color={budget >= 0 ? (isBudgetGood ? "text-emerald-500" : "text-red-500") : "text-slate-500"}
             />
         </div>
     );
 }
 
-function StatsCard({ label, value, icon: Icon, color }: { label: string, value: string, icon: any, color: string }) {
+function StatsCard({
+    label,
+    value,
+    icon: Icon,
+    color,
+}: {
+    label: string;
+    value: string;
+    icon: LucideIcon;
+    color: string;
+}) {
     return (
         <Card className="p-4 flex items-center justify-between shadow-sm">
             <div>

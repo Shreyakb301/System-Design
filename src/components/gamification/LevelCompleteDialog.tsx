@@ -1,3 +1,5 @@
+"use client";
+
 import {
     Dialog,
     DialogContent,
@@ -50,10 +52,10 @@ export function LevelCompleteDialog({
                         <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-full text-yellow-600 dark:text-yellow-400">
                             <Trophy className="h-6 w-6" />
                         </div>
-                        <DialogTitle className="text-xl">Level Complete!</DialogTitle>
+                        <DialogTitle className="text-xl">Exercise complete</DialogTitle>
                     </div>
                     <DialogDescription>
-                        Great job! You've successfully architected a system that meets all requirements.
+                        The current setup satisfies the goal state. Replay it or continue to the next exercise.
                     </DialogDescription>
                 </DialogHeader>
 

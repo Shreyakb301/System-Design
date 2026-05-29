@@ -17,28 +17,28 @@ export default function SystemDesignPage() {
             <div className="space-y-6">
                 {/* Featured Challenge Banner */}
                 <Link href="/system-design/challenge">
-                    <Card className="p-8 bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-none shadow-lg hover:shadow-xl transition-all hover:scale-[1.01] cursor-pointer group relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Card className="group relative cursor-pointer overflow-hidden border-slate-200 bg-slate-950 p-8 text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl">
+                        <div className="absolute top-0 right-0 p-12 opacity-10 transition-opacity group-hover:opacity-20">
                             <Trophy className="w-64 h-64 -mr-16 -mt-16 rotate-12" />
                         </div>
                         <div className="relative z-10 flex items-start justify-between">
                             <div className="space-y-4 max-w-xl">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-sm font-medium backdrop-blur-sm">
+                                <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm font-medium backdrop-blur-sm">
                                     <Sparkles className="w-4 h-4" />
-                                    <span>New: Interactive Mode</span>
+                                    <span>Interactive prototype in progress</span>
                                 </div>
                                 <h2 className="text-3xl font-bold">System Architect Challenge</h2>
                                 <p className="text-lg text-white/90">
-                                    Put your knowledge to the test! Build, scale, and optimize real-time systems in our new gamified simulation.
-                                    Can you handle 10k RPS without crashing?
+                                    Add components, adjust the architecture, and watch latency, reliability,
+                                    and cost respond as the system changes.
                                 </p>
-                                <div className="inline-flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-lg font-semibold mt-2 group-hover:bg-white/90 transition-colors">
-                                    Start Challenge
+                                <div className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 font-semibold text-slate-950 transition-colors group-hover:bg-slate-100">
+                                    Try the prototype
                                     <ArrowRight className="w-4 h-4" />
                                 </div>
                             </div>
-                            <div className="hidden md:block p-4 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/20">
-                                <Trophy className="w-16 h-16 text-yellow-300 drop-shadow-lg" />
+                            <div className="hidden rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm md:block">
+                                <Trophy className="w-16 h-16 text-emerald-200 drop-shadow-lg" />
                             </div>
                         </div>
                     </Card>

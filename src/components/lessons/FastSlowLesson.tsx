@@ -1,103 +1,132 @@
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { FastSlowVisual } from "@/components/visuals/FastSlowVisual";
 
+const naiveComparisonRows = [
+  {
+    aspect: "Cycle detection",
+    naive: "Store every visited node in a set, check membership on each step",
+    pattern: "Two pointers - if they ever meet, a cycle exists",
+  },
+  {
+    aspect: "Time",
+    naive: "O(n)",
+    pattern: "O(n)",
+  },
+  {
+    aspect: "Space",
+    naive: "O(n) - stores every node",
+    pattern: "O(1) - just two pointers",
+  },
+  {
+    aspect: "Why it matters",
+    naive: "Works, but memory grows with list size",
+    pattern: "Memory is constant regardless of list size - no set needed",
+  },
+];
+
 const comparisonRows = [
   {
-    aspect: "Main job",
-    middle: "Find the middle node without first counting the whole list.",
-    cycle: "Detect whether the next pointers eventually loop back into the list.",
+    aspect: "Goal",
+    middle: "Find the midpoint without counting",
+    cycle: "Detect whether next pointers loop back",
   },
   {
-    aspect: "Slow pointer",
-    middle: "Moves one hop each step and ends at the middle when fast reaches the end.",
-    cycle: "Moves one hop each step and helps reveal when the two pointers meet.",
-  },
-  {
-    aspect: "Fast pointer",
-    middle: "Moves two hops each step, so it reaches the end sooner.",
-    cycle: "Moves two hops each step, so it laps slow inside the cycle.",
+    aspect: "Key moment",
+    middle: "When fast reaches null",
+    cycle: "When slow and fast land on the same node",
   },
   {
     aspect: "Why it works",
-    middle: "Fast covers the list twice as quickly, so slow is halfway when fast finishes.",
-    cycle: "If a loop exists, two runners moving at different speeds must eventually land on the same node.",
+    middle: "Fast covers 2x the distance, so slow is halfway when fast finishes",
+    cycle: "Inside a cycle, fast gains 1 node per step on slow - it must catch up",
+  },
+  {
+    aspect: "Return value",
+    middle: "slow (the middle node)",
+    cycle: "true / false",
+  },
+  {
+    aspect: "Complexity",
+    middle: "O(n) time, O(1) space",
+    cycle: "O(n) time, O(1) space",
   },
 ];
 
 const takeaways = [
-  "Fast and slow pointers use two speeds on the same linked list.",
-  "The middle-node version works because fast reaches the end while slow only travels half as far.",
-  "The cycle-detection version works because the faster pointer eventually catches the slower one inside the loop.",
-  "Both patterns run in O(n) time and use O(1) extra space.",
+  "The entire pattern is one insight: fast covers twice the distance of slow in the same number of steps.",
+  "Find Middle: when fast hits null, slow is at the exact midpoint - no length count needed.",
+  "Detect Cycle: inside any loop, a pointer moving 2x faster than another must eventually lap it. Meeting = cycle.",
+  "Both patterns use O(1) space - no array, no set, no visited map. Just two pointers.",
+  "If the list is null or has one node, fast hits null immediately - handle that edge case first.",
 ];
 
 export function FastSlowLesson() {
   return (
     <div className="box-border w-full min-w-0 max-w-full space-y-12">
       <section className="space-y-5">
+        <div className="rounded-[1.5rem] border bg-muted/40 p-6">
+          <div className="space-y-3">
+            <p className="max-w-4xl leading-7 text-foreground">
+              The input is a linked list and you need to find the middle node, detect a
+              cycle, or find where a cycle begins - without storing visited nodes. The
+              speed difference is the entire trick.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Pointer Pattern</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
-            Fast and slow pointers read one linked list at two different speeds
+            The speed difference beats the naive set approach without extra memory
           </h2>
           <p className="leading-7 text-muted-foreground">
-            This pattern places two pointers on the same linked list. The slow pointer
-            moves one node at a time, while the fast pointer moves two. That small speed
-            difference is enough to solve two common problems: finding the middle node and
-            detecting whether a cycle exists.
+            Fast and slow pointers matters because it solves linked-list problems in one
+            pass without remembering every node you have seen. The speed gap is not just
+            an implementation detail - it is the proof.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>How to read the demo</CardTitle>
-              <CardDescription>
-                Watch the two highlighted pointers move through the same list.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                <strong>Slow</strong> advances one hop per step. <strong>Fast</strong>
-                advances two hops per step.
-              </p>
-              <p>
-                In <strong>Find Middle</strong>, the key moment is when fast reaches the
-                end of the list. In <strong>Detect Cycle</strong>, the key moment is when
-                the two pointers land on the same node.
-              </p>
-            </CardContent>
-          </Card>
+        <div className="overflow-x-auto rounded-xl border">
+          <table className="w-full min-w-[760px] text-left text-sm">
+            <thead className="bg-muted/50">
+              <tr className="border-b">
+                <th className="px-4 py-3 font-semibold">Aspect</th>
+                <th className="px-4 py-3 font-semibold">Naive (HashSet)</th>
+                <th className="px-4 py-3 font-semibold">Fast &amp; Slow</th>
+              </tr>
+            </thead>
+            <tbody>
+              {naiveComparisonRows.map((row) => (
+                <tr key={row.aspect} className="border-b last:border-0">
+                  <td className="px-4 py-3 font-medium">{row.aspect}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{row.naive}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{row.pattern}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>What to try in the demo</CardTitle>
-              <CardDescription>
-                Step through both scenarios and compare what the speed difference reveals.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                In <strong>Find Middle</strong>, step until fast runs out of list. Notice
-                where slow stops.
-              </p>
-              <p>
-                In <strong>Detect Cycle</strong>, watch the tail loop back into the list,
-                then keep stepping until fast catches slow inside the cycle.
-              </p>
-              <p>
-                Use <strong>Auto Play</strong> to watch the motion continuously, or{" "}
-                <strong>Reset</strong> to replay the same example.
-              </p>
-            </CardContent>
-          </Card>
+        <p className="text-sm leading-7 text-muted-foreground">
+          If a cycle exists, the fast pointer laps the slow pointer inside the loop - they
+          must eventually land on the same node. That is the entire proof.
+        </p>
+      </section>
+
+      <section className="space-y-5">
+        <div className="space-y-3">
+          <h2 className="text-2xl font-bold tracking-tight">
+            See the mechanic, then the reason behind it
+          </h2>
+          <p className="leading-7 text-muted-foreground">
+            The card below uses the same structure as the two-pointers page: tabs,
+            progress dots, step controls, side-by-side What / Why insight, and a fixed
+            code panel. The linked-list motion is the only thing that changes.
+          </p>
         </div>
 
         <FastSlowVisual />
@@ -105,49 +134,17 @@ export function FastSlowLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Pattern Uses</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
-            One speed difference solves two different linked-list questions
+            One speed difference solves two classic linked-list problems
           </h2>
           <p className="leading-7 text-muted-foreground">
-            The setup is the same in both demos, but the goal changes. One version finds
-            the midpoint of a finite list. The other checks whether the list ever loops
-            back into itself.
+            The loop looks almost identical in both problems. The difference is what you
+            are waiting for: null in one case, a meeting point in the other.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Find Middle</CardTitle>
-              <CardDescription>
-                Useful when you need the midpoint without a separate counting pass.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>Slow moves once while fast moves twice.</p>
-              <p>When fast reaches the end, slow has only covered half the distance.</p>
-              <p>That leaves slow at the middle node.</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Detect Cycle</CardTitle>
-              <CardDescription>
-                Useful when you need to know whether the list ever loops back.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>Slow and fast both enter the loop if a cycle exists.</p>
-              <p>Fast gains one node on slow during each step inside the cycle.</p>
-              <p>That guarantees a meeting point, which proves the cycle exists.</p>
-            </CardContent>
-          </Card>
-        </div>
-
         <div className="overflow-x-auto rounded-xl border">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="bg-muted/50">
               <tr className="border-b">
                 <th className="px-4 py-3 font-semibold">Aspect</th>
@@ -170,7 +167,6 @@ export function FastSlowLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Key Takeaways</Badge>
           <h2 className="text-2xl font-bold tracking-tight">The short version</h2>
         </div>
 

@@ -14,6 +14,8 @@ export function calculateSystemMetrics(
     const hasLB = components.some(c => c.type === "load-balancer");
     const hasCache = components.some(c => c.type === "cache");
     const hasCDN = components.some(c => c.type === "cdn");
+    const hasQueue = components.some(c => c.type === "queue");
+    const hasFirewall = components.some(c => c.type === "firewall");
     const dbCount = components.filter(c => c.type === "database").length;
 
     let baseLatency = 300; // Unoptimized base
@@ -22,6 +24,10 @@ export function calculateSystemMetrics(
     if (hasLB && serverCount > 1) baseLatency *= 0.6; // LB helps distribution
     if (hasCache) baseLatency *= 0.5; // Cache creates huge win
     if (hasCDN) baseLatency *= 0.8; // CDN helps static assets
+    if (hasQueue && traffic > serverCount * COMPONENT_CATALOG.server.capacity * 0.8) {
+        baseLatency *= 0.85; // absorbs spikes when traffic surges
+    }
+    if (hasFirewall) baseLatency *= 1.03; // small inspection overhead
 
     // Bottlenecks
     if (serverCount === 0) baseLatency = 10000; // Broken system
@@ -44,11 +50,18 @@ export function calculateSystemMetrics(
     let reliability = 0.95;
     if (serverCount > 1 && hasLB) reliability = 0.99;
     if (serverCount > 2 && dbCount > 1) reliability = 0.999;
+    if (hasFirewall) reliability = Math.min(0.9999, reliability + 0.004);
+    if (hasQueue) reliability = Math.min(0.9999, reliability + 0.003);
 
     // If overloaded, reliability drops
     if (finalLatency > 1000) reliability = Math.max(0.5, reliability - 0.2);
 
-    const throughput = Math.min(traffic, serverCount * 120); // Simplified throughput cap
+    let throughputCapacity = serverCount * 120;
+    if (hasLB) throughputCapacity += 160;
+    if (hasCache) throughputCapacity += 220;
+    if (hasCDN) throughputCapacity += 180;
+    if (hasQueue) throughputCapacity += 140;
+    const throughput = Math.min(traffic, throughputCapacity);
 
     // 3. User Satisfaction (0-100)
     // 100ms = 100, 1000ms = 0

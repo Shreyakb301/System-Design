@@ -3,32 +3,27 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
     Radio,
     Send,
     Users,
     MessageSquare,
-    Activity,
-    BarChart3,
     Zap,
     CheckCircle2,
     AlertCircle,
-    Clock,
-    Network,
-    Layers,
     Play,
     Pause,
+    Info,
     Plus,
-    Minus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Topic {
     id: string;
     name: string;
-    subscribers: string[];
+    color: string;
     messageCount: number;
 }
 
@@ -43,7 +38,6 @@ interface Message {
 interface Publisher {
     id: string;
     name: string;
-    topicId?: string;
     publishedCount: number;
 }
 
@@ -54,446 +48,296 @@ interface Subscriber {
     receivedCount: number;
 }
 
+const TOPICS: Topic[] = [
+    { id: "t1", name: "user-events", color: "blue", messageCount: 0 },
+    { id: "t2", name: "notifications", color: "purple", messageCount: 0 },
+    { id: "t3", name: "analytics", color: "green", messageCount: 0 },
+];
+
+const topicColorMap: Record<string, string> = {
+    blue: "bg-blue-500",
+    purple: "bg-purple-500",
+    green: "bg-green-500",
+};
+const topicLightMap: Record<string, string> = {
+    blue: "bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700",
+    purple: "bg-purple-50 dark:bg-purple-950/30 border-purple-300 dark:border-purple-700",
+    green: "bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-700",
+};
+const topicTextMap: Record<string, string> = {
+    blue: "text-blue-600 dark:text-blue-400",
+    purple: "text-purple-600 dark:text-purple-400",
+    green: "text-green-600 dark:text-green-400",
+};
+
 export function PubSubVisual() {
-    const [topics, setTopics] = useState<Topic[]>([
-        { id: "t1", name: "user-events", subscribers: [], messageCount: 0 },
-        { id: "t2", name: "notifications", subscribers: [], messageCount: 0 },
-        { id: "t3", name: "analytics", subscribers: [], messageCount: 0 },
-    ]);
+    const [topics, setTopics] = useState<Topic[]>(TOPICS);
     const [publishers, setPublishers] = useState<Publisher[]>([
-        { id: "p1", name: "Publisher 1", publishedCount: 0 },
+        { id: "p1", name: "Pub 1", publishedCount: 0 },
     ]);
     const [subscribers, setSubscribers] = useState<Subscriber[]>([
-        { id: "s1", name: "Subscriber 1", topicIds: ["t1"], receivedCount: 0 },
-        { id: "s2", name: "Subscriber 2", topicIds: ["t1", "t2"], receivedCount: 0 },
+        { id: "s1", name: "Sub 1", topicIds: ["t1"], receivedCount: 0 },
+        { id: "s2", name: "Sub 2", topicIds: ["t1", "t2"], receivedCount: 0 },
     ]);
     const [messages, setMessages] = useState<Message[]>([]);
     const [isAutoRunning, setIsAutoRunning] = useState(true);
 
-    // Initialize subscribers for topics
-    useEffect(() => {
-        setTopics(prev => prev.map(topic => ({
-            ...topic,
-            subscribers: subscribers
-                .filter(s => s.topicIds.includes(topic.id))
-                .map(s => s.id),
-        })));
-    }, [subscribers]);
+    const topicSubscribers = useMemo(() =>
+        topics.reduce<Record<string, string[]>>((acc, t) => {
+            acc[t.id] = subscribers.filter(s => s.topicIds.includes(t.id)).map(s => s.id);
+            return acc;
+        }, {}),
+        [topics, subscribers]
+    );
 
     const publishMessage = useCallback((publisherId: string, topicId: string) => {
-        const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const content = `Event-${Math.random().toString(36).substr(2, 5)}`;
-        
-        const topic = topics.find(t => t.id === topicId);
-        if (!topic) return;
+        const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+        const content = `Evt-${Math.random().toString(36).substr(2, 4)}`;
+        const subscriberIds = topicSubscribers[topicId] ?? [];
 
-        const message: Message = {
-            id: messageId,
-            topicId,
-            content,
-            timestamp: Date.now(),
-            deliveredTo: [],
-        };
+        setMessages(prev => [...prev, { id: messageId, topicId, content, timestamp: Date.now(), deliveredTo: [] }]);
+        setTopics(prev => prev.map(t => t.id === topicId ? { ...t, messageCount: t.messageCount + 1 } : t));
+        setPublishers(prev => prev.map(p => p.id === publisherId ? { ...p, publishedCount: p.publishedCount + 1 } : p));
 
-        setMessages(prev => [...prev, message]);
-        setTopics(prev => prev.map(t => 
-            t.id === topicId ? { ...t, messageCount: t.messageCount + 1 } : t
-        ));
-        setPublishers(prev => prev.map(p => 
-            p.id === publisherId ? { ...p, publishedCount: p.publishedCount + 1 } : p
-        ));
-
-        // Deliver to all subscribers
-        topic.subscribers.forEach((subscriberId, idx) => {
+        subscriberIds.forEach((sId, idx) => {
             setTimeout(() => {
-                setMessages(prev => prev.map(m => 
-                    m.id === messageId 
-                        ? { ...m, deliveredTo: [...m.deliveredTo, subscriberId] }
-                        : m
-                ));
-                setSubscribers(prev => prev.map(s => 
-                    s.id === subscriberId 
-                        ? { ...s, receivedCount: s.receivedCount + 1 }
-                        : s
-                ));
-            }, idx * 100);
+                setMessages(prev => prev.map(m => m.id === messageId ? { ...m, deliveredTo: [...m.deliveredTo, sId] } : m));
+                setSubscribers(prev => prev.map(s => s.id === sId ? { ...s, receivedCount: s.receivedCount + 1 } : s));
+            }, idx * 150);
         });
 
-        // Clean up message
-        setTimeout(() => {
-            setMessages(prev => prev.filter(m => m.id !== messageId));
-        }, 5000);
-    }, [topics]);
+        setTimeout(() => setMessages(prev => prev.filter(m => m.id !== messageId)), 4000);
+    }, [topicSubscribers]);
 
-    // Auto-publish messages
     useEffect(() => {
         if (!isAutoRunning || publishers.length === 0) return;
         const interval = setInterval(() => {
-            const publisher = publishers[Math.floor(Math.random() * publishers.length)];
+            const pub = publishers[Math.floor(Math.random() * publishers.length)];
             const topic = topics[Math.floor(Math.random() * topics.length)];
-            if (publisher && topic) {
-                publishMessage(publisher.id, topic.id);
-            }
-        }, 2000);
+            if (pub && topic) publishMessage(pub.id, topic.id);
+        }, 1800);
         return () => clearInterval(interval);
     }, [isAutoRunning, publishers, topics, publishMessage]);
-
-    const addPublisher = () => {
-        const newId = `p${publishers.length + 1}`;
-        setPublishers(prev => [...prev, {
-            id: newId,
-            name: `Publisher ${publishers.length + 1}`,
-            publishedCount: 0,
-        }]);
-    };
-
-    const addSubscriber = () => {
-        const newId = `s${subscribers.length + 1}`;
-        setSubscribers(prev => [...prev, {
-            id: newId,
-            name: `Subscriber ${subscribers.length + 1}`,
-            topicIds: [],
-            receivedCount: 0,
-        }]);
-    };
 
     const toggleSubscription = (subscriberId: string, topicId: string) => {
         setSubscribers(prev => prev.map(s => {
             if (s.id !== subscriberId) return s;
-            const hasTopic = s.topicIds.includes(topicId);
-            return {
-                ...s,
-                topicIds: hasTopic
-                    ? s.topicIds.filter(id => id !== topicId)
-                    : [...s.topicIds, topicId],
-            };
+            return { ...s, topicIds: s.topicIds.includes(topicId) ? s.topicIds.filter(id => id !== topicId) : [...s.topicIds, topicId] };
         }));
     };
 
-    const metrics = useMemo(() => {
-        const totalPublished = publishers.reduce((sum, p) => sum + p.publishedCount, 0);
-        const totalReceived = subscribers.reduce((sum, s) => sum + s.receivedCount, 0);
-        const activeMessages = messages.length;
-        const totalSubscriptions = subscribers.reduce((sum, s) => sum + s.topicIds.length, 0);
-        return { totalPublished, totalReceived, activeMessages, totalSubscriptions };
-    }, [publishers, subscribers, messages]);
+    const metrics = useMemo(() => ({
+        totalPublished: publishers.reduce((sum, p) => sum + p.publishedCount, 0),
+        totalReceived: subscribers.reduce((sum, s) => sum + s.receivedCount, 0),
+        activeMessages: messages.length,
+        totalSubscriptions: subscribers.reduce((sum, s) => sum + s.topicIds.length, 0),
+    }), [publishers, subscribers, messages]);
 
     return (
-        <Card className="p-8 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 shadow-3xl flex flex-col gap-10">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-                <div>
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-500 rounded-xl shadow-lg shadow-purple-500/20">
-                            <Radio className="w-6 h-6 text-white" />
-                        </div>
-                    </div>
-                    <p className="mt-2 text-sm text-slate-500 font-semibold italic">
-                        Understand event-driven messaging with topics and subscribers
-                    </p>
-                </div>
+        <>
+            <Card className="p-4 md:p-8 bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 shadow-xl relative">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-violet-500" />
 
-                <div className="flex gap-4">
-                    <Button
-                        onClick={() => setIsAutoRunning(!isAutoRunning)}
-                        variant={isAutoRunning ? "default" : "outline"}
-                        size="sm"
-                    >
-                        {isAutoRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                        {isAutoRunning ? "Pause" : "Resume"}
-                    </Button>
-                </div>
-            </div>
-
-            {/* Main Visualization */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                {/* Pub-Sub Flow */}
-                <div className="lg:col-span-8 space-y-6">
-                    {/* Publishers */}
-                    <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                        <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                                <Send className="w-3.5 h-3.5" /> Publishers
-                            </h4>
-                            <Button
-                                onClick={addPublisher}
-                                size="sm"
-                                variant="outline"
-                                disabled={publishers.length >= 5}
-                            >
-                                <Plus className="w-4 h-4" /> Add
-                            </Button>
+                <div className="flex flex-col gap-8">
+                    {/* Canvas */}
+                    <div className="w-full h-[450px] bg-white dark:bg-slate-950 rounded-2xl border-2 border-slate-100 dark:border-slate-800 relative shadow-inner bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px] overflow-hidden flex gap-3 p-4">
+                        <div className="absolute top-3 left-4 flex items-center gap-2 z-10">
+                            <Radio className="w-4 h-4 text-purple-500" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pub/Sub Simulation</span>
                         </div>
-                        <div className="grid grid-cols-3 gap-4">
-                            {publishers.map((publisher) => (
-                                <motion.div
-                                    key={publisher.id}
-                                    className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950 border-2 border-blue-500"
-                                >
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Send className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                                        <span className="font-bold text-sm">{publisher.name}</span>
-                                    </div>
-                                    <div className="text-xs text-slate-600 dark:text-slate-400">
-                                        Published: <span className="font-bold">{publisher.publishedCount}</span>
-                                    </div>
-                                </motion.div>
+
+                        {/* Publishers */}
+                        <div className="flex flex-col gap-2 shrink-0 w-24 mt-8">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 text-center mb-1">Publishers</span>
+                            {publishers.map(pub => (
+                                <div key={pub.id} className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-200 dark:border-blue-800 text-center">
+                                    <Send className="w-4 h-4 text-blue-500 mx-auto mb-1" />
+                                    <span className="text-[9px] font-black text-slate-600 dark:text-slate-300 block">{pub.name}</span>
+                                    <span className="text-[8px] text-slate-400">sent: {pub.publishedCount}</span>
+                                </div>
                             ))}
                         </div>
-                    </Card>
 
-                    {/* Topics */}
-                    <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
-                            <MessageSquare className="w-3.5 h-3.5" /> Topics
-                        </h4>
-                        <div className="grid grid-cols-3 gap-4">
-                            {topics.map((topic) => {
-                                const activeMessages = messages.filter(m => m.topicId === topic.id);
-                                return (
-                                    <motion.div
-                                        key={topic.id}
-                                        className={cn(
-                                            "p-4 rounded-lg border-2 transition-all relative",
-                                            activeMessages.length > 0
-                                                ? "bg-purple-50 dark:bg-purple-950 border-purple-500 ring-4 ring-purple-400"
-                                                : "bg-slate-50 dark:bg-slate-800 border-slate-300"
-                                        )}
-                                        animate={{
-                                            scale: activeMessages.length > 0 ? [1, 1.05, 1] : 1,
-                                        }}
-                                        transition={{ duration: 0.5, repeat: activeMessages.length > 0 ? Infinity : 0 }}
-                                    >
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="flex items-center gap-2">
-                                                <Radio className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                                                <span className="font-bold text-sm">{topic.name}</span>
+                        {/* Flow lines + Topics */}
+                        <div className="flex-1 flex flex-col gap-2 mt-8 min-w-0">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 text-center mb-1">Topics</span>
+                            <div className="flex flex-col gap-3 flex-1">
+                                {topics.map(topic => {
+                                    const activeMsgs = messages.filter(m => m.topicId === topic.id);
+                                    const subCount = (topicSubscribers[topic.id] ?? []).length;
+                                    return (
+                                        <motion.div key={topic.id}
+                                            animate={{ scale: activeMsgs.length > 0 ? [1, 1.02, 1] : 1 }}
+                                            transition={{ duration: 0.4, repeat: activeMsgs.length > 0 ? Infinity : 0 }}
+                                            className={cn(
+                                                "flex items-center gap-3 p-3 rounded-xl border-2 transition-all",
+                                                activeMsgs.length > 0 ? topicLightMap[topic.color] : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                                            )}
+                                        >
+                                            <div className={cn("p-1.5 rounded-lg", topicColorMap[topic.color])}>
+                                                <MessageSquare className="w-3.5 h-3.5 text-white" />
                                             </div>
-                                            {activeMessages.length > 0 && (
-                                                <motion.div
-                                                    animate={{ rotate: 360 }}
-                                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                                >
-                                                    <Zap className="w-4 h-4 text-purple-500" />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-[9px] font-black text-slate-600 dark:text-slate-300 truncate">{topic.name}</div>
+                                                <div className="text-[8px] text-slate-400">{subCount} sub · {topic.messageCount} total</div>
+                                            </div>
+                                            {activeMsgs.length > 0 && (
+                                                <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
+                                                    <Zap className={cn("w-3.5 h-3.5", topicTextMap[topic.color])} />
                                                 </motion.div>
                                             )}
-                                        </div>
-                                        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
-                                            <div>
-                                                Subscribers: <span className="font-bold">{topic.subscribers.length}</span>
-                                            </div>
-                                            <div>
-                                                Messages: <span className="font-bold">{topic.messageCount}</span>
-                                            </div>
-                                        </div>
-                                        {activeMessages.length > 0 && (
-                                            <div className="mt-2 space-y-1">
-                                                {activeMessages.slice(0, 2).map(msg => (
-                                                    <div key={msg.id} className="text-xs font-mono bg-white dark:bg-slate-900 p-1 rounded">
-                                                        {msg.content}
-                                                    </div>
-                                                ))}
-                                            </div>
+                                            {activeMsgs.slice(0, 2).map(m => (
+                                                <motion.div key={m.id}
+                                                    initial={{ opacity: 0, scale: 0.8 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    exit={{ opacity: 0 }}
+                                                    className="text-[8px] font-mono bg-white dark:bg-slate-800 px-1 py-0.5 rounded border text-slate-500 shrink-0"
+                                                >
+                                                    {m.content}
+                                                </motion.div>
+                                            ))}
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Subscribers */}
+                        <div className="flex flex-col gap-2 shrink-0 w-32 mt-8">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 text-center mb-1">Subscribers</span>
+                            {subscribers.map(sub => {
+                                const isActive = messages.some(m => m.deliveredTo.includes(sub.id));
+                                return (
+                                    <motion.div key={sub.id}
+                                        animate={{ scale: isActive ? [1, 1.03, 1] : 1 }}
+                                        transition={{ duration: 0.3 }}
+                                        className={cn(
+                                            "p-2 rounded-xl border-2 transition-all",
+                                            isActive ? "bg-green-50 dark:bg-green-950/30 border-green-400" : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                                         )}
+                                    >
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <div className="flex items-center gap-1">
+                                                <Users className="w-3 h-3 text-green-500" />
+                                                <span className="text-[9px] font-black text-slate-600 dark:text-slate-300">{sub.name}</span>
+                                            </div>
+                                            {isActive && <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ repeat: Infinity, duration: 0.5 }} className="w-1.5 h-1.5 rounded-full bg-green-500" />}
+                                        </div>
+                                        <div className="text-[8px] text-slate-400 mb-1.5">rcvd: {sub.receivedCount}</div>
+                                        <div className="flex flex-wrap gap-1">
+                                            {topics.map(t => {
+                                                const subscribed = sub.topicIds.includes(t.id);
+                                                return (
+                                                    <button key={t.id} onClick={() => toggleSubscription(sub.id, t.id)}
+                                                        className={cn("text-[7px] px-1.5 py-0.5 rounded font-bold transition-all",
+                                                            subscribed ? topicColorMap[t.color] + " text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-500")}
+                                                    >
+                                                        {t.id}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                     </motion.div>
                                 );
                             })}
                         </div>
-                    </Card>
+                    </div>
 
-                    {/* Subscribers */}
-                    <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                        <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                                <Users className="w-3.5 h-3.5" /> Subscribers
-                            </h4>
+                    {/* Bottom Controls */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                        {/* Col 1: Controls */}
+                        <div className="space-y-3">
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Controls</h4>
                             <Button
-                                onClick={addSubscriber}
-                                size="sm"
-                                variant="outline"
-                                disabled={subscribers.length >= 5}
+                                onClick={() => setIsAutoRunning(!isAutoRunning)}
+                                className={cn("w-full gap-2 h-10 text-xs", isAutoRunning ? "bg-purple-600 hover:bg-purple-700 text-white" : "")}
+                                variant={isAutoRunning ? "default" : "outline"}
                             >
-                                <Plus className="w-4 h-4" /> Add
+                                {isAutoRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                                {isAutoRunning ? "Pause Auto-Publish" : "Resume Auto-Publish"}
                             </Button>
+                            <div className="grid grid-cols-2 gap-2">
+                                <Button variant="outline" onClick={() => publishers.length < 3 && setPublishers(prev => [...prev, { id: `p${prev.length + 1}`, name: `Pub ${prev.length + 1}`, publishedCount: 0 }])}
+                                    disabled={publishers.length >= 3} className="h-9 gap-1 text-xs">
+                                    <Plus className="w-3 h-3" /> Publisher
+                                </Button>
+                                <Button variant="outline" onClick={() => subscribers.length < 4 && setSubscribers(prev => [...prev, { id: `s${prev.length + 1}`, name: `Sub ${prev.length + 1}`, topicIds: [], receivedCount: 0 }])}
+                                    disabled={subscribers.length >= 4} className="h-9 gap-1 text-xs">
+                                    <Plus className="w-3 h-3" /> Subscriber
+                                </Button>
+                            </div>
+                            <p className="text-[10px] text-slate-400 leading-relaxed">
+                                Click topic buttons (t1/t2/t3) on each subscriber to toggle subscriptions.
+                            </p>
                         </div>
-                        <div className="space-y-3">
-                            {subscribers.map((subscriber) => (
-                                <motion.div
-                                    key={subscriber.id}
-                                    className="p-4 rounded-lg bg-green-50 dark:bg-green-950 border-2 border-green-500"
-                                >
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className="flex items-center gap-2">
-                                            <Users className="w-5 h-5 text-green-600 dark:text-green-400" />
-                                            <span className="font-bold">{subscriber.name}</span>
-                                        </div>
-                                        <div className="text-xs text-slate-600 dark:text-slate-400">
-                                            Received: <span className="font-bold">{subscriber.receivedCount}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {topics.map(topic => {
-                                            const isSubscribed = subscriber.topicIds.includes(topic.id);
-                                            return (
-                                                <button
-                                                    key={topic.id}
-                                                    onClick={() => toggleSubscription(subscriber.id, topic.id)}
-                                                    className={cn(
-                                                        "px-3 py-1 rounded text-xs font-bold transition-all",
-                                                        isSubscribed
-                                                            ? "bg-purple-500 text-white"
-                                                            : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
-                                                    )}
-                                                >
-                                                    {topic.name}
-                                                    {isSubscribed && <CheckCircle2 className="w-3 h-3 inline ml-1" />}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </Card>
 
-                    {/* Message Flow Animation */}
-                    <div className="relative h-32">
-                        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 30">
-                            <defs>
-                                <marker
-                                    id="pubsub-arrow"
-                                    markerWidth="10"
-                                    markerHeight="10"
-                                    refX="9"
-                                    refY="3"
-                                    orient="auto"
-                                >
-                                    <polygon points="0 0, 10 3, 0 6" fill="currentColor" />
-                                </marker>
-                            </defs>
-                            <AnimatePresence>
-                                {messages.map((message) => {
-                                    const topic = topics.find(t => t.id === message.topicId);
-                                    if (!topic) return null;
-                                    
-                                    return (
-                                        <g key={message.id}>
-                                            {/* Publisher to Topic */}
-                                            <motion.line
-                                                x1="10"
-                                                y1="15"
-                                                x2="50"
-                                                y2="15"
-                                                stroke="rgb(59, 130, 246)"
-                                                strokeWidth="0.3"
-                                                markerEnd="url(#pubsub-arrow)"
-                                                initial={{ pathLength: 0, opacity: 0 }}
-                                                animate={{ pathLength: 1, opacity: 0.6 }}
-                                                exit={{ opacity: 0 }}
-                                                transition={{ duration: 0.5 }}
-                                            />
-                                            {/* Topic to Subscribers */}
-                                            {topic.subscribers.map((subId, idx) => (
-                                                <motion.line
-                                                    key={subId}
-                                                    x1="50"
-                                                    y1="15"
-                                                    x2="90"
-                                                    y2={10 + idx * 5}
-                                                    stroke="rgb(168, 85, 247)"
-                                                    strokeWidth="0.2"
-                                                    strokeDasharray="0.3 0.3"
-                                                    markerEnd="url(#pubsub-arrow)"
-                                                    initial={{ pathLength: 0, opacity: 0 }}
-                                                    animate={{ pathLength: 1, opacity: 0.4 }}
-                                                    transition={{ duration: 0.5, delay: 0.5 + idx * 0.1 }}
-                                                />
-                                            ))}
-                                        </g>
-                                    );
-                                })}
-                            </AnimatePresence>
-                        </svg>
+                        {/* Col 2: Manual Publish */}
+                        <div className="space-y-3">
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Manual Publish</h4>
+                            <div className="flex flex-col gap-2">
+                                {topics.map(t => (
+                                    <button key={t.id} onClick={() => publishMessage("p1", t.id)}
+                                        className={cn("flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all text-white", topicColorMap[t.color], "hover:opacity-90")}
+                                    >
+                                        <Send className="w-3 h-3" /> Publish to {t.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Col 3: Metrics */}
+                        <div className="space-y-3 p-4 rounded-2xl bg-purple-500/5 border border-purple-500/20">
+                            <div className="flex items-center gap-2 text-xs font-bold text-purple-600 mb-2">
+                                <Zap className="w-4 h-4" /> Live Stats
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-[10px] text-slate-500">Published</span>
+                                    <span className="text-xs font-bold tabular-nums">{metrics.totalPublished}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-[10px] text-slate-500">Delivered</span>
+                                    <span className="text-xs font-bold tabular-nums">{metrics.totalReceived}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-[10px] text-slate-500 flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-500" /> Active Msgs</span>
+                                    <span className="text-xs font-bold tabular-nums text-purple-600">{metrics.activeMessages}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-[10px] text-slate-500 flex items-center gap-1"><AlertCircle className="w-3 h-3 text-orange-500" /> Subscriptions</span>
+                                    <span className="text-xs font-bold tabular-nums">{metrics.totalSubscriptions}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </Card>
 
-                {/* Metrics */}
-                <div className="lg:col-span-4 space-y-6">
-                    <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
-                            <BarChart3 className="w-3.5 h-3.5" /> Metrics
-                        </h4>
-                        <div className="space-y-4">
-                            <div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-xs font-bold text-slate-400">Total Published</span>
-                                    <span className="text-2xl font-black">{metrics.totalPublished}</span>
-                                </div>
-                            </div>
-                            <div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-xs font-bold text-slate-400">Total Received</span>
-                                    <span className="text-2xl font-black">{metrics.totalReceived}</span>
-                                </div>
-                            </div>
-                            <div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-xs font-bold text-slate-400">Active Messages</span>
-                                    <Badge className="bg-purple-500">{metrics.activeMessages}</Badge>
-                                </div>
-                            </div>
-                            <div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-xs font-bold text-slate-400">Subscriptions</span>
-                                    <Badge variant="outline">{metrics.totalSubscriptions}</Badge>
-                                </div>
-                            </div>
-                        </div>
-                    </Card>
-
-                    <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
-                            <Layers className="w-3.5 h-3.5" /> Pub-Sub Properties
-                        </h4>
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-xs">
-                                <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                <span>One-to-many messaging</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs">
-                                <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                <span>Decoupled publishers & subscribers</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs">
-                                <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                <span>Topic-based routing</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs">
-                                <AlertCircle className="w-4 h-4 text-orange-500" />
-                                <span>No message ordering guarantee</span>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-            </div>
-
-            {/* Educational Insight */}
-            <div className="bg-slate-900 dark:bg-white p-8 rounded-[2.5rem] text-slate-100 dark:text-slate-900 flex flex-col md:flex-row gap-8 items-center shadow-2xl relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="p-4 bg-purple-500 rounded-3xl shrink-0 shadow-xl shadow-purple-500/20">
-                    <Radio className="w-10 h-10 text-white" />
-                </div>
-                <div className="space-y-2 flex-1 relative z-10">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60">System Design Insight</h4>
-                    <div className="text-sm font-medium leading-relaxed opacity-90 tracking-tight">
-                        <strong>Pub-Sub</strong> enables event-driven architectures where publishers broadcast messages to topics,
-                        and all subscribers to that topic receive the message. This pattern provides <strong>loose coupling</strong>,
-                        allowing publishers and subscribers to evolve independently. Unlike queues, messages are delivered to
-                        <strong>all subscribers</strong>, making it ideal for notifications, event sourcing, and real-time
-                        updates. Use pub-sub when you need one-to-many message distribution.
+            {/* Explanations */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Info className="w-4 h-4 text-purple-500" />
+                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">What&apos;s happening?</h4>
                     </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Publishers broadcast events to topics (channels). Every subscriber that has subscribed to a topic automatically receives a copy of each message.
+                        Toggle the colored topic buttons on each subscriber to subscribe or unsubscribe in real time.
+                        Use <span className="font-semibold">Manual Publish</span> to push messages to specific topics and watch delivery fan out.
+                    </p>
+                </div>
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Radio className="w-4 h-4 text-purple-500" />
+                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Why it matters?</h4>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Pub/Sub enables <span className="font-semibold">one-to-many</span> messaging with loose coupling — publishers don&apos;t know who&apos;s listening.
+                        Unlike queues (one consumer per message), every subscriber gets their own copy.
+                        This is how systems like Google Pub/Sub, Kafka topics, and WebSocket rooms broadcast notifications, analytics events, and real-time updates to thousands of clients.
+                    </p>
                 </div>
             </div>
-        </Card>
+        </>
     );
 }

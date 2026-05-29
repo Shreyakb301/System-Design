@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -119,7 +118,6 @@ export function ArraysLesson() {
     <div className="space-y-12">
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Memory Model</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             Arrays store data in contiguous memory
           </h2>
@@ -186,7 +184,6 @@ export function ArraysLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Static vs Dynamic</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             Static arrays have fixed size. Dynamic arrays grow with capacity.
           </h2>
@@ -248,7 +245,6 @@ export function ArraysLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Resize Flow</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             What happens when a dynamic array runs out of capacity?
           </h2>
@@ -286,7 +282,6 @@ export function ArraysLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Operation Costs</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             End operations are cheap. Front operations are not.
           </h2>
@@ -364,7 +359,6 @@ export function ArraysLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Language Examples</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             The same ideas appear in real programming languages
           </h2>
@@ -390,7 +384,6 @@ export function ArraysLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Key Takeaways</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             The short version
           </h2>

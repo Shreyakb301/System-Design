@@ -1,25 +1,22 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
     Database,
     Copy,
-    Server,
     ArrowRight,
-    ArrowDown,
-    ArrowUp,
     RefreshCw,
-    Zap,
-    Activity,
-    BarChart3,
     CheckCircle2,
     AlertCircle,
-    Clock,
-    Network,
+    Play,
+    Pause,
+    Zap,
+    Info,
+    ArrowLeftRight,
     Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,414 +36,287 @@ interface WriteOperation {
     id: string;
     nodeId: string;
     data: string;
-    timestamp: number;
     status: "pending" | "replicating" | "completed";
 }
 
+function buildNodes(mode: ReplicationMode): Node[] {
+    const ts = Date.now();
+    if (mode === "master-slave") return [
+        { id: "master", type: "master", data: [], isActive: true, lastSync: ts },
+        { id: "slave1", type: "slave", data: [], isActive: true, lastSync: ts },
+        { id: "slave2", type: "slave", data: [], isActive: true, lastSync: ts },
+    ];
+    if (mode === "master-master") return [
+        { id: "master1", type: "master", data: [], isActive: true, lastSync: ts },
+        { id: "master2", type: "master", data: [], isActive: true, lastSync: ts },
+    ];
+    return [
+        { id: "shard1", type: "shard", shardKey: "A–M", data: [], isActive: true, lastSync: ts },
+        { id: "shard2", type: "shard", shardKey: "N–Z", data: [], isActive: true, lastSync: ts },
+        { id: "shard3", type: "shard", shardKey: "0–9", data: [], isActive: true, lastSync: ts },
+    ];
+}
+
+const modeInfo = {
+    "master-slave": { consistency: "Strong (master) / Eventual (slaves)", pros: ["Read scaling via replicas", "Simple failover"], cons: ["Single write bottleneck", "Replication lag"] },
+    "master-master": { consistency: "Eventual (conflict-resolution needed)", pros: ["No single point of failure", "Write anywhere"], cons: ["Conflict resolution required", "Higher complexity"] },
+    "sharding": { consistency: "Strong per shard", pros: ["Horizontal write scaling", "Data partitioning"], cons: ["Cross-shard queries complex", "Rebalancing hard"] },
+};
+
 export function ReplicationVisual() {
     const [mode, setMode] = useState<ReplicationMode>("master-slave");
-    const [nodes, setNodes] = useState<Node[]>([]);
+    const [nodes, setNodes] = useState<Node[]>(() => buildNodes("master-slave"));
     const [operations, setOperations] = useState<WriteOperation[]>([]);
     const [isAutoRunning, setIsAutoRunning] = useState(true);
-    const [writeLatency, setWriteLatency] = useState(0);
-    const [readLatency, setReadLatency] = useState(0);
-    const [consistency, setConsistency] = useState("Strong");
-
-    // Initialize nodes based on mode
-    useEffect(() => {
-        if (mode === "master-slave") {
-            setNodes([
-                { id: "master", type: "master", data: [], isActive: true, lastSync: Date.now() },
-                { id: "slave1", type: "slave", data: [], isActive: true, lastSync: Date.now() },
-                { id: "slave2", type: "slave", data: [], isActive: true, lastSync: Date.now() },
-            ]);
-            setConsistency("Strong (Read from master) / Eventual (Read from slave)");
-        } else if (mode === "master-master") {
-            setNodes([
-                { id: "master1", type: "master", data: [], isActive: true, lastSync: Date.now() },
-                { id: "master2", type: "master", data: [], isActive: true, lastSync: Date.now() },
-            ]);
-            setConsistency("Eventual (Conflict resolution needed)");
-        } else {
-            // Sharding
-            setNodes([
-                { id: "shard1", type: "shard", shardKey: "A-M", data: [], isActive: true, lastSync: Date.now() },
-                { id: "shard2", type: "shard", shardKey: "N-Z", data: [], isActive: true, lastSync: Date.now() },
-                { id: "shard3", type: "shard", shardKey: "0-9", data: [], isActive: true, lastSync: Date.now() },
-            ]);
-            setConsistency("Strong (Per shard)");
-        }
-    }, [mode]);
+    const nodesRef = useRef(nodes);
+    useEffect(() => { nodesRef.current = nodes; }, [nodes]);
 
     const handleWrite = useCallback((nodeId: string, data: string) => {
-        const opId = `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const operation: WriteOperation = {
-            id: opId,
-            nodeId,
-            data,
-            timestamp: Date.now(),
-            status: "pending",
-        };
+        const opId = `op-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+        setOperations(prev => [...prev, { id: opId, nodeId, data, status: "pending" }]);
+        setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, data: [...n.data.slice(-4), data] } : n));
 
-        setOperations(prev => [...prev, operation]);
-
-        // Update node data
-        setNodes(prev => prev.map(n => 
-            n.id === nodeId ? { ...n, data: [...n.data, data] } : n
-        ));
-
-        // Simulate replication
         setTimeout(() => {
-            setOperations(prev => prev.map(op => 
-                op.id === opId ? { ...op, status: "replicating" } : op
-            ));
-
-            if (mode === "master-slave") {
-                // Replicate to all slaves
-                const masterNode = nodes.find(n => n.id === nodeId);
-                if (masterNode && masterNode.type === "master") {
-                    setTimeout(() => {
-                        setNodes(prev => prev.map(n => 
-                            n.type === "slave" ? { ...n, data: [...n.data, data], lastSync: Date.now() } : n
-                        ));
-                        setOperations(prev => prev.map(op => 
-                            op.id === opId ? { ...op, status: "completed" } : op
-                        ));
-                    }, 200);
+            setOperations(prev => prev.map(op => op.id === opId ? { ...op, status: "replicating" } : op));
+            const delay = mode === "master-master" ? 350 : 200;
+            setTimeout(() => {
+                if (mode === "master-slave") {
+                    setNodes(prev => prev.map(n => n.type === "slave" ? { ...n, data: [...n.data.slice(-4), data], lastSync: Date.now() } : n));
+                } else if (mode === "master-master") {
+                    setNodes(prev => prev.map(n => n.id !== nodeId && n.type === "master" ? { ...n, data: [...n.data.slice(-4), data], lastSync: Date.now() } : n));
                 }
-            } else if (mode === "master-master") {
-                // Replicate to other master
-                setTimeout(() => {
-                    setNodes(prev => prev.map(n => 
-                        n.id !== nodeId && n.type === "master" 
-                            ? { ...n, data: [...n.data, data], lastSync: Date.now() } 
-                            : n
-                    ));
-                    setOperations(prev => prev.map(op => 
-                        op.id === opId ? { ...op, status: "completed" } : op
-                    ));
-                }, 300);
-            } else {
-                // Sharding - no replication needed
-                setOperations(prev => prev.map(op => 
-                    op.id === opId ? { ...op, status: "completed" } : op
-                ));
-            }
+                setOperations(prev => prev.map(op => op.id === opId ? { ...op, status: "completed" } : op));
+            }, delay);
         }, 100);
 
-        // Clean up
-        setTimeout(() => {
-            setOperations(prev => prev.filter(op => op.id !== opId));
-        }, 3000);
-    }, [mode, nodes]);
+        setTimeout(() => setOperations(prev => prev.filter(op => op.id !== opId)), 3000);
+    }, [mode]);
 
-    // Auto-generate writes
     useEffect(() => {
         if (!isAutoRunning) return;
         const interval = setInterval(() => {
+            const currentNodes = nodesRef.current;
             if (mode === "sharding") {
-                const shardKeys = ["A-M", "N-Z", "0-9"];
-                const randomKey = shardKeys[Math.floor(Math.random() * shardKeys.length)];
-                const shard = nodes.find(n => n.shardKey === randomKey);
-                if (shard) {
-                    const data = `Data-${Math.random().toString(36).substr(2, 5)}`;
-                    handleWrite(shard.id, data);
-                }
+                const shard = currentNodes[Math.floor(Math.random() * currentNodes.length)];
+                if (shard) handleWrite(shard.id, `D-${Math.random().toString(36).substr(2, 4)}`);
             } else {
-                const master = nodes.find(n => n.type === "master");
-                if (master) {
-                    const data = `Data-${Math.random().toString(36).substr(2, 5)}`;
-                    handleWrite(master.id, data);
-                }
+                const master = currentNodes.find(n => n.type === "master");
+                if (master) handleWrite(master.id, `D-${Math.random().toString(36).substr(2, 4)}`);
             }
-        }, 2500);
+        }, 2000);
         return () => clearInterval(interval);
-    }, [isAutoRunning, mode, nodes, handleWrite]);
+    }, [isAutoRunning, mode, handleWrite]);
 
-    // Calculate metrics
-    const metrics = useMemo(() => {
-        const totalData = nodes.reduce((sum, n) => sum + n.data.length, 0);
-        const avgLatency = mode === "sharding" ? 50 : mode === "master-master" ? 120 : 80;
-        const throughput = operations.filter(op => op.status === "completed").length * 2;
-        return { totalData, avgLatency, throughput };
-    }, [nodes, operations, mode]);
+    const changeMode = (m: ReplicationMode) => { setMode(m); setNodes(buildNodes(m)); setOperations([]); };
 
-    const getShardForData = (data: string): string => {
-        const firstChar = data[5]?.toUpperCase() || "A";
-        if (firstChar >= "A" && firstChar <= "M") return "shard1";
-        if (firstChar >= "N" && firstChar <= "Z") return "shard2";
-        return "shard3";
+    const metrics = useMemo(() => ({
+        totalData: nodes.reduce((sum, n) => sum + n.data.length, 0),
+        avgLatency: mode === "sharding" ? 50 : mode === "master-master" ? 120 : 80,
+        active: operations.filter(op => op.status !== "completed").length,
+    }), [nodes, operations, mode]);
+
+    const info = modeInfo[mode];
+
+    const nodeColors: Record<string, string> = {
+        master: "bg-blue-50 dark:bg-blue-950/40 border-blue-500 text-blue-600 dark:text-blue-400",
+        slave: "bg-green-50 dark:bg-green-950/40 border-green-500 text-green-600 dark:text-green-400",
+        shard: "bg-purple-50 dark:bg-purple-950/40 border-purple-500 text-purple-600 dark:text-purple-400",
     };
 
     return (
-        <Card className="p-8 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 shadow-3xl flex flex-col gap-10">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-                <div>
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-500 rounded-xl shadow-lg shadow-indigo-500/20">
-                            <Copy className="w-6 h-6 text-white" />
+        <>
+            <Card className="p-4 md:p-8 bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 shadow-xl relative">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-blue-500" />
+
+                <div className="flex flex-col gap-8">
+                    {/* Canvas */}
+                    <div className="w-full h-[450px] bg-white dark:bg-slate-950 rounded-2xl border-2 border-slate-100 dark:border-slate-800 relative shadow-inner bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px] overflow-hidden p-5">
+                        <div className="absolute top-3 left-4 flex items-center gap-2 z-10">
+                            <Copy className="w-4 h-4 text-indigo-500" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Replication — {mode}</span>
                         </div>
-                    </div>
-                    <p className="mt-2 text-sm text-slate-500 font-semibold italic">
-                        Understand data replication strategies and horizontal partitioning
-                    </p>
-                </div>
-
-                <div className="flex gap-4">
-                    <Button
-                        onClick={() => setIsAutoRunning(!isAutoRunning)}
-                        variant={isAutoRunning ? "default" : "outline"}
-                        size="sm"
-                    >
-                        {isAutoRunning ? "Pause" : "Resume"}
-                    </Button>
-                </div>
-            </div>
-
-            {/* Mode Selector */}
-            <div className="grid grid-cols-3 gap-4">
-                {(["master-slave", "master-master", "sharding"] as ReplicationMode[]).map((m) => (
-                    <Card
-                        key={m}
-                        className={cn(
-                            "p-4 cursor-pointer transition-all border-2",
-                            mode === m
-                                ? "bg-indigo-50 dark:bg-indigo-950 border-indigo-500 shadow-lg"
-                                : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-indigo-300"
-                        )}
-                        onClick={() => setMode(m)}
-                    >
-                        <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-lg font-bold capitalize">
-                                {m.replace("-", " ")}
-                            </h3>
-                            {mode === m && (
-                                <Badge className="bg-indigo-500 text-white">Active</Badge>
+                        <div className="absolute top-3 right-4 flex items-center gap-2 z-10">
+                            {metrics.active > 0 && (
+                                <Badge className="bg-amber-500 text-white text-[8px] animate-pulse">{metrics.active} replicating</Badge>
                             )}
                         </div>
-                        <p className="text-xs text-slate-500">
-                            {m === "master-slave" && "One master, multiple read replicas"}
-                            {m === "master-master" && "Multiple masters, bidirectional sync"}
-                            {m === "sharding" && "Horizontal partitioning by key range"}
-                        </p>
-                    </Card>
-                ))}
-            </div>
 
-            {/* Main Visualization */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                {/* Node Visualization */}
-                <div className="lg:col-span-8">
-                    <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 min-h-[500px]">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
-                            <Network className="w-3.5 h-3.5" /> Cluster Topology
-                        </h4>
+                        {/* Node grid */}
                         <div className={cn(
-                            "grid gap-6",
-                            mode === "sharding" ? "grid-cols-3" : mode === "master-master" ? "grid-cols-2" : "grid-cols-1"
+                            "h-full flex items-center justify-center gap-6 md:gap-10 mt-4",
+                            mode === "sharding" ? "flex-row" : mode === "master-master" ? "flex-row" : "flex-col"
                         )}>
-                            {nodes.map((node, idx) => {
-                                const activeOps = operations.filter(op => 
-                                    op.nodeId === node.id && op.status !== "completed"
-                                );
-                                const isReplicating = activeOps.some(op => op.status === "replicating");
-
-                                return (
-                                    <motion.div
-                                        key={node.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="flex flex-col items-center"
-                                    >
-                                        <motion.div
-                                            className={cn(
-                                                "p-6 rounded-2xl border-4 shadow-xl transition-all relative",
-                                                node.type === "master" && "bg-blue-50 dark:bg-blue-950 border-blue-500",
-                                                node.type === "slave" && "bg-green-50 dark:bg-green-950 border-green-500",
-                                                node.type === "shard" && "bg-purple-50 dark:bg-purple-950 border-purple-500",
-                                                isReplicating && "scale-105 ring-4 ring-yellow-400"
-                                            )}
-                                            animate={{
-                                                scale: isReplicating ? [1, 1.05, 1] : 1,
-                                            }}
-                                            transition={{ duration: 0.5, repeat: isReplicating ? Infinity : 0 }}
-                                        >
-                                            <Database className={cn(
-                                                "w-10 h-10",
-                                                node.type === "master" && "text-blue-600 dark:text-blue-400",
-                                                node.type === "slave" && "text-green-600 dark:text-green-400",
-                                                node.type === "shard" && "text-purple-600 dark:text-purple-400"
-                                            )} />
-                                            {isReplicating && (
-                                                <motion.div
-                                                    className="absolute -top-2 -right-2"
-                                                    animate={{ rotate: 360 }}
-                                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                                >
-                                                    <RefreshCw className="w-5 h-5 text-yellow-500" />
-                                                </motion.div>
-                                            )}
-                                        </motion.div>
-                                        <div className="mt-3 text-center">
-                                            <div className="text-sm font-bold capitalize mb-1">
-                                                {node.type} {node.shardKey && `(${node.shardKey})`}
+                            <AnimatePresence mode="wait">
+                                <motion.div key={mode}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    className={cn(
+                                        "flex items-center gap-6 md:gap-10",
+                                        mode === "master-slave" ? "flex-col w-full max-w-sm" : "flex-row"
+                                    )}
+                                >
+                                    {mode === "master-slave" && (
+                                        <>
+                                            {/* Master */}
+                                            <NodeCard node={nodes[0]} ops={operations} colors={nodeColors} />
+                                            <div className="flex items-center gap-4 w-full justify-center">
+                                                <ArrowRight className="w-4 h-4 text-indigo-400" />
+                                                <div className="flex gap-6">
+                                                    {nodes.slice(1).map(n => <NodeCard key={n.id} node={n} ops={operations} colors={nodeColors} />)}
+                                                </div>
                                             </div>
-                                            <Badge variant="outline" className="text-xs">
-                                                {node.data.length} items
-                                            </Badge>
-                                        </div>
+                                        </>
+                                    )}
 
-                                        {/* Data Items */}
-                                        <div className="mt-4 w-full space-y-1 max-h-32 overflow-y-auto">
-                                            <AnimatePresence>
-                                                {node.data.slice(-5).map((item, i) => (
-                                                    <motion.div
-                                                        key={`${node.id}-${item}-${i}`}
-                                                        initial={{ opacity: 0, x: -10 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        exit={{ opacity: 0, x: 10 }}
-                                                        className="text-xs p-2 bg-slate-100 dark:bg-slate-800 rounded text-center font-mono"
-                                                    >
-                                                        {item}
-                                                    </motion.div>
-                                                ))}
-                                            </AnimatePresence>
-                                        </div>
-                                    </motion.div>
-                                );
-                            })}
+                                    {mode === "master-master" && (
+                                        <>
+                                            <NodeCard node={nodes[0]} ops={operations} colors={nodeColors} />
+                                            <div className="flex flex-col items-center gap-1">
+                                                <ArrowRight className="w-4 h-4 text-indigo-400" />
+                                                <span className="text-[8px] font-bold text-slate-400 uppercase">sync</span>
+                                                <ArrowLeftRight className="w-4 h-4 text-indigo-400" />
+                                            </div>
+                                            <NodeCard node={nodes[1]} ops={operations} colors={nodeColors} />
+                                        </>
+                                    )}
+
+                                    {mode === "sharding" && nodes.map(n => <NodeCard key={n.id} node={n} ops={operations} colors={nodeColors} />)}
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
+                    </div>
+
+                    {/* Bottom Controls */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                        {/* Col 1: Mode */}
+                        <div className="space-y-3">
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Strategy</h4>
+                            <div className="flex flex-col p-1 bg-slate-100 dark:bg-slate-800 rounded-lg gap-1">
+                                {(["master-slave", "master-master", "sharding"] as ReplicationMode[]).map(m => (
+                                    <button key={m} onClick={() => changeMode(m)}
+                                        className={cn("px-3 py-2 rounded-md text-xs font-bold transition-all text-left",
+                                            mode === m ? "bg-white dark:bg-slate-700 shadow-sm text-indigo-600" : "text-slate-500")}
+                                    >
+                                        {m === "master-slave" ? "Master-Slave" : m === "master-master" ? "Master-Master" : "Sharding"}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
-                        {/* Replication Arrows */}
-                        {mode !== "sharding" && (
-                            <div className="mt-8 flex justify-center items-center gap-4">
-                                {nodes.filter(n => n.type === "master").map(master => (
-                                    <div key={master.id} className="flex flex-col items-center gap-2">
-                                        {nodes.filter(n => 
-                                            (mode === "master-slave" && n.type === "slave") ||
-                                            (mode === "master-master" && n.type === "master" && n.id !== master.id)
-                                        ).map(slave => {
-                                            const activeOp = operations.find(op => 
-                                                op.nodeId === master.id && op.status === "replicating"
-                                            );
-                                            return (
-                                                <motion.div
-                                                    key={slave.id}
-                                                    className="flex items-center gap-2"
-                                                    animate={activeOp ? {
-                                                        opacity: [0.5, 1, 0.5],
-                                                    } : {}}
-                                                    transition={{ duration: 1, repeat: Infinity }}
-                                                >
-                                                    <ArrowRight className="w-6 h-6 text-indigo-500" />
-                                                </motion.div>
-                                            );
-                                        })}
+                        {/* Col 2: Controls */}
+                        <div className="space-y-3">
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Controls</h4>
+                            <div className="grid grid-cols-2 gap-2">
+                                <Button variant="outline" onClick={() => setIsAutoRunning(!isAutoRunning)} className="h-9 gap-1.5 text-xs">
+                                    {isAutoRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                                    {isAutoRunning ? "Pause" : "Play"}
+                                </Button>
+                                <Button variant="outline" onClick={() => { setNodes(buildNodes(mode)); setOperations([]); }} className="h-9 gap-1.5 text-xs">
+                                    <RefreshCw className="w-3 h-3" /> Reset
+                                </Button>
+                            </div>
+                            <Button
+                                onClick={() => {
+                                    const masterNode = nodesRef.current.find(n => n.type === "master") || nodesRef.current[0];
+                                    if (masterNode) handleWrite(masterNode.id, `D-${Math.random().toString(36).substr(2, 4)}`);
+                                }}
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-9 gap-1.5 text-xs"
+                            >
+                                <Zap className="w-3 h-3" /> Trigger Write
+                            </Button>
+                        </div>
+
+                        {/* Col 3: Insight */}
+                        <div className="space-y-2 p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/20">
+                            <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 mb-1">
+                                <Layers className="w-4 h-4" /> Consistency: <span className="font-normal text-slate-500 text-[10px]">{info.consistency}</span>
+                            </div>
+                            <div className="space-y-1">
+                                {info.pros.map((p, i) => (
+                                    <div key={i} className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                                        <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" /> {p}
+                                    </div>
+                                ))}
+                                {info.cons.map((c, i) => (
+                                    <div key={i} className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                                        <AlertCircle className="w-3 h-3 text-orange-500 shrink-0" /> {c}
                                     </div>
                                 ))}
                             </div>
-                        )}
-                    </Card>
-                </div>
-
-                {/* Metrics & Info */}
-                <div className="lg:col-span-4 space-y-6">
-                    <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
-                            <BarChart3 className="w-3.5 h-3.5" /> Metrics
-                        </h4>
-                        <div className="space-y-4">
-                            <div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-xs font-bold text-slate-400">Total Data Items</span>
-                                    <span className="text-2xl font-black">{metrics.totalData}</span>
-                                </div>
-                            </div>
-                            <div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-xs font-bold text-slate-400">Avg Write Latency</span>
-                                    <span className="text-2xl font-black">{metrics.avgLatency}ms</span>
-                                </div>
-                            </div>
-                            <div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-xs font-bold text-slate-400">Throughput</span>
-                                    <Badge variant="outline">{metrics.throughput} ops/s</Badge>
-                                </div>
+                            <div className="flex justify-between pt-1 border-t border-slate-100 dark:border-slate-800 mt-1">
+                                <span className="text-[9px] text-slate-400">Total items</span>
+                                <span className="text-xs font-bold">{metrics.totalData}</span>
                             </div>
                         </div>
-                    </Card>
-
-                    <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
-                            <Layers className="w-3.5 h-3.5" /> Consistency Model
-                        </h4>
-                        <div className="space-y-3">
-                            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-                                <div className="text-xs font-bold text-slate-400 mb-1">Consistency</div>
-                                <div className="text-sm font-medium">{consistency}</div>
-                            </div>
-                            <div className="space-y-2">
-                                {mode === "master-slave" && (
-                                    <>
-                                        <div className="flex items-center gap-2 text-xs">
-                                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                            <span>Read scaling via replicas</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-xs">
-                                            <AlertCircle className="w-4 h-4 text-orange-500" />
-                                            <span>Single point of failure (master)</span>
-                                        </div>
-                                    </>
-                                )}
-                                {mode === "master-master" && (
-                                    <>
-                                        <div className="flex items-center gap-2 text-xs">
-                                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                            <span>No single point of failure</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-xs">
-                                            <AlertCircle className="w-4 h-4 text-orange-500" />
-                                            <span>Conflict resolution required</span>
-                                        </div>
-                                    </>
-                                )}
-                                {mode === "sharding" && (
-                                    <>
-                                        <div className="flex items-center gap-2 text-xs">
-                                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                            <span>Horizontal scalability</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-xs">
-                                            <AlertCircle className="w-4 h-4 text-orange-500" />
-                                            <span>Cross-shard queries complex</span>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-            </div>
-
-            {/* Educational Insight */}
-            <div className="bg-slate-900 dark:bg-white p-8 rounded-[2.5rem] text-slate-100 dark:text-slate-900 flex flex-col md:flex-row gap-8 items-center shadow-2xl relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="p-4 bg-indigo-500 rounded-3xl shrink-0 shadow-xl shadow-indigo-500/20">
-                    <Copy className="w-10 h-10 text-white" />
-                </div>
-                <div className="space-y-2 flex-1 relative z-10">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60">System Design Insight</h4>
-                    <div className="text-sm font-medium leading-relaxed opacity-90 tracking-tight">
-                        <strong>Master-Slave replication</strong> provides read scaling and backup, but the master is a single point of failure.
-                        <strong>Master-Master replication</strong> eliminates single points of failure but requires conflict resolution.
-                        <strong>Sharding</strong> partitions data across multiple nodes for horizontal scaling, but cross-shard queries become complex.
-                        Choose based on your read/write ratio, consistency requirements, and scalability needs.
                     </div>
                 </div>
+            </Card>
+
+            {/* Explanations */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Info className="w-4 h-4 text-indigo-500" />
+                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">What&apos;s happening?</h4>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Writes flow into the master node and replicate outward. Watch the nodes pulse when a replication event is in-flight.
+                        In <span className="font-semibold">Master-Slave</span>, only one node accepts writes and pushes to read replicas.
+                        In <span className="font-semibold">Master-Master</span>, both nodes accept writes and sync bidirectionally.
+                        In <span className="font-semibold">Sharding</span>, data is partitioned by key range — each shard is independent.
+                    </p>
+                </div>
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Copy className="w-4 h-4 text-indigo-500" />
+                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Why it matters?</h4>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Replication is how databases achieve <span className="font-semibold">high availability and durability</span>.
+                        Master-Slave scales reads cheaply but the master is a single point of failure.
+                        Master-Master removes that bottleneck but requires conflict resolution for concurrent writes.
+                        Sharding is the only strategy that scales writes — it&apos;s how Google Spanner and Cassandra handle planetary-scale data.
+                    </p>
+                </div>
             </div>
-        </Card>
+        </>
     );
 }
 
+function NodeCard({ node, ops, colors }: { node: Node; ops: WriteOperation[]; colors: Record<string, string> }) {
+    const isReplicating = ops.some(op => (op.nodeId === node.id || node.type !== "master") && op.status === "replicating");
+    return (
+        <motion.div
+            animate={{ scale: isReplicating ? [1, 1.04, 1] : 1 }}
+            transition={{ duration: 0.5, repeat: isReplicating ? Infinity : 0 }}
+            className={cn("relative flex flex-col items-center gap-2 p-4 rounded-2xl border-4 transition-all min-w-[110px]", colors[node.type])}
+        >
+            <div className="relative">
+                <Database className="w-7 h-7" />
+                {isReplicating && (
+                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="absolute -top-2 -right-2 p-0.5 bg-amber-500 rounded-full text-white shadow">
+                        <RefreshCw className="w-2.5 h-2.5" />
+                    </motion.div>
+                )}
+            </div>
+            <div className="text-center">
+                <div className="text-[9px] font-black uppercase tracking-widest">{node.type}{node.shardKey ? ` (${node.shardKey})` : ""}</div>
+                <Badge variant="outline" className="text-[8px] mt-0.5">{node.data.length} items</Badge>
+            </div>
+            <div className="w-full space-y-0.5 max-h-24 overflow-hidden">
+                <AnimatePresence>
+                    {node.data.slice(-3).map((item, i) => (
+                        <motion.div key={`${node.id}-${item}-${i}`}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="text-[8px] font-mono text-center bg-white dark:bg-slate-800 rounded px-1 py-0.5 text-slate-500"
+                        >{item}</motion.div>
+                    ))}
+                </AnimatePresence>
+            </div>
+        </motion.div>
+    );
+}

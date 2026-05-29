@@ -1,7 +1,41 @@
 import Link from "next/link";
-import { BookOpenText, Scale } from "lucide-react";
+import {
+  BookOpenText,
+  Cpu,
+  FileCode2,
+  Scale,
+  Type,
+  Waypoints,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { TOPICS } from "@/lib/topics";
+
+const LIVE_LESSONS = [
+  {
+    title: "Static vs Dynamic Types",
+    description: "Watch the same program fail before execution versus during execution.",
+    href: "/programming-languages/static-dynamic-types",
+    icon: Type,
+  },
+  {
+    title: "Parameter Passing Methods",
+    description: "See copies, aliases, and copy-out semantics across one function call.",
+    href: "/programming-languages/parameter-passing",
+    icon: Waypoints,
+  },
+  {
+    title: "Compiler Pipeline",
+    description: "Follow source text through tokens, parse trees, semantic checks, and codegen.",
+    href: "/programming-languages/translation-pipeline",
+    icon: FileCode2,
+  },
+  {
+    title: "Data Race and Synchronization",
+    description: "Step through a lost update, then fix it with a lock.",
+    href: "/programming-languages/data-race-synchronization",
+    icon: Cpu,
+  },
+];
 
 export default function ProgrammingLanguagesPage() {
   const programmingLanguages = TOPICS.find(
@@ -15,8 +49,9 @@ export default function ProgrammingLanguagesPage() {
           Programming Languages
         </h1>
         <p className="text-muted-foreground">
-          Learn how language design choices trade off readability, writability,
-          reliability, and cost.
+          Textbook-aligned modules with self-teaching lessons on variables,
+          types, control flow, subprograms, object models, compilers, logic,
+          and concurrency.
         </p>
       </div>
 
@@ -30,11 +65,12 @@ export default function ProgrammingLanguagesPage() {
                   Core tradeoffs
                 </div>
                 <h2 className="text-3xl font-bold">
-                  Language Evaluation Criteria
+                  Sebesta-style Programming Languages Track
                 </h2>
                 <p className="text-lg text-white/90">
-                  Explore how syntax, typing, abstraction, and runtime checks
-                  shift readability, writability, reliability, and cost.
+                  Start with the foundations, then move into live simulations
+                  for type systems, parameter passing, compiler translation,
+                  and synchronization.
                 </p>
               </div>
 
@@ -44,6 +80,29 @@ export default function ProgrammingLanguagesPage() {
             </div>
           </Card>
         </Link>
+
+        <div className="space-y-3">
+          <h2 className="text-xl font-semibold tracking-tight">Live lessons</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {LIVE_LESSONS.map((lesson) => (
+              <Link key={lesson.href} href={lesson.href}>
+                <Card className="h-full p-6 transition-colors hover:border-primary hover:bg-muted/30">
+                  <div className="flex items-start gap-4">
+                    <div className="rounded-xl border bg-background p-3">
+                      <lesson.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="font-semibold">{lesson.title}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {lesson.description}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
 
         <div className="grid gap-6 md:grid-cols-2">
           {programmingLanguages?.categories.map((category) => (

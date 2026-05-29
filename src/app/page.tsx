@@ -51,6 +51,7 @@ const tracks = [
     primaryLabel: "Explore data structures",
     secondaryLabel: "Enter arena mode",
   },
+  /*
   {
     href: "/programming-languages",
     challengeHref: "/programming-languages/language-evaluation",
@@ -65,12 +66,13 @@ const tracks = [
     primaryLabel: "Explore language design",
     secondaryLabel: "Open evaluation lesson",
   },
+  */
 ];
 
 const heroStats = [
   { label: "Tracks", value: trackCount.toString().padStart(2, "0") },
-  { label: "Lessons", value: lessonCount.toString().padStart(2, "0") },
   { label: "Challenges", value: challengeCount.toString().padStart(2, "0") },
+  { label: "Status", value: "Prototypes in Progress" },
 ];
 
 const pageStyle: CSSProperties = {
@@ -92,15 +94,15 @@ export default function Home() {
 
             <div className="space-y-6">
               <p className="text-sm font-semibold uppercase tracking-[0.4em] text-slate-500">
-                Learn by doing
+                Visual challenges in development — first prototypes coming
               </p>
               <h1
                 className="max-w-4xl text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl lg:text-6xl"
               >
-                Practice systems and algorithms visually.
+                Hands-on system design and algorithm simulations (early stage).
               </h1>
               <p className="max-w-xl text-lg leading-8 text-slate-600 sm:text-xl">
-                Three tracks. Live demos. Challenge modes.
+                Interactive prototypes in progress.
               </p>
             </div>
 
@@ -286,11 +288,8 @@ export default function Home() {
         <div className="mx-auto max-w-7xl rounded-[2.5rem] border border-black/5 bg-[#f4f4ef] px-8 py-12 text-slate-900 shadow-[0_16px_40px_rgba(15,23,42,0.04)]">
           <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
             <div className="max-w-3xl space-y-4">
-              <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
-                Ready to start
-              </p>
               <h2 className="text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl">
-                Start with a challenge or browse all three tracks.
+                Try System Architect Challenge
               </h2>
             </div>
 
@@ -301,17 +300,9 @@ export default function Home() {
                 className="h-12 rounded-full bg-slate-900 px-7 text-base font-semibold text-white shadow-sm hover:bg-slate-800"
               >
                 <Link href="/system-design/challenge">
-                  Start training
+                  Try System Architect Challenge
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="h-12 rounded-full border-black/10 bg-white px-7 text-base font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                <Link href="/#tracks">Browse both tracks</Link>
               </Button>
             </div>
           </div>

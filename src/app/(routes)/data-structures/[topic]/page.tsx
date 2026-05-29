@@ -15,8 +15,8 @@ const CONTENT_MAP: Record<string, { title: string; description: string; visual?:
         visual: <ArraysLesson />,
     },
     "two-pointers": {
-        title: "Two Pointers Technique",
-        description: "A technique that moves two positions through the same data structure with a rule, often solving the problem in O(n) time.",
+        title: "Two Pointers",
+        description: "A technique that places two markers on the same array and moves them according to a simple rule - often turning an O(n^2) nested loop into a single O(n) pass.",
         visual: <TwoPointersLesson />,
     },
     "singly-doubly": {
@@ -26,12 +26,12 @@ const CONTENT_MAP: Record<string, { title: string; description: string; visual?:
     },
     "fast-slow": {
         title: "Fast & Slow Pointers",
-        description: "A pattern that uses two pointers moving at different speeds to solve complex linked list problems like cycle detection and finding the middle node.",
+        description: "A pattern that moves two pointers through the same linked list at different speeds - one hop vs two - to find the middle or detect a cycle in a single O(n) pass with no extra memory.",
         visual: <FastSlowLesson />,
     },
     "hash-tables": {
         title: "Hash Tables",
-        description: "A data structure that implements an associative array abstract data type, a structure that can map keys to values.",
+        description: "A data structure that converts any key into an array index using a hash function - giving O(1) average lookup, insert, and delete regardless of how many items are stored.",
         visual: <HashTablesLesson />,
     },
     "bst": {
@@ -45,8 +45,8 @@ const CONTENT_MAP: Record<string, { title: string; description: string; visual?:
         visual: <TreeTraversalLesson />,
     },
     "bfs-dfs": {
-        title: "BFS vs. DFS (Graphs)",
-        description: "Compare the two fundamental graph traversal algorithms: Breadth-First Search and Depth-First Search. See how they explore the same graph differently using Queues and Stacks.",
+        title: "BFS vs DFS",
+        description: "Two ways to explore a graph - one expands outward level by level, the other dives deep before backtracking. The only difference is the data structure driving them.",
         visual: <GraphTraversalLesson />,
     },
 };
@@ -61,7 +61,9 @@ export default async function DataStructureTopicPage(props: { params: Promise<{ 
         return (
             <div className="space-y-6">
                 <h1 className="text-3xl font-bold tracking-tight capitalize">{topicId.replace("-", " ")}</h1>
-                <p className="text-muted-foreground">Visual explanation coming soon.</p>
+                <p className="text-muted-foreground">
+                    This lesson is still in development.
+                </p>
             </div>
         );
     }

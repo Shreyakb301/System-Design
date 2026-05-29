@@ -9,23 +9,17 @@ import {
     Activity,
     Network,
     Server,
-    Zap,
     AlertCircle,
     RotateCcw,
     Play,
     Pause,
-    ChevronRight,
-    ArrowRight,
-    Settings,
     ShieldCheck,
     ShieldAlert,
     Timer,
-    Flame,
     Users,
     MousePointer2,
     Info,
-    CloudLightning,
-    ZapOff
+    Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +28,7 @@ type Strategy = "round-robin" | "least-conn" | "random";
 interface ServerState {
     id: string;
     connections: number;
-    latency: number; // base latency in ms
+    latency: number;
     status: "healthy" | "slow" | "failed";
     requestsHandled: number;
 }
@@ -42,7 +36,7 @@ interface ServerState {
 interface Request {
     id: string;
     targetId: string;
-    startTime: number;
+    outcome: "success" | "error";
 }
 
 export function LoadBalancingVisual() {
@@ -62,24 +56,13 @@ export function LoadBalancingVisual() {
 
     const rrIndex = useRef(0);
 
-    // --- Core Logic ---
-
     const getNextServer = useCallback(() => {
         const activeServers = healthChecksEnabled
             ? servers.filter(s => s.status !== "failed")
             : servers;
-
         if (activeServers.length === 0) return null;
-
-        if (strategy === "random") {
-            return activeServers[Math.floor(Math.random() * activeServers.length)];
-        }
-
-        if (strategy === "least-conn") {
-            return [...activeServers].sort((a, b) => a.connections - b.connections)[0];
-        }
-
-        // Round Robin
+        if (strategy === "random") return activeServers[Math.floor(Math.random() * activeServers.length)];
+        if (strategy === "least-conn") return [...activeServers].sort((a, b) => a.connections - b.connections)[0];
         const target = activeServers[rrIndex.current % activeServers.length];
         rrIndex.current = (rrIndex.current + 1) % activeServers.length;
         return target;
@@ -87,39 +70,32 @@ export function LoadBalancingVisual() {
 
     useEffect(() => {
         if (isPaused) return;
-
         const interval = setInterval(() => {
             const spawnCount = Math.ceil(traffic / 15);
             const newReqs: Request[] = [];
-
             for (let i = 0; i < spawnCount; i++) {
                 const target = getNextServer();
                 if (target) {
-                    newReqs.push({
-                        id: Math.random().toString(36).substring(7),
-                        targetId: target.id,
-                        startTime: Date.now()
-                    });
-
-                    // Update local server state connections
-                    setServers(prev => prev.map(s =>
-                        s.id === target.id
-                            ? { ...s, connections: s.connections + 1, requestsHandled: s.requestsHandled + 1 }
-                            : s
-                    ));
+                    const requestId = Math.random().toString(36).substring(7);
+                    const requestFails = target.status === "failed";
+                    newReqs.push({ id: requestId, targetId: target.id, outcome: requestFails ? "error" : "success" });
+                    if (requestFails) {
+                        setErrorCount(prev => prev + 1);
+                    } else {
+                        setServers(prev => prev.map(s =>
+                            s.id === target.id ? { ...s, connections: s.connections + 1, requestsHandled: s.requestsHandled + 1 } : s
+                        ));
+                    }
                 } else {
                     setErrorCount(prev => prev + 1);
                 }
                 setTotalProcessed(prev => prev + 1);
             }
-
             setRequests(prev => [...prev.slice(-20), ...newReqs]);
         }, 800 - (traffic * 5));
-
         return () => clearInterval(interval);
     }, [traffic, isPaused, getNextServer]);
 
-    // Cleanup finished requests (connection closing)
     useEffect(() => {
         const interval = setInterval(() => {
             setServers(prev => prev.map(s => {
@@ -130,8 +106,6 @@ export function LoadBalancingVisual() {
         return () => clearInterval(interval);
     }, []);
 
-    // --- Interactions ---
-
     const toggleStatus = (id: string, nextStatus: ServerState["status"]) => {
         setServers(prev => prev.map(s =>
             s.id === id ? { ...s, status: s.status === nextStatus ? "healthy" : nextStatus } : s
@@ -139,14 +113,13 @@ export function LoadBalancingVisual() {
     };
 
     const handleReset = () => {
-        setServers(servers.map(s => ({ ...s, connections: 0, status: "healthy", requestsHandled: 0 })));
+        setServers(prev => prev.map(s => ({ ...s, connections: 0, status: "healthy", requestsHandled: 0 })));
         setRequests([]);
         setErrorCount(0);
         setTotalProcessed(0);
         rrIndex.current = 0;
     };
 
-    // --- Metrics ---
     const metrics = useMemo(() => {
         const totalHandled = servers.reduce((acc, s) => acc + s.requestsHandled, 0);
         const fairness = totalHandled === 0 ? 100 : (() => {
@@ -154,254 +127,253 @@ export function LoadBalancingVisual() {
             const variance = servers.reduce((acc, s) => acc + Math.pow(s.requestsHandled - avg, 2), 0) / servers.length;
             return Math.max(0, 100 - (Math.sqrt(variance) / (avg || 1)) * 10).toFixed(1);
         })();
-
-        const avgLatency = servers.reduce((acc, s) => {
-            const base = s.status === "slow" ? 250 : 20;
-            return acc + (base + s.connections * 15);
-        }, 0) / servers.length;
-
+        const avgLatency = servers.reduce((acc, s) => acc + ((s.status === "slow" ? 250 : 20) + s.connections * 15), 0) / servers.length;
         const errorRate = totalProcessed === 0 ? 0 : (errorCount / totalProcessed) * 100;
-
         return { fairness, avgLatency, errorRate };
     }, [servers, errorCount, totalProcessed]);
 
+    const strategyInsight = {
+        "round-robin": "Round Robin ensures perfect fairness but ignores server load variations.",
+        "least-conn": "Least Connections dynamically routes to the least busy server — best for variable request times.",
+        "random": "Random is simple and stateless, but can create short-term hot spots.",
+    }[strategy];
+
     return (
-        <Card className="p-8 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 shadow-3xl overflow-hidden flex flex-col gap-10">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-                <div>
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/20">
-                            <Network className="w-6 h-6 text-white" />
+        <>
+            <Card className="p-4 md:p-8 bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 shadow-xl relative">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-violet-500" />
+
+                <div className="flex flex-col gap-8">
+                    {/* Canvas */}
+                    <div className="w-full h-[450px] bg-white dark:bg-slate-950 rounded-2xl border-2 border-slate-100 dark:border-slate-800 relative shadow-inner bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px] overflow-hidden flex items-center justify-between px-6 md:px-16">
+                        <div className="absolute top-3 left-4 flex items-center gap-2">
+                            <Network className="w-4 h-4 text-indigo-500" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Load Balancer Simulation</span>
                         </div>
-                    </div>
-                    <p className="mt-2 text-sm text-slate-500 font-semibold italic">Optimize traffic distribution across your server pool.</p>
-                </div>
 
-                <div className="flex flex-wrap gap-2 p-1 bg-slate-200 dark:bg-slate-900 rounded-2xl border border-slate-300 dark:border-slate-800 shadow-inner">
-                    {[
-                        { id: "round-robin", label: "ROUND ROBIN", icon: RotateCcw },
-                        { id: "least-conn", label: "LEAST CONN", icon: Timer },
-                        { id: "random", label: "RANDOM", icon: MousePointer2 },
-                    ].map((s) => (
-                        <button
-                            key={s.id}
-                            onClick={() => setStrategy(s.id as Strategy)}
-                            className={cn(
-                                "flex items-center gap-2 px-5 py-2 rounded-xl text-[10px] font-black transition-all",
-                                strategy === s.id ? "bg-white dark:bg-slate-800 text-indigo-600 shadow-md ring-1 ring-slate-200" : "text-slate-500 hover:text-slate-700"
-                            )}
-                        >
-                            <s.icon className="w-3.5 h-3.5" /> {s.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Architecture Canvas */}
-            <div className="relative h-[450px] bg-white dark:bg-slate-900 rounded-[2.5rem] border-2 border-slate-100 dark:border-slate-800 shadow-2xl flex items-center justify-between px-6 md:px-20 overflow-hidden">
-                <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#334155_1.5px,transparent_1.5px)] [background-size:40px_40px]" />
-
-                {/* User Source */}
-                <div className="flex flex-col items-center gap-2 z-20 shrink-0">
-                    <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-700 shadow-xl">
-                        <Users className="w-6 h-6 text-slate-600" />
-                    </div>
-                    <Badge variant="outline" className="text-[9px] font-black">INTERNET</Badge>
-                </div>
-
-                {/* Connection Lineinternet -> lb */}
-                <div className="flex-1 h-0.5 max-w-[100px] border-t-2 border-dashed border-slate-200 dark:border-slate-700 mx-4 hidden md:block" />
-
-                {/* Load Balancer */}
-                <div className="flex flex-col items-center gap-3 z-30 shrink-0">
-                    <motion.div
-                        animate={{ scale: [1, 1.05, 1] }}
-                        transition={{ duration: 1, repeat: Infinity }}
-                        className="p-6 bg-indigo-600 rounded-2xl shadow-2xl border-2 border-indigo-400"
-                    >
-                        <Network className="w-8 h-8 text-white" />
-                    </motion.div>
-                    <div className="flex flex-col items-center">
-                        <span className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">NGINX LB</span>
-                        <div className="flex items-center gap-1.5 mt-1">
-                            <div className={cn("w-2 h-2 rounded-full", healthChecksEnabled ? "bg-emerald-500 animate-pulse" : "bg-slate-400")} />
-                            <span className="text-[8px] font-black text-slate-400 uppercase">Health Checks {healthChecksEnabled ? "ON" : "OFF"}</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Connection Line lb -> pool */}
-                <div className="flex-1 h-0.5 border-t-2 border-dashed border-slate-200 dark:border-slate-700 mx-4 hidden md:block" />
-
-                {/* Server Pool */}
-                <div className="grid grid-cols-2 gap-4 md:gap-8 z-20 shrink-0">
-                    <AnimatePresence>
-                        {servers.map((s) => (
-                            <motion.div
-                                key={s.id}
-                                layout
-                                className={cn(
-                                    "relative w-32 md:w-44 p-4 md:p-5 rounded-2xl md:rounded-3xl border-4 transition-all duration-300 flex flex-col gap-2 md:gap-3",
-                                    s.status === "healthy" ? "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-xl" :
-                                        s.status === "slow" ? "bg-amber-50 dark:bg-amber-950/20 border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)]" :
-                                            "bg-red-50 dark:bg-red-950/20 border-red-500 opacity-60"
-                                )}
-                            >
-                                <div className="flex justify-between items-start">
-                                    <Server className={cn("w-4 md:w-5 h-4 md:h-5", s.status === "healthy" ? "text-slate-400" : "text-current")} />
-                                    <div className="flex gap-1">
-                                        <button onClick={() => toggleStatus(s.id, "slow")} className={cn("p-1 rounded-md", s.status === "slow" ? "bg-amber-500 text-white" : "text-amber-500 bg-amber-50 dark:bg-amber-950/50")}>
-                                            <Timer className="w-3 h-3" />
-                                        </button>
-                                        <button onClick={() => toggleStatus(s.id, "failed")} className={cn("p-1 rounded-md", s.status === "failed" ? "bg-red-500 text-white" : "text-red-500 bg-red-50 dark:bg-red-950/50")}>
-                                            <AlertCircle className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1 md:space-y-1.5">
-                                    <div className="flex justify-between items-end">
-                                        <span className="text-[8px] md:text-[9px] font-black uppercase text-slate-400">Connections</span>
-                                        <span className="text-[10px] md:text-xs font-black tabular-nums">{s.connections}</span>
-                                    </div>
-                                    <div className="h-1 md:h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                        <motion.div animate={{ width: `${Math.min(s.connections * 5, 100)}%` }} className={cn("h-full", s.connections > 15 ? "bg-red-500" : "bg-indigo-500")} />
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-between items-center text-[7px] md:text-[8px] font-black uppercase tracking-widest pt-0.5 md:pt-1">
-                                    <span className="text-slate-400">{s.id}</span>
-                                    <span className="text-indigo-500">{s.requestsHandled}</span>
-                                </div>
-
-                                {s.status !== "healthy" && (
-                                    <div className="absolute -top-2 -right-2">
-                                        <Badge className={cn("text-[7px] md:text-[8px] px-1 md:px-2", s.status === "slow" ? "bg-amber-500" : "bg-red-500")}>
-                                            {s.status.toUpperCase()}
-                                        </Badge>
-                                    </div>
-                                )}
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
-                </div>
-
-                {/* Animated Requests */}
-                <AnimatePresence>
-                    {requests.map(req => {
-                        // Coordinates are now based on percentages of the parent relative container
-                        const targetX = req.targetId === "S2" || req.targetId === "S4" ? 85 : 75;
-                        const targetY = req.targetId === "S1" || req.targetId === "S2" ? 30 : 70;
-
-                        return (
-                            <motion.div
-                                key={req.id}
-                                initial={{ left: "10%", top: "50%", opacity: 0, scale: 0 }}
-                                animate={{
-                                    left: ["10%", "30%", `${targetX}%`],
-                                    top: ["50%", "50%", `${targetY}%`],
-                                    opacity: [0, 1, 1, 0],
-                                    scale: [0, 1.2, 1, 0]
-                                }}
-                                transition={{ duration: 0.6, ease: "circOut" }}
-                                onAnimationComplete={() => setRequests(prev => prev.filter(r => r.id !== req.id))}
-                                className="absolute w-3 h-3 bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(79,70,229,0.5)] z-40 border-2 border-white flex items-center justify-center -translate-x-1/2 -translate-y-1/2"
-                            >
-                                <div className="w-1 h-1 bg-white rounded-full animate-ping" />
-                            </motion.div>
-                        );
-                    })}
-                </AnimatePresence>
-            </div>
-
-            {/* Dashboard and Controls */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Main Controls */}
-                <div className="lg:col-span-1 space-y-6">
-                    <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-                        <div className="flex justify-between items-center">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-slate-500">Global Traffic</h4>
-                            <Badge className="bg-amber-100 text-amber-700 border-amber-200 font-black">
-                                {traffic * 4}k REQ/SEC
-                            </Badge>
-                        </div>
-                        <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={traffic}
-                            onChange={(e) => setTraffic(parseInt(e.target.value))}
-                            className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full appearance-none cursor-pointer accent-indigo-600"
-                        />
-                        <div className="flex gap-4 pt-2">
-                            <Button
-                                variant="outline"
-                                onClick={() => setIsPaused(!isPaused)}
-                                className="flex-1 rounded-2xl font-black text-xs gap-2 py-6 border-2"
-                            >
-                                {isPaused ? <Play className="w-3.5 h-3.5 fill-current" /> : <Pause className="w-3.5 h-3.5 fill-current" />}
-                                {isPaused ? "RESUME" : "PAUSE"}
-                            </Button>
-                            <Button
-                                variant="outline"
-                                onClick={handleReset}
-                                className="flex-1 rounded-2xl font-black text-xs gap-2 py-6 border-2"
-                            >
-                                <RotateCcw className="w-3.5 h-3.5" /> RESET
-                            </Button>
-                        </div>
-                    </div>
-
-                    <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
-                        <div className="space-y-1">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-slate-500">Health Checks</h4>
-                            <p className="text-[10px] text-slate-400 font-medium tracking-tight italic">Automatically route around failures</p>
-                        </div>
-                        <button
-                            onClick={() => setHealthChecksEnabled(!healthChecksEnabled)}
-                            className={cn(
-                                "p-3 rounded-2xl transition-all border-2",
-                                healthChecksEnabled ? "bg-emerald-500 border-emerald-600 text-white shadow-lg" : "bg-slate-100 dark:bg-slate-800 border-slate-200 text-slate-400"
-                            )}
-                        >
-                            {healthChecksEnabled ? <ShieldCheck className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Metrics */}
-                <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    {[
-                        { label: "Distribution Fairness", value: `${metrics.fairness}%`, desc: "How evenly load is spread", icon: Activity, color: "text-indigo-500" },
-                        { label: "Avg System Latency", value: `${metrics.avgLatency.toFixed(0)}ms`, desc: "End-to-end response time", icon: Timer, color: "text-amber-500" },
-                        { label: "System Error Rate", value: `${metrics.errorRate.toFixed(1)}%`, desc: "Failed request percentage", icon: AlertCircle, color: "text-red-500" },
-                    ].map((m, i) => (
-                        <div key={i} className="p-6 bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-3">
-                            <div className="flex items-center gap-2 opacity-50">
-                                <m.icon className={cn("w-3.5 h-3.5", m.color)} />
-                                <span className="text-[10px] font-black uppercase tracking-widest">{m.label}</span>
+                        {/* Internet */}
+                        <div className="flex flex-col items-center gap-2 z-20 shrink-0">
+                            <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-700 shadow-xl">
+                                <Users className="w-6 h-6 text-slate-600" />
                             </div>
-                            <div className="text-3xl font-black tabular-nums">{m.value}</div>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter leading-none">{m.desc}</p>
+                            <Badge variant="outline" className="text-[9px] font-black">INTERNET</Badge>
                         </div>
-                    ))}
 
-                    <div className="sm:col-span-3 p-8 bg-slate-900 dark:bg-white rounded-[2.5rem] text-slate-100 dark:text-slate-900 flex items-start gap-6 shadow-2xl">
-                        <div className="p-4 bg-indigo-500 rounded-3xl shrink-0 shadow-lg shadow-indigo-500/20">
-                            <Info className="w-8 h-8 text-white" />
-                        </div>
-                        <div className="space-y-2">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60">Algorithm Insight</h4>
-                            <div className="text-sm font-medium leading-relaxed opacity-90 italic tracking-tight">
-                                {strategy === "round-robin" && "Round Robin is best when all servers have similar specs. It ensures perfect fairness but ignores server load or health variations."}
-                                {strategy === "least-conn" && "Least Connections is dynamic. It's the 'smartest' choice for requests with varying processing times, as it routes to idle resources."}
-                                {strategy === "random" && "Random is simple and stateless. While it averages out over time, it can cause short-term imbalances leading to 'hot spotting'."}
+                        <div className="flex-1 h-0.5 max-w-[80px] border-t-2 border-dashed border-slate-200 dark:border-slate-700 mx-3 hidden md:block" />
+
+                        {/* Load Balancer */}
+                        <div className="flex flex-col items-center gap-3 z-30 shrink-0">
+                            <motion.div
+                                animate={{ scale: [1, 1.05, 1] }}
+                                transition={{ duration: 1, repeat: Infinity }}
+                                className="p-5 bg-indigo-600 rounded-2xl shadow-2xl border-2 border-indigo-400"
+                            >
+                                <Network className="w-7 h-7 text-white" />
+                            </motion.div>
+                            <div className="flex flex-col items-center">
+                                <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">NGINX LB</span>
+                                <div className="flex items-center gap-1 mt-1">
+                                    <div className={cn("w-1.5 h-1.5 rounded-full", healthChecksEnabled ? "bg-emerald-500 animate-pulse" : "bg-slate-400")} />
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase">Health {healthChecksEnabled ? "ON" : "OFF"}</span>
+                                </div>
                             </div>
                         </div>
+
+                        <div className="flex-1 h-0.5 border-t-2 border-dashed border-slate-200 dark:border-slate-700 mx-3 hidden md:block" />
+
+                        {/* Server Pool */}
+                        <div className="grid grid-cols-2 gap-3 z-20 shrink-0">
+                            <AnimatePresence>
+                                {servers.map((s) => (
+                                    <motion.div
+                                        key={s.id}
+                                        layout
+                                        className={cn(
+                                            "relative w-28 md:w-36 p-3 md:p-4 rounded-2xl border-4 transition-all duration-300 flex flex-col gap-2",
+                                            s.status === "healthy" ? "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-xl" :
+                                                s.status === "slow" ? "bg-amber-50 dark:bg-amber-950/20 border-amber-500" :
+                                                    "bg-red-50 dark:bg-red-950/20 border-red-500 opacity-60"
+                                        )}
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <Server className="w-4 h-4 text-slate-400" />
+                                            <div className="flex gap-1">
+                                                <button
+                                                    onClick={() => toggleStatus(s.id, "slow")}
+                                                    className={cn("p-0.5 rounded", s.status === "slow" ? "bg-amber-500 text-white" : "text-amber-500 bg-amber-50 dark:bg-amber-950/50")}
+                                                >
+                                                    <Timer className="w-2.5 h-2.5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => toggleStatus(s.id, "failed")}
+                                                    className={cn("p-0.5 rounded", s.status === "failed" ? "bg-red-500 text-white" : "text-red-500 bg-red-50 dark:bg-red-950/50")}
+                                                >
+                                                    <AlertCircle className="w-2.5 h-2.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <div className="flex justify-between items-end">
+                                                <span className="text-[8px] font-black uppercase text-slate-400">Conns</span>
+                                                <span className="text-[10px] font-black tabular-nums">{s.connections}</span>
+                                            </div>
+                                            <div className="h-1 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                                <motion.div
+                                                    animate={{ width: `${Math.min(s.connections * 5, 100)}%` }}
+                                                    className={cn("h-full", s.connections > 15 ? "bg-red-500" : "bg-indigo-500")}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between text-[7px] font-black uppercase text-slate-400">
+                                            <span>{s.id}</span>
+                                            <span className="text-indigo-500">{s.requestsHandled}</span>
+                                        </div>
+                                        {s.status !== "healthy" && (
+                                            <div className="absolute -top-2 -right-2">
+                                                <Badge className={cn("text-[7px] px-1", s.status === "slow" ? "bg-amber-500" : "bg-red-500")}>
+                                                    {s.status.toUpperCase()}
+                                                </Badge>
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </div>
+
+                        {/* Animated Requests */}
+                        <AnimatePresence>
+                            {requests.map(req => {
+                                const targetX = req.targetId === "S2" || req.targetId === "S4" ? 85 : 75;
+                                const targetY = req.targetId === "S1" || req.targetId === "S2" ? 30 : 70;
+                                return (
+                                    <motion.div
+                                        key={req.id}
+                                        initial={{ left: "10%", top: "50%", opacity: 0, scale: 0 }}
+                                        animate={{ left: ["10%", "30%", `${targetX}%`], top: ["50%", "50%", `${targetY}%`], opacity: [0, 1, 1, 0], scale: [0, 1.2, 1, 0] }}
+                                        transition={{ duration: 0.6, ease: "circOut" }}
+                                        onAnimationComplete={() => setRequests(prev => prev.filter(r => r.id !== req.id))}
+                                        className={cn(
+                                            "absolute z-40 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white",
+                                            req.outcome === "error" ? "bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.5)]" : "bg-indigo-500 shadow-[0_0_12px_rgba(79,70,229,0.5)]"
+                                        )}
+                                    >
+                                        <div className="w-1 h-1 bg-white rounded-full animate-ping" />
+                                    </motion.div>
+                                );
+                            })}
+                        </AnimatePresence>
+                    </div>
+
+                    {/* Bottom Controls */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                        {/* Col 1: Strategy */}
+                        <div className="space-y-3">
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Strategy</h4>
+                            <div className="flex flex-col p-1 bg-slate-100 dark:bg-slate-800 rounded-lg gap-1">
+                                {([
+                                    { id: "round-robin", label: "Round Robin", icon: RotateCcw },
+                                    { id: "least-conn", label: "Least Conn", icon: Timer },
+                                    { id: "random", label: "Random", icon: MousePointer2 },
+                                ] as const).map((s) => (
+                                    <button
+                                        key={s.id}
+                                        onClick={() => setStrategy(s.id)}
+                                        className={cn(
+                                            "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-bold transition-all",
+                                            strategy === s.id ? "bg-white dark:bg-slate-700 shadow-sm text-indigo-600" : "text-slate-500"
+                                        )}
+                                    >
+                                        <s.icon className="w-3 h-3" /> {s.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Col 2: Controls */}
+                        <div className="space-y-3">
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Controls</h4>
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center text-xs text-slate-500">
+                                    <span>Traffic</span>
+                                    <Badge variant="outline" className="text-[9px]">{traffic * 4}k req/s</Badge>
+                                </div>
+                                <input
+                                    type="range" min="0" max="100" value={traffic}
+                                    onChange={(e) => setTraffic(parseInt(e.target.value))}
+                                    className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full appearance-none cursor-pointer accent-indigo-600"
+                                />
+                                <div className="grid grid-cols-2 gap-2 pt-1">
+                                    <Button variant="outline" onClick={() => setIsPaused(!isPaused)} className="h-9 gap-2 text-xs">
+                                        {isPaused ? <Play className="w-3 h-3 fill-current" /> : <Pause className="w-3 h-3 fill-current" />}
+                                        {isPaused ? "Resume" : "Pause"}
+                                    </Button>
+                                    <Button variant="outline" onClick={handleReset} className="h-9 gap-2 text-xs">
+                                        <RotateCcw className="w-3 h-3" /> Reset
+                                    </Button>
+                                </div>
+                                <button
+                                    onClick={() => setHealthChecksEnabled(!healthChecksEnabled)}
+                                    className={cn(
+                                        "w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all",
+                                        healthChecksEnabled ? "bg-emerald-500 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                                    )}
+                                >
+                                    {healthChecksEnabled ? <ShieldCheck className="w-3 h-3" /> : <ShieldAlert className="w-3 h-3" />}
+                                    Health Checks {healthChecksEnabled ? "ON" : "OFF"}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Col 3: Metrics */}
+                        <div className="space-y-3 p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/20">
+                            <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 mb-2">
+                                <Zap className="w-4 h-4" /> Live Metrics
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[10px] text-slate-500 flex items-center gap-1"><Activity className="w-3 h-3" /> Fairness</span>
+                                    <span className="text-xs font-bold tabular-nums">{metrics.fairness}%</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[10px] text-slate-500 flex items-center gap-1"><Timer className="w-3 h-3" /> Avg Latency</span>
+                                    <span className="text-xs font-bold tabular-nums">{metrics.avgLatency.toFixed(0)}ms</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[10px] text-slate-500 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Error Rate</span>
+                                    <span className="text-xs font-bold tabular-nums">{metrics.errorRate.toFixed(1)}%</span>
+                                </div>
+                            </div>
+                            <p className="text-[10px] text-slate-500 italic mt-2 leading-relaxed">{strategyInsight}</p>
+                        </div>
                     </div>
                 </div>
+            </Card>
+
+            {/* Explanations */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Info className="w-4 h-4 text-indigo-500" />
+                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">What&apos;s happening?</h4>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                        A load balancer sits in front of your server pool and distributes incoming requests based on the chosen strategy.
+                        Animated dots show live traffic flowing from the internet through the balancer to individual servers.
+                        Click the <span className="font-semibold">⚡</span> and <span className="font-semibold">⚠</span> icons on any server to simulate slowdowns or failures — watch how the balancer responds.
+                    </p>
+                </div>
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Activity className="w-4 h-4 text-indigo-500" />
+                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Why it matters?</h4>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Load balancing is essential for high availability and horizontal scalability. Without it, a single server becomes a bottleneck.
+                        Health checks automatically remove failed nodes from the pool. The right strategy depends on your workload:
+                        Round Robin for uniform requests, Least Connections for variable processing times, Random for simplicity at scale.
+                    </p>
+                </div>
             </div>
-        </Card>
+        </>
     );
 }

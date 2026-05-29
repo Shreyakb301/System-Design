@@ -1,370 +1,485 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { ArrowRight, Code2, Pause, Play, RotateCcw, SkipForward } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  ArrowRight,
-  Pause,
-  Play,
-  RotateCcw,
-  SkipForward,
-  Split,
-  Repeat2,
-  Timer,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Scenario = "middle" | "cycle";
 
-const VALUES = [1, 2, 3, 4, 5, 6, 7];
-const CYCLE_ENTRY_INDEX = 3;
+type DisplayNode = {
+  label: string;
+  kind: "node" | "null";
+};
 
-function getNextIndex(index: number, scenario: Scenario) {
-  if (scenario === "cycle") {
-    return index === VALUES.length - 1 ? CYCLE_ENTRY_INDEX : index + 1;
+type DemoStep = {
+  slow: number;
+  fast: number;
+  what: string;
+  why: string;
+  resultIndex?: number;
+  resultLabel?: "Middle" | "Meeting";
+  tailIndices?: number[];
+  found?: boolean;
+};
+
+type DemoDefinition = {
+  tab: Scenario;
+  tabLabel: string;
+  listLabel: string;
+  code: string;
+  nodes: DisplayNode[];
+  steps: DemoStep[];
+};
+
+const MIDDLE_CODE = `function findMiddle(head) {
+  let slow = head;
+  let fast = head;
+
+  while (fast !== null && fast.next !== null) {
+    slow = slow.next;       // one hop
+    fast = fast.next.next;  // two hops
   }
 
-  return index < VALUES.length - 1 ? index + 1 : null;
-}
+  return slow; // slow is at the middle
+}`;
 
-function NodeCell({
-  value,
-  activeSlow,
-  activeFast,
-  cycleMember,
-  cycleEntry,
-  collision,
+const CYCLE_CODE = `function hasCycle(head) {
+  let slow = head;
+  let fast = head;
+
+  while (fast !== null && fast.next !== null) {
+    slow = slow.next;       // one hop
+    fast = fast.next.next;  // two hops
+
+    if (slow === fast) return true; // cycle detected
+  }
+
+  return false; // fast reached null - no cycle
+}`;
+
+const DEMOS: Record<Scenario, DemoDefinition> = {
+  middle: {
+    tab: "middle",
+    tabLabel: "Find Middle",
+    listLabel: "List: 1 -> 2 -> 3 -> 4 -> 5 -> null",
+    code: MIDDLE_CODE,
+    nodes: [
+      { label: "1", kind: "node" },
+      { label: "2", kind: "node" },
+      { label: "3", kind: "node" },
+      { label: "4", kind: "node" },
+      { label: "5", kind: "node" },
+      { label: "null", kind: "null" },
+    ],
+    steps: [
+      {
+        slow: 0,
+        fast: 0,
+        what: "Both pointers start at head (node 1).",
+        why: "Slow will cover half the distance fast does. When fast hits the end, slow is exactly at the middle - no counting needed.",
+      },
+      {
+        slow: 1,
+        fast: 2,
+        what: "Slow moves to node 2. Fast moves to node 3 (two hops).",
+        why: "Fast is already one node ahead. The gap between them grows by one every step - that gap is what positions slow at the midpoint.",
+      },
+      {
+        slow: 2,
+        fast: 4,
+        what: "Slow moves to node 3. Fast moves to node 5 (two hops).",
+        why: "Fast just reached the last node. Slow has moved exactly half as far - it is at the middle.",
+      },
+      {
+        slow: 2,
+        fast: 5,
+        resultIndex: 2,
+        resultLabel: "Middle",
+        tailIndices: [3, 4],
+        found: true,
+        what: "Fast reached null. Algorithm complete. Middle = node 3.",
+        why: "Fast covered the full list in the same steps slow covered half. Return slow - it is always the middle node.",
+      },
+    ],
+  },
+  cycle: {
+    tab: "cycle",
+    tabLabel: "Detect Cycle",
+    listLabel: "List: 1 -> 2 -> 3 -> 4 -> 5, with 5 -> 3",
+    code: CYCLE_CODE,
+    nodes: [
+      { label: "1", kind: "node" },
+      { label: "2", kind: "node" },
+      { label: "3", kind: "node" },
+      { label: "4", kind: "node" },
+      { label: "5", kind: "node" },
+    ],
+    steps: [
+      {
+        slow: 0,
+        fast: 0,
+        what: "Both start at head (node 1). The cycle tail is node 5, which points back to node 3.",
+        why: "We show the cycle upfront intentionally. The question is not whether you can see it - it is whether the algorithm can detect it without a map of visited nodes.",
+      },
+      {
+        slow: 1,
+        fast: 2,
+        what: "Slow moves to node 2. Fast moves to node 3.",
+        why: "Both are in the linear section. Fast is gaining one node per step on slow.",
+      },
+      {
+        slow: 2,
+        fast: 4,
+        what: "Slow moves to node 3. Fast moves to node 5.",
+        why: "Fast entered the cycle on the previous step. Slow just entered. Once both are inside the cycle, fast will lap slow.",
+      },
+      {
+        slow: 3,
+        fast: 3,
+        resultIndex: 3,
+        resultLabel: "Meeting",
+        what: "Slow moves to node 4. Fast moves two hops: 5 -> 3 -> 4. They meet at node 4.",
+        why: "Inside a cycle, fast gains exactly one node on slow per step. It must catch up - there is no way to skip over slow when incrementing by one. Meeting = cycle confirmed.",
+      },
+      {
+        slow: 3,
+        fast: 3,
+        resultIndex: 3,
+        resultLabel: "Meeting",
+        found: true,
+        what: "Pointers met at node 4. Return true - cycle exists.",
+        why: "If the list had no cycle, fast would have reached null before they ever met. Null means no cycle. Meeting means cycle. Those are the only two outcomes.",
+      },
+    ],
+  },
+};
+
+function NodeBox({
+  node,
+  isSlow,
+  isFast,
+  isResult,
+  resultLabel,
+  isTail,
 }: {
-  value: number;
-  activeSlow?: boolean;
-  activeFast?: boolean;
-  cycleMember?: boolean;
-  cycleEntry?: boolean;
-  collision?: boolean;
+  node: DisplayNode;
+  isSlow: boolean;
+  isFast: boolean;
+  isResult: boolean;
+  resultLabel?: "Middle" | "Meeting";
+  isTail: boolean;
 }) {
-  const labels = [
-    activeSlow ? { text: "Slow", tone: "border-blue-400/20 bg-blue-500/12 text-blue-200" } : null,
-    activeFast ? { text: "Fast", tone: "border-emerald-400/20 bg-emerald-500/12 text-emerald-200" } : null,
-  ].filter(Boolean) as Array<{ text: string; tone: string }>;
-
   return (
-    <div className="flex flex-col items-center">
-      <div className="pointer-events-none mb-1.5 flex min-h-[1.9rem] flex-col items-center justify-end gap-0.5">
-        {cycleEntry ? (
-          <span className="rounded-full border border-blue-400/25 bg-blue-500/10 px-2 py-0.5 text-[7px] font-medium uppercase tracking-[0.16em] text-blue-200">
-            Loop Start
-          </span>
-        ) : null}
-
-        {labels.map((label) => (
-          <span
-            key={label.text}
-            className={cn(
-              "rounded-full border px-2 py-0.5 text-[7px] font-medium uppercase tracking-[0.16em] shadow-sm",
-              label.tone
-            )}
-          >
-            {label.text}
-          </span>
-        ))}
-      </div>
-
+    <div className="flex w-[52px] shrink-0 flex-col items-center gap-1.5 text-center">
       <motion.div
         layout
-        initial={{ opacity: 0, y: 10, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: "spring", stiffness: 260, damping: 24 }}
+        transition={{ duration: 0.28, ease: "easeInOut" }}
         className={cn(
-          "relative flex h-[4.7rem] w-[4.7rem] flex-col rounded-[0.95rem] border px-2.5 py-2 shadow-sm",
-          collision
-            ? "border-rose-400 bg-rose-500/10 shadow-[0_0_0_1px_rgba(251,113,133,0.2)]"
-            : activeSlow || activeFast
-              ? "border-blue-400 bg-blue-500/10 shadow-[0_0_0_1px_rgba(96,165,250,0.2)]"
-              : cycleMember
-                ? "border-blue-500/20 bg-slate-900"
-                : "border-slate-800 bg-slate-900"
+          "relative flex h-[54px] w-[52px] overflow-hidden rounded-[0.95rem] border shadow-sm",
+          node.kind === "null" ? "items-center justify-center" : "items-stretch",
+          isTail && "border-slate-900 bg-slate-950 text-slate-500 opacity-45",
+          !isTail && !isResult && !isSlow && !isFast && "border-slate-800 bg-slate-900 text-white",
+          isSlow && !isResult && "border-amber-400/70 bg-amber-500/10 text-white",
+          isFast && !isResult && "border-blue-400/70 bg-blue-500/10 text-white",
+          isResult && "border-emerald-300 bg-emerald-500/18 text-emerald-100"
         )}
       >
-        <div className="flex min-h-4 items-start">
-          <span className="text-[7px] uppercase tracking-[0.18em] text-slate-600">node</span>
-        </div>
-
-        <div className="flex flex-1 items-center justify-center py-0.5">
-          <span className="text-[1.5rem] font-semibold leading-none tracking-tight text-white">
-            {value}
-          </span>
-        </div>
-
-        <div className="pt-0.5 text-center text-[7px] uppercase tracking-[0.18em] text-slate-600">
-          value
-        </div>
+        {node.kind === "null" ? (
+          <span className="text-xs font-semibold uppercase tracking-[0.14em]">null</span>
+        ) : (
+          <>
+            <div className="flex flex-1 items-center justify-center text-lg font-semibold tracking-tight">
+              {node.label}
+            </div>
+            <div className="flex w-[16px] items-center justify-center border-l border-slate-700 text-[11px] text-slate-400">
+              →
+            </div>
+          </>
+        )}
       </motion.div>
-    </div>
-  );
-}
 
-function ForwardConnector({
-  active,
-  scenario,
-}: {
-  active?: boolean;
-  scenario: Scenario;
-}) {
-  return (
-    <div className="flex min-w-[2.7rem] flex-col items-center justify-center gap-0.5">
-      <div className="flex h-4 items-center">
-        <div className={cn("h-px w-4.5", active ? "bg-blue-300" : "bg-slate-700")} />
-        <ArrowRight
-          className={cn("-ml-0.5 h-[0.7rem] w-[0.7rem]", active ? "text-blue-300" : "text-slate-700")}
-          strokeWidth={2}
-        />
+      <div className="flex min-h-[2.5rem] flex-col items-center gap-1">
+        <div className="flex min-h-[16px] flex-wrap items-center justify-center gap-1">
+          {isResult ? (
+            <span className="rounded-full border border-emerald-400/25 bg-emerald-500/12 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-emerald-200">
+              {resultLabel}
+            </span>
+          ) : null}
+          {isSlow && !isResult ? (
+            <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-amber-200">
+              SLOW
+            </span>
+          ) : null}
+          {isFast && !isResult ? (
+            <span className="rounded-full border border-blue-400/25 bg-blue-500/10 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-blue-200">
+              FAST
+            </span>
+          ) : null}
+        </div>
+
+        <div className="flex min-h-[14px] items-center justify-center">
+          {isTail ? (
+            <span className="text-[9px] uppercase tracking-[0.16em] text-slate-600">TAIL</span>
+          ) : null}
+        </div>
       </div>
-      <span className="text-[7px] uppercase tracking-[0.18em] text-slate-600">
-        {scenario === "cycle" ? "next" : "next"}
-      </span>
     </div>
   );
 }
 
-function MessagePanel({ children }: { children: React.ReactNode }) {
+function ForwardConnector() {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/35 px-4 py-2.5 text-sm text-slate-200">
-      {children}
+    <div className="flex h-[54px] w-[20px] shrink-0 items-center justify-center text-slate-600">
+      <div className="flex items-center">
+        <div className="h-px w-3 bg-slate-700" />
+        <ArrowRight className="-ml-0.5 h-3.5 w-3.5 text-slate-700" strokeWidth={2} />
+      </div>
     </div>
+  );
+}
+
+function CycleOverlay() {
+  return (
+    <svg
+      className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-[40px] w-[340px]"
+      viewBox="0 0 340 40"
+      aria-hidden="true"
+    >
+      <defs>
+        <marker
+          id="cycle-arrowhead"
+          markerWidth="6"
+          markerHeight="6"
+          refX="5"
+          refY="3"
+          orient="auto"
+        >
+          <path d="M0,0 L6,3 L0,6 Z" fill="#f87171" />
+        </marker>
+      </defs>
+      <path
+        d="M314 24 C338 24 338 4 264 4 L188 4 C166 4 156 12 170 22"
+        fill="none"
+        stroke="#f87171"
+        strokeWidth="2"
+        strokeDasharray="5 4"
+        markerEnd="url(#cycle-arrowhead)"
+      />
+      <text x="244" y="16" fill="#fca5a5" fontSize="10" fontWeight="600" letterSpacing="0.14em">
+        cycle
+      </text>
+    </svg>
   );
 }
 
 export function FastSlowVisual() {
-  const [scenario, setScenario] = useState<Scenario>("middle");
-  const [slowIndex, setSlowIndex] = useState(0);
-  const [fastIndex, setFastIndex] = useState(0);
+  const [activeTab, setActiveTab] = useState<Scenario>("middle");
+  const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isFinished, setIsFinished] = useState(false);
-  const [status, setStatus] = useState(
-    "Slow moves one hop. Fast moves two hops. Step through the list to watch the gap change."
-  );
-  const [stepCount, setStepCount] = useState(0);
-  const [collisionIndex, setCollisionIndex] = useState<number | null>(null);
 
-  const reset = useCallback((nextScenario: Scenario) => {
-    setScenario(nextScenario);
-    setSlowIndex(0);
-    setFastIndex(0);
-    setIsPlaying(false);
-    setIsFinished(false);
-    setStepCount(0);
-    setCollisionIndex(null);
-    setStatus(
-      nextScenario === "middle"
-        ? "Slow moves one hop. Fast moves two hops. Step through the list to see why slow reaches the middle."
-        : `Slow moves one hop. Fast moves two hops. The tail loops back to node ${VALUES[CYCLE_ENTRY_INDEX]}.`
-    );
-  }, []);
-
-  const step = useCallback(() => {
-    if (isFinished) return;
-
-    if (scenario === "middle") {
-      const slowNext = getNextIndex(slowIndex, "middle");
-      const fastOne = getNextIndex(fastIndex, "middle");
-
-      if (slowNext === null || fastOne === null) {
-        setIsFinished(true);
-        setIsPlaying(false);
-        setStatus(`Fast reached the end. Slow is at node ${VALUES[slowIndex]}, which is the middle.`);
-        return;
-      }
-
-      const fastTwo = getNextIndex(fastOne, "middle");
-      const nextSlow = slowNext;
-      const nextFast = fastTwo ?? fastOne;
-
-      setSlowIndex(nextSlow);
-      setFastIndex(nextFast);
-      setStepCount((value) => value + 1);
-
-      if (fastTwo === null || getNextIndex(nextFast, "middle") === null) {
-        setIsFinished(true);
-        setIsPlaying(false);
-        setStatus(`Fast reached the end. Slow is at node ${VALUES[nextSlow]}, which is the middle.`);
-        return;
-      }
-
-      setStatus(`Slow moved to ${VALUES[nextSlow]}. Fast moved to ${VALUES[nextFast]}.`);
-      return;
-    }
-
-    const nextSlow = getNextIndex(slowIndex, "cycle") ?? slowIndex;
-    const fastOne = getNextIndex(fastIndex, "cycle") ?? fastIndex;
-    const nextFast = getNextIndex(fastOne, "cycle") ?? fastOne;
-
-    setSlowIndex(nextSlow);
-    setFastIndex(nextFast);
-    setStepCount((value) => value + 1);
-
-    if (nextSlow === nextFast && stepCount > 0) {
-      setCollisionIndex(nextSlow);
-      setIsFinished(true);
-      setIsPlaying(false);
-      setStatus(`Cycle detected. Slow and fast met at node ${VALUES[nextSlow]}.`);
-      return;
-    }
-
-    setStatus(`Slow moved to ${VALUES[nextSlow]}. Fast moved to ${VALUES[nextFast]}.`);
-  }, [fastIndex, isFinished, scenario, slowIndex, stepCount]);
+  const demo = DEMOS[activeTab];
+  const step = demo.steps[currentStep];
+  const isAtLastStep = currentStep === demo.steps.length - 1;
+  const isAutoRunning = isPlaying && !isAtLastStep;
 
   useEffect(() => {
-    if (!isPlaying || isFinished) return;
+    if (!isAutoRunning) {
+      return undefined;
+    }
 
-    const id = window.setInterval(() => {
-      step();
-    }, 900);
+    const timer = window.setInterval(() => {
+      setCurrentStep((previousStep) =>
+        previousStep < demo.steps.length - 1 ? previousStep + 1 : previousStep
+      );
+    }, 1400);
 
-    return () => window.clearInterval(id);
-  }, [isFinished, isPlaying, step]);
+    return () => window.clearInterval(timer);
+  }, [demo.steps.length, isAutoRunning]);
 
-  const cycleNodes = scenario === "cycle" ? VALUES.map((_, index) => index >= CYCLE_ENTRY_INDEX) : [];
+  function selectTab(nextTab: Scenario) {
+    setActiveTab(nextTab);
+    setCurrentStep(0);
+    setIsPlaying(false);
+  }
+
+  function reset() {
+    setCurrentStep(0);
+    setIsPlaying(false);
+  }
+
+  function nextStep() {
+    setCurrentStep((previousStep) =>
+      previousStep < demo.steps.length - 1 ? previousStep + 1 : previousStep
+    );
+  }
+
+  function togglePlay() {
+    if (isAutoRunning) {
+      setIsPlaying(false);
+      return;
+    }
+
+    if (isAtLastStep) {
+      setCurrentStep(0);
+    }
+
+    setIsPlaying(true);
+  }
 
   return (
-    <section className="relative w-full max-w-5xl overflow-hidden rounded-[1.5rem] border border-slate-800 bg-slate-950 px-5 py-5 text-slate-100 shadow-xl sm:px-6 sm:py-6">
-      <div className="mx-auto max-w-[70rem]">
-        <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-800 bg-slate-900">
-          <Timer className="h-4 w-4 text-blue-300" />
-        </div>
-        <div className="min-w-0 flex-1">
-            <p className="max-w-2xl text-[13px] leading-6 text-slate-400">
-              Slow moves one node at a time while fast moves two to find the middle or detect a loop.
-            </p>
+    <section className="relative flex h-auto min-h-[860px] w-full max-w-5xl flex-col overflow-hidden rounded-[1.5rem] border border-slate-800 bg-slate-950 text-slate-100 shadow-xl sm:min-h-[620px]">
+      <div className="absolute left-0 top-0 h-1 w-full bg-blue-400" />
 
-            <div className="mt-3.5 max-w-4xl rounded-xl border border-slate-800 bg-slate-900/40 p-0.5">
-              <div className="grid grid-cols-2 gap-1 text-xs">
-                <button
-                  type="button"
-                  onClick={() => reset("middle")}
-                  className={cn(
-                    "rounded-lg px-3 py-2 font-medium transition-colors",
-                    scenario === "middle" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"
-                  )}
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <Split className="h-3.5 w-3.5" />
-                    Find Middle
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => reset("cycle")}
-                  className={cn(
-                    "rounded-lg px-3 py-2 font-medium transition-colors",
-                    scenario === "cycle" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"
-                  )}
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <Repeat2 className="h-3.5 w-3.5" />
-                    Detect Cycle
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-2 flex max-w-4xl flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
-              <span>Slow = +1 hop</span>
-              <span>Fast = +2 hops</span>
-              <span>O(n) time / O(1) space</span>
-              {scenario === "cycle" ? <span>Tail loops back to node {VALUES[CYCLE_ENTRY_INDEX]}</span> : null}
-            </div>
+      <div className="flex h-[88px] shrink-0 flex-col justify-center gap-3 border-b border-slate-800 px-4 sm:h-12 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
+        <div className="flex flex-wrap gap-2">
+          <div className="inline-flex rounded-xl border border-slate-800 bg-slate-900/60 p-1">
+            {Object.values(DEMOS).map((tab) => (
+              <button
+                key={tab.tab}
+                type="button"
+                onClick={() => selectTab(tab.tab)}
+                className={cn(
+                  "whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+                  activeTab === tab.tab
+                    ? "bg-slate-800 text-white"
+                    : "text-slate-400 hover:text-white"
+                )}
+              >
+                {tab.tabLabel}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="mt-4 rounded-[1.2rem] border border-slate-800 bg-slate-900/40 px-4 py-4">
-          <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-500">
-            <span>[ value | next ]</span>
-            <span>{scenario === "middle" ? "Linear list" : "Cycle closes back into the list"}</span>
-          </div>
+        <div className="flex flex-wrap gap-2">
+          <Badge className="border-blue-500/20 bg-blue-500/10 text-blue-200 hover:bg-blue-500/10">
+            O(n) time
+          </Badge>
+          <Badge className="border-emerald-500/20 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/10">
+            O(1) space
+          </Badge>
+        </div>
+      </div>
 
-          <div className="overflow-x-auto overflow-y-visible py-2">
-            <div className="mx-auto w-max max-w-full px-5">
-              <div className="flex min-h-[7.8rem] items-end gap-1.5">
-                {VALUES.map((value, index) => (
-                  <div key={value} className="flex items-end gap-1.5">
-                    <NodeCell
-                      value={value}
-                      activeSlow={slowIndex === index}
-                      activeFast={fastIndex === index}
-                      cycleMember={scenario === "cycle" ? cycleNodes[index] : false}
-                      cycleEntry={scenario === "cycle" && index === CYCLE_ENTRY_INDEX}
-                      collision={collisionIndex === index}
+      <div className="flex h-[72px] shrink-0 items-center border-b border-slate-800 px-4 sm:h-9 sm:px-5">
+        <div className="flex w-full flex-wrap gap-2">
+          <Badge variant="outline" className="shrink-0 border-slate-700 bg-slate-900 text-slate-400">
+            {demo.listLabel}
+          </Badge>
+        </div>
+      </div>
+
+      <div className="flex h-[240px] shrink-0 items-center justify-center border-b border-slate-800 px-4 py-4 sm:h-[184px] sm:px-5">
+        <div className="w-full">
+          <div className={cn("relative mx-auto w-max", activeTab === "cycle" && "pt-9")}>
+            {activeTab === "cycle" ? <CycleOverlay /> : null}
+
+            <div className="flex items-start">
+              {demo.nodes.map((node, index) => {
+                const isSlow = step.slow === index;
+                const isFast = step.fast === index;
+                const isResult = step.resultIndex === index;
+                const isTail = step.tailIndices?.includes(index) ?? false;
+
+                return (
+                  <div key={`${activeTab}-${node.label}-${index}`} className="flex items-start">
+                    <NodeBox
+                      node={node}
+                      isSlow={isSlow}
+                      isFast={isFast}
+                      isResult={isResult}
+                      resultLabel={step.resultLabel}
+                      isTail={isTail}
                     />
-                    {index < VALUES.length - 1 ? (
-                      <ForwardConnector
-                        scenario={scenario}
-                        active={scenario === "middle" ? fastIndex > index : index >= CYCLE_ENTRY_INDEX || fastIndex > index}
-                      />
+                    {index < demo.nodes.length - 1 && !(activeTab === "cycle" && index === demo.nodes.length - 1) ? (
+                      <ForwardConnector />
                     ) : null}
                   </div>
-                ))}
-              </div>
-
-              {scenario === "cycle" ? (
-                <div className="mt-2 flex items-center justify-end gap-2 pr-[4.9rem] text-[10px] text-blue-300">
-                  <Repeat2 className="h-3.5 w-3.5" />
-                  <span>Tail links back to node {VALUES[CYCLE_ENTRY_INDEX]}</span>
-                </div>
-              ) : null}
+                );
+              })}
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="mt-2.5">
-          <MessagePanel>{status}</MessagePanel>
+      <div className="flex h-[92px] shrink-0 flex-col justify-center gap-3 border-b border-slate-800 px-4 py-3 sm:h-11 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-0">
+        <div className="flex items-center gap-2">
+          {demo.steps.map((_, index) => (
+            <span
+              key={`${activeTab}-dot-${index}`}
+              className={cn(
+                "h-2.5 w-2.5 rounded-full transition-colors",
+                index <= currentStep ? "bg-blue-400" : "bg-slate-700"
+              )}
+            />
+          ))}
+          <span className="ml-2 text-xs font-medium text-slate-500">
+            Step {currentStep + 1} of {demo.steps.length}
+          </span>
         </div>
 
-        <div className="mt-3.5 border-t border-slate-800 pt-3">
-          <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-            <Button
-              variant="outline"
-              className="h-10 rounded-xl border-slate-700 bg-transparent px-4 text-slate-200 hover:bg-slate-900 hover:text-white"
-              onClick={() => reset(scenario)}
-            >
-              <RotateCcw className="h-4 w-4" />
-              Reset
-            </Button>
-            <Button
-              variant="outline"
-              className="h-10 rounded-xl border-slate-700 bg-transparent px-4 text-slate-200 hover:bg-slate-900 hover:text-white"
-              onClick={step}
-              disabled={isPlaying || isFinished}
-            >
-              <SkipForward className="h-4 w-4" />
-              Step
-            </Button>
-            <Button
-              className={cn(
-                "h-10 rounded-xl px-5 text-white",
-                isPlaying ? "bg-amber-600 hover:bg-amber-500" : "bg-blue-600 hover:bg-blue-500"
-              )}
-              onClick={() => setIsPlaying((value) => !value)}
-              disabled={isFinished}
-            >
-              {isPlaying ? (
-                <>
-                  <Pause className="h-4 w-4" />
-                  Pause
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4" />
-                  Auto Play
-                </>
-              )}
-            </Button>
-            <span className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-sm text-slate-400">
-              <span className="text-xs uppercase tracking-[0.16em] text-slate-500">steps</span>{" "}
-              <span className="text-sm text-slate-300">{stepCount}</span>
-            </span>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            className="h-9 rounded-xl border-slate-700 bg-transparent px-3 text-slate-200 hover:bg-slate-900 hover:text-white"
+            onClick={reset}
+          >
+            <RotateCcw className="h-4 w-4" />
+            Reset
+          </Button>
+          <Button
+            variant="outline"
+            className="h-9 rounded-xl border-slate-700 bg-transparent px-3 text-slate-200 hover:bg-slate-900 hover:text-white"
+            onClick={togglePlay}
+          >
+            {isAutoRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            {isAutoRunning ? "Pause" : "Auto Play"}
+          </Button>
+          <Button
+            className="h-9 rounded-xl bg-blue-600 px-3 text-white hover:bg-blue-500"
+            onClick={nextStep}
+            disabled={isAtLastStep}
+          >
+            <SkipForward className="h-4 w-4" />
+            Step
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid shrink-0 grid-cols-1 gap-3 border-b border-slate-800 px-4 py-3 sm:min-h-[100px] sm:grid-cols-2 sm:px-5 sm:py-2">
+        <div className="flex min-h-[90px] flex-col items-start rounded-2xl border border-amber-500/20 bg-slate-900/80 p-4 pb-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-200">
+            What
+          </p>
+          <div className="mt-2 flex-1 overflow-visible pr-1">
+            <p className="text-sm leading-6 text-slate-100">{step.what}</p>
           </div>
+        </div>
+
+        <div className="flex min-h-[90px] flex-col items-start rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4 pb-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-200">
+            Why
+          </p>
+          <div className="mt-2 flex-1 overflow-visible pr-1">
+            <p className="text-sm leading-6 text-slate-100">{step.why}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 px-4 py-3 sm:px-5 sm:py-2">
+        <div className="flex h-full min-h-0 flex-col rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+          <div className="flex items-center gap-2 text-slate-300">
+            <Code2 className="h-4 w-4 text-blue-300" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+              Code For This Pattern
+            </p>
+          </div>
+          <pre className="mt-3 min-h-0 flex-1 max-h-[160px] overflow-y-auto overflow-x-auto rounded-xl border border-slate-800 bg-slate-950 px-4 py-4 text-sm leading-6 text-slate-200">
+            <code>{demo.code}</code>
+          </pre>
         </div>
       </div>
     </section>

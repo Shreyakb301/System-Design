@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -43,7 +42,6 @@ export function TreeTraversalLesson() {
     <div className="box-border w-full min-w-0 max-w-full space-y-12">
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Traversal Order</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             Tree traversals are different rules for visiting the same nodes
           </h2>
@@ -106,7 +104,6 @@ export function TreeTraversalLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Traversal Types</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             The order changes, but the same tree is being visited every time
           </h2>
@@ -155,7 +152,6 @@ export function TreeTraversalLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Key Takeaways</Badge>
           <h2 className="text-2xl font-bold tracking-tight">The short version</h2>
         </div>
 

@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -48,7 +47,6 @@ export function LinkedListLesson() {
     <div className="box-border w-full min-w-0 max-w-full space-y-12">
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Linked List Basics</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             Linked lists connect nodes through pointers
           </h2>
@@ -114,7 +112,6 @@ export function LinkedListLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Singly vs Doubly</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             One extra pointer changes how the list behaves
           </h2>
@@ -179,7 +176,6 @@ export function LinkedListLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Key Takeaways</Badge>
           <h2 className="text-2xl font-bold tracking-tight">The short version</h2>
         </div>
 

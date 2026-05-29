@@ -1,104 +1,148 @@
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { GraphTraversalVisual } from "@/components/visuals/GraphTraversalVisual";
+
+const whyRows = [
+  {
+    aspect: "Data structure",
+    bfs: "Queue (FIFO)",
+    dfs: "Stack (LIFO)",
+  },
+  {
+    aspect: "Next node",
+    bfs: "Oldest unvisited neighbor",
+    dfs: "Most recently discovered neighbor",
+  },
+  {
+    aspect: "Pattern",
+    bfs: "Expands like a wave outward",
+    dfs: "Dives down one branch, then backtracks",
+  },
+  {
+    aspect: "Guarantees",
+    bfs: "Shortest path by edge count",
+    dfs: "Full path exploration",
+  },
+  {
+    aspect: "Classic uses",
+    bfs: "Shortest path, level-order, social graph distance",
+    dfs: "Cycle detection, topological sort, connected components",
+  },
+];
 
 const comparisonRows = [
   {
-    aspect: "Main data structure",
-    bfs: "Queue",
-    dfs: "Stack or recursion",
+    aspect: "Data structure",
+    bfs: "Queue (FIFO)",
+    dfs: "Stack (LIFO)",
   },
   {
-    aspect: "Exploration pattern",
-    bfs: "Visits neighbors layer by layer.",
-    dfs: "Dives down one path before backtracking.",
+    aspect: "Visits neighbors",
+    bfs: "Level by level",
+    dfs: "Branch by branch",
   },
   {
-    aspect: "Shortest-path intuition",
-    bfs: "Finds shortest path by edge count in an unweighted graph.",
-    dfs: "Does not guarantee the shortest path.",
+    aspect: "Shortest path",
+    bfs: "Guaranteed in unweighted graphs",
+    dfs: "Not guaranteed",
   },
   {
-    aspect: "Best mental model",
-    bfs: "A wave spreading outward from the start node.",
-    dfs: "A path explorer going as deep as possible first.",
+    aspect: "Memory",
+    bfs: "O(width) - wide graphs are costly",
+    dfs: "O(depth) - deep graphs are costly",
+  },
+  {
+    aspect: "Best for",
+    bfs: "Shortest path, level-order, social distance",
+    dfs: "Cycle detection, topological sort, maze solving",
+  },
+  {
+    aspect: "Worst case",
+    bfs: "Very wide graphs",
+    dfs: "Very deep graphs (stack overflow risk)",
   },
 ];
 
 const takeaways = [
-  "BFS and DFS can visit the same graph in very different orders.",
-  "BFS uses a queue and explores one layer at a time.",
-  "DFS uses a stack-like process and explores one branch deeply before backtracking.",
-  "The right traversal depends on whether you care more about levels or deep path exploration.",
+  "BFS and DFS visit the same nodes - the order is what changes. That order is entirely determined by queue vs stack.",
+  "BFS processes all nodes at distance 1 before distance 2. That is why it guarantees the shortest path in unweighted graphs.",
+  "DFS dives as deep as possible before backtracking. That is why it is natural for exhaustive search, cycle detection, and path problems.",
+  "Swap queue.shift() for stack.pop() and BFS becomes DFS. The rest of the code is nearly identical.",
+  "BFS is expensive on wide graphs. DFS is expensive on deep graphs.",
 ];
 
 export function GraphTraversalLesson() {
   return (
     <div className="box-border w-full min-w-0 max-w-full space-y-12">
       <section className="space-y-5">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-[1.5rem] border bg-muted/40 p-6">
+            <div className="space-y-3">
+              <p className="leading-7 text-foreground">
+                You need the shortest path in an unweighted graph, or you need to
+                process nodes level by level.
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border bg-muted/40 p-6">
+            <div className="space-y-3">
+              <p className="leading-7 text-foreground">
+                You need to explore all paths, detect cycles, check connectivity, or
+                solve maze and backtracking problems.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Graph Search</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
-            BFS and DFS explore the same graph with different priorities
+            Queue versus stack is the entire behavioral difference
           </h2>
           <p className="leading-7 text-muted-foreground">
-            Breadth-first search and depth-first search both start from one node and work
-            outward through a graph. The big difference is what they do next: BFS explores
-            the closest frontier first, while DFS keeps following one branch until it has
-            to backtrack.
+            BFS and DFS do not disagree about the graph. They disagree about which
+            frontier node gets processed next. The queue makes BFS stay shallow. The
+            stack makes DFS go deep.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>How to read the demo</CardTitle>
-              <CardDescription>
-                First pick a start node, then watch the frontier structure change.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                The current node and discovered nodes are highlighted directly on the graph.
-              </p>
-              <p>
-                The side structure shows the active <strong>queue</strong> for BFS or{" "}
-                <strong>stack</strong> for DFS, which explains why the visit order changes.
-              </p>
-              <p>
-                The comparison mode lets you watch both patterns side by side.
-              </p>
-            </CardContent>
-          </Card>
+        <div className="overflow-x-auto rounded-xl border">
+          <table className="w-full min-w-[760px] text-left text-sm">
+            <thead className="bg-muted/50">
+              <tr className="border-b">
+                <th className="px-4 py-3 font-semibold">Aspect</th>
+                <th className="px-4 py-3 font-semibold">BFS</th>
+                <th className="px-4 py-3 font-semibold">DFS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {whyRows.map((row) => (
+                <tr key={row.aspect} className="border-b last:border-0">
+                  <td className="px-4 py-3 font-medium">{row.aspect}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{row.bfs}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{row.dfs}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>What to try in the demo</CardTitle>
-              <CardDescription>
-                Use the same start node and compare the order produced by each traversal.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                Start from one node and run <strong>BFS</strong> to see the search expand
-                level by level.
-              </p>
-              <p>
-                Reset, then run <strong>DFS</strong> from the same node to watch it go deep
-                down one branch first.
-              </p>
-              <p>
-                Use <strong>Comparison</strong> mode when you want both traversals visible
-                at the same time.
-              </p>
-            </CardContent>
-          </Card>
+        <p className="text-sm leading-7 text-muted-foreground">
+          Swap the queue for a stack and BFS becomes DFS. That is the entire difference.
+        </p>
+      </section>
+
+      <section className="space-y-5">
+        <div className="space-y-3">
+          <h2 className="text-2xl font-bold tracking-tight">
+            See the data structure force the traversal order
+          </h2>
+          <p className="leading-7 text-muted-foreground">
+            The simulator keeps the graph fixed and changes only the frontier structure.
+            Queue chips on the right explain BFS. Stack chips on the right explain DFS.
+            The side-by-side tab makes the divergence explicit.
+          </p>
         </div>
 
         <GraphTraversalVisual />
@@ -106,46 +150,17 @@ export function GraphTraversalLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">BFS vs DFS</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
-            Queue-first and stack-first searches feel different immediately
+            Same graph, same start node, different traversal priorities
           </h2>
           <p className="leading-7 text-muted-foreground">
-            These traversals are often taught together because they solve related graph
-            tasks, but they prioritize different information while the search is running.
+            BFS pays memory to keep an entire frontier. DFS pays memory to keep a deep
+            path. Their best-use cases come directly from that tradeoff.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Breadth-first search</CardTitle>
-              <CardDescription>
-                Best when you care about levels or shortest unweighted paths.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>Explores all nodes at distance 1 before distance 2, then distance 3.</p>
-              <p>A natural fit for queue-based frontier expansion.</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Depth-first search</CardTitle>
-              <CardDescription>
-                Best when you want to explore structure deeply before trying alternatives.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>Pushes deeper into one branch, then backtracks when needed.</p>
-              <p>A natural fit for recursion, stacks, and path-style exploration.</p>
-            </CardContent>
-          </Card>
-        </div>
-
         <div className="overflow-x-auto rounded-xl border">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="bg-muted/50">
               <tr className="border-b">
                 <th className="px-4 py-3 font-semibold">Aspect</th>
@@ -168,7 +183,6 @@ export function GraphTraversalLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Key Takeaways</Badge>
           <h2 className="text-2xl font-bold tracking-tight">The short version</h2>
         </div>
 

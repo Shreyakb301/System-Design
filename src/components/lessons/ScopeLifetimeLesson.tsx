@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScopeLifetimeVisual } from "@/components/visuals/ScopeLifetimeVisual";
 
@@ -32,7 +31,6 @@ export function ScopeLifetimeLesson() {
     <div className="box-border w-full min-w-0 max-w-full space-y-12">
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Programming Languages</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             Scope controls visibility. Lifetime controls existence.
           </h2>
@@ -71,7 +69,6 @@ export function ScopeLifetimeLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Comparison Summary</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             Scope and lifetime answer different questions
           </h2>
@@ -101,7 +98,6 @@ export function ScopeLifetimeLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Key Takeaways</Badge>
           <h2 className="text-2xl font-bold tracking-tight">The short version</h2>
         </div>
 

@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { VariableAttributesVisual } from "@/components/visuals/VariableAttributesVisual";
 
@@ -22,7 +21,6 @@ export function VariableAttributesLesson() {
     <div className="box-border w-full min-w-0 max-w-full space-y-12">
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Programming Languages</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             A variable is a bundle of attributes, not just a label
           </h2>
@@ -64,7 +62,6 @@ export function VariableAttributesLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Comparison Summary</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             Each attribute answers a different question about the variable
           </h2>
@@ -92,7 +89,6 @@ export function VariableAttributesLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Key Takeaways</Badge>
           <h2 className="text-2xl font-bold tracking-tight">The short version</h2>
         </div>
 

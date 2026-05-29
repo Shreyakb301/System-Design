@@ -36,12 +36,13 @@ export function Sidebar({ sectionId }: SidebarProps) {
                                                 key={item.href}
                                                 href={item.href}
                                                 className={cn(
-                                                    "group flex w-full items-center rounded-md border border-transparent px-2 py-1 hover:underline",
+                                                    "group flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-1.5 hover:underline",
                                                     pathname === item.href
                                                         ? "font-medium text-foreground underline"
                                                         : "text-muted-foreground"
                                                 )}
                                             >
+                                                <div className={cn("h-1.5 w-1.5 rounded-full transition-colors", pathname === item.href ? "bg-primary" : "bg-muted-foreground/30")} />
                                                 {item.title}
                                             </Link>
                                         ))}

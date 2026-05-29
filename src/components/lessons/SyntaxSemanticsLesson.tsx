@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { SyntaxSemanticsVisual } from "@/components/visuals/SyntaxSemanticsVisual";
 
@@ -37,7 +36,6 @@ export function SyntaxSemanticsLesson() {
     <div className="box-border w-full min-w-0 max-w-full space-y-12">
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Programming Languages</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             Syntax describes form. Semantics describes meaning.
           </h2>
@@ -77,7 +75,6 @@ export function SyntaxSemanticsLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Comparison Table</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             Syntax and semantics answer different questions
           </h2>
@@ -107,7 +104,6 @@ export function SyntaxSemanticsLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Key Takeaways</Badge>
           <h2 className="text-2xl font-bold tracking-tight">The short version</h2>
         </div>
 

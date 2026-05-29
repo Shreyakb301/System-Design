@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -41,7 +40,6 @@ export function LanguageCriteriaLesson() {
     <div className="box-border w-full min-w-0 max-w-full space-y-12">
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Language Theory</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             Language design is a set of tradeoffs, not one perfect formula
           </h2>
@@ -82,7 +80,6 @@ export function LanguageCriteriaLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Comparison Summary</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             The four criteria describe different kinds of language quality
           </h2>
@@ -120,7 +117,6 @@ export function LanguageCriteriaLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Key Takeaways</Badge>
           <h2 className="text-2xl font-bold tracking-tight">The short version</h2>
         </div>
 

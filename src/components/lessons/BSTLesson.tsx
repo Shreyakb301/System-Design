@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -43,7 +42,6 @@ export function BSTLesson() {
     <div className="box-border w-full min-w-0 max-w-full space-y-12">
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Ordered Trees</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             Binary search trees use ordering to cut down the search space
           </h2>
@@ -105,7 +103,6 @@ export function BSTLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Operations</Badge>
           <h2 className="text-2xl font-bold tracking-tight">
             One ordering rule powers search, insert, and delete
           </h2>
@@ -174,7 +171,6 @@ export function BSTLesson() {
 
       <section className="space-y-5">
         <div className="space-y-3">
-          <Badge variant="outline">Key Takeaways</Badge>
           <h2 className="text-2xl font-bold tracking-tight">The short version</h2>
         </div>
 

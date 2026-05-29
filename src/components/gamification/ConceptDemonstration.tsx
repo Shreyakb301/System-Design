@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { SystemCanvas } from "./SystemCanvas";
 import { ResourceMonitor } from "./ResourceMonitor";
-import { COMPONENT_CATALOG, GameState, SystemComponent, Connection } from "@/lib/gamification/types";
+import { GameState, SystemComponent, Connection } from "@/lib/gamification/types";
 import { calculateSystemMetrics } from "@/lib/gamification/simulation";
 
 interface ConceptDemonstrationProps {
@@ -45,6 +45,15 @@ export function ConceptDemonstration({
         return () => clearInterval(interval);
     }, []);
 
+    const handleMoveComponent = (id: string, x: number, y: number) => {
+        setGameState((prev) => ({
+            ...prev,
+            components: prev.components.map((component) =>
+                component.id === id ? { ...component, x, y } : component
+            ),
+        }));
+    };
+
     return (
         <div className="flex flex-col gap-4 p-4 bg-slate-100 dark:bg-slate-950 rounded-xl border">
             <div className="flex items-center justify-between">
@@ -69,13 +78,14 @@ export function ConceptDemonstration({
                 <SystemCanvas
                     components={gameState.components}
                     connections={gameState.connections}
-                    onMoveComponent={() => { }} // Read-only
-                    onRemoveComponent={() => { }} // Read-only
+                    onMoveComponent={handleMoveComponent}
+                    onRemoveComponent={() => { }}
                     isDraggingType={null}
+                    canRemoveComponents={false}
                 />
 
                 <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-white/50 dark:bg-black/50 px-2 py-1 rounded pointer-events-none">
-                    Interactive Demo
+                    Drag nodes to inspect the topology
                 </div>
             </div>
         </div>
