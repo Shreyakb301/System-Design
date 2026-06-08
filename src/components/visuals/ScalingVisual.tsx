@@ -38,8 +38,8 @@ const scenarios: Record<Scenario, { label: string; traffic: number; mode: Scalin
   "failure-ready": { label: "Failure Ready", traffic: 440, mode: "horizontal", nodes: 3, cpu: 4, note: "Multiple nodes keep the service available." },
 };
 
-const pageMotion = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeInOut" } } };
-const cardMotion = { initial: { opacity: 0, y: 12 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: 0.18 }, transition: { duration: 0.24, ease: "easeInOut" } };
+const pageMotion = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeInOut" as const } } };
+const cardMotion = { initial: { opacity: 0, y: 12 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: 0.18 }, transition: { duration: 0.24, ease: "easeInOut" as const } };
 
 function DashboardCard({ className, children }: { className?: string; children: React.ReactNode }) {
   return <motion.section {...cardMotion} className={cn("rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm", className)}>{children}</motion.section>;
@@ -138,13 +138,7 @@ function useScalingModel({ mode, traffic, nodeCount, cpuSize, failedNode }: { mo
 function ScenarioHero({ scenario, onScenario }: { scenario: Scenario; onScenario: (scenario: Scenario) => void }) {
   return (
     <DashboardCard>
-      <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr] lg:items-end">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">System Design</p>
-          <h1 className="mt-2 text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">Vertical vs Horizontal Scaling</h1>
-          <p className="mt-3 max-w-[760px] text-lg leading-8 text-slate-600">Compare upgrading one server with adding more servers to handle growth, latency, and failure.</p>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {(Object.keys(scenarios) as Scenario[]).map((id) => (
             <motion.button
               key={id}
@@ -164,7 +158,6 @@ function ScenarioHero({ scenario, onScenario }: { scenario: Scenario; onScenario
               </span>
             </motion.button>
           ))}
-        </div>
       </div>
     </DashboardCard>
   );
