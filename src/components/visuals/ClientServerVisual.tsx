@@ -65,7 +65,7 @@ const REQUEST_TYPES: RequestTypeDef[] = [
   {
     id: "login",
     label: "Login",
-    icon: "🔐",
+    icon: "AUTH",
     path: ["client", "internet", "server", "server", "database", "database", "server", "internet", "client"],
     latency: 180,
     responseSize: "32 B token",
@@ -75,7 +75,7 @@ const REQUEST_TYPES: RequestTypeDef[] = [
   {
     id: "load_feed",
     label: "Load Feed",
-    icon: "📰",
+    icon: "FEED",
     path: ["client", "internet", "server", "server", "cache", "server", "internet", "client"],
     latency: 90,
     responseSize: "48 KB JSON",
@@ -85,7 +85,7 @@ const REQUEST_TYPES: RequestTypeDef[] = [
   {
     id: "search",
     label: "Search",
-    icon: "🔍",
+    icon: "SEARCH",
     path: ["client", "internet", "server", "server", "database", "database", "database", "server", "internet", "client"],
     latency: 240,
     responseSize: "12 KB results",
@@ -95,7 +95,7 @@ const REQUEST_TYPES: RequestTypeDef[] = [
   {
     id: "upload",
     label: "Upload File",
-    icon: "📤",
+    icon: "UPLOAD",
     path: ["client", "client", "internet", "server", "server", "object_storage", "object_storage", "server", "internet", "client"],
     latency: 850,
     responseSize: "200 B URL",
@@ -105,7 +105,7 @@ const REQUEST_TYPES: RequestTypeDef[] = [
   {
     id: "submit_form",
     label: "Submit Form",
-    icon: "📝",
+    icon: "FORM",
     path: ["client", "internet", "server", "server", "database", "server", "internet", "client"],
     latency: 150,
     responseSize: "64 B status",
