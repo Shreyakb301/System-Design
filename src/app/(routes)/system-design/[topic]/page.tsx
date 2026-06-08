@@ -4,7 +4,7 @@ import { CapacityEstimationVisual } from "@/components/visuals/CapacityEstimatio
 import { ArchitectureComparisonVisual } from "@/components/visuals/ArchitectureComparisonVisual";
 import { ApiComparisonVisual } from "@/components/visuals/ApiComparisonVisual";
 import { ScalingVisual } from "@/components/visuals/ScalingVisual";
-import { LoadBalancingVisual } from "@/components/visuals/LoadBalancingVisual";
+import { LoadBalancerVisual } from "@/components/visuals/LoadBalancerVisual";
 import { CachingVisual } from "@/components/visuals/CachingVisual";
 import { CDNVisual } from "@/components/visuals/CDNVisual";
 import { SQLNoSQLVisual } from "@/components/visuals/SQLNoSQLVisual";
@@ -129,7 +129,7 @@ const DEMO_CONFIGS: Record<string, { title: string; description: string; visual?
     "load-balancing": {
         title: "Load Balancer",
         description: "Explore how traffic is distributed across multiple servers using different algorithms and health check strategies.",
-        visual: <LoadBalancingVisual />,
+        visual: <LoadBalancerVisual />,
     },
     "scaling": {
         title: "Vertical vs Horizontal Scaling",
@@ -178,6 +178,10 @@ export default async function SystemDesignTopicPage(props: { params: Promise<{ t
                 </p>
             </div>
         );
+    }
+
+    if (topicId === "load-balancing") {
+        return <LoadBalancerVisual />;
     }
 
     return (
