@@ -206,13 +206,7 @@ function useLoadBalancerModel({
 function ScenarioHero({ scenario, onScenario }: { scenario: Scenario; onScenario: (scenario: Scenario) => void }) {
   return (
     <DashboardCard className="overflow-hidden">
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr] lg:items-end">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">System Design</p>
-          <h1 className="mt-2 text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">Load Balancing</h1>
-          <p className="mt-3 max-w-[760px] text-lg leading-8 text-slate-600">Learn how traffic is distributed across servers to improve availability, scalability, and performance.</p>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {(Object.keys(scenarios) as Scenario[]).map((id) => (
             <motion.button
               key={id}
@@ -221,14 +215,17 @@ function ScenarioHero({ scenario, onScenario }: { scenario: Scenario; onScenario
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
               className={cn(
-                "rounded-2xl border bg-white p-4 text-left transition",
-                scenario === id ? "border-2 border-slate-900 shadow-lg scale-[1.01]" : "border-slate-200 hover:border-slate-300",
+                "flex h-full flex-col rounded-2xl border bg-white p-4 text-left transition",
+                scenario === id ? "border-2 border-slate-900 shadow-lg" : "border-slate-200 hover:border-slate-300",
               )}
             >
               <span className="text-base font-bold text-slate-950">{scenarios[id].label}</span>
               <span className="mt-1 block text-sm leading-6 text-slate-600">{scenarios[id].note}</span>
-              <span className="mt-3 block rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-semibold text-slate-700">
-                Recommended: {algorithms[scenarios[id].algorithm].label}
+              <span className="mt-auto pt-4">
+                <span className="block text-[0.7rem] font-semibold uppercase tracking-wider text-slate-400">Recommended</span>
+                <span className="mt-1 inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-sm font-semibold text-slate-700">
+                  {algorithms[scenarios[id].algorithm].label}
+                </span>
               </span>
             </motion.button>
           ))}
