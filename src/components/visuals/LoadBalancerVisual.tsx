@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   Check,
   CircleDot,
-  Database,
   GitBranch,
   Server,
   Settings2,
@@ -78,8 +77,8 @@ const algorithms: Record<Algorithm, { label: string; changed: string; matters: s
 
 const serverIds = ["A", "B", "C", "D"];
 const baseWeights = [1, 1.25, 0.9, 1.55];
-const pageMotion = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeInOut" } } };
-const cardMotion = { initial: { opacity: 0, y: 12 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: 0.18 }, transition: { duration: 0.24, ease: "easeInOut" } };
+const pageMotion = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeInOut" as const } } };
+const cardMotion = { initial: { opacity: 0, y: 12 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: 0.18 }, transition: { duration: 0.24, ease: "easeInOut" as const } };
 
 function DashboardCard({ className, children }: { className?: string; children: React.ReactNode }) {
   return <motion.section {...cardMotion} className={cn("rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm", className)}>{children}</motion.section>;
@@ -311,13 +310,19 @@ function TrafficControls({
   );
 }
 
-function TrafficDot({ delay, y, load }: { delay: number; y: number; load: number }) {
+// A request "packet" that travels from the Load Balancer along a connector
+// curve into a specific server row. Positions are percentages so the dot stays
+// round and aligned regardless of the canvas aspect ratio.
+function TrafficDot({ targetTop, duration, delay }: { targetTop: number; duration: number; delay: number }) {
   return (
     <motion.span
-      className="absolute left-[37%] top-1/2 h-2.5 w-2.5 rounded-full bg-slate-800/60"
-      style={{ y }}
-      animate={{ x: ["0vw", "20vw"], opacity: [0, 0.75, 0] }}
-      transition={{ duration: Math.max(1.4, 3.2 - load / 340), repeat: Infinity, delay, ease: "easeInOut" }}
+      className="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-500 shadow-sm"
+      animate={{
+        left: ["57.3%", "62%", "65.8%"],
+        top: ["47.4%", "47.4%", `${targetTop}%`],
+        opacity: [0, 0.9, 0],
+      }}
+      transition={{ duration, repeat: Infinity, delay, ease: "easeInOut" }}
     />
   );
 }
@@ -365,7 +370,8 @@ function ServerNode({ server }: { server: ServerState }) {
 }
 
 function ArchitectureCanvas({ servers, requestRate, healthChecks }: { servers: ServerState[]; requestRate: number; healthChecks: boolean }) {
-  const dots = Math.min(18, Math.max(6, Math.round(requestRate / 70)));
+  const dotDuration = Math.max(1.1, 2.6 - requestRate / 450);
+  const dotsPerLine = Math.min(5, Math.max(2, Math.round(requestRate / 220)));
   return (
     <DashboardCard className="min-h-[420px] max-h-[520px] overflow-hidden">
       <div className="mb-4 flex items-center justify-between gap-4">
@@ -382,35 +388,40 @@ function ArchitectureCanvas({ servers, requestRate, healthChecks }: { servers: S
         style={{ backgroundImage: "radial-gradient(circle, rgba(100,116,139,0.18) 1px, transparent 1px)", backgroundSize: "18px 18px" }}
       >
         <svg className="absolute inset-0 h-full w-full" viewBox="0 0 820 390" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M130 185 C220 185 250 185 330 185" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
-          <path d="M470 185 C545 80 605 70 705 70" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
-          <path d="M470 185 C555 150 605 145 705 145" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
-          <path d="M470 185 C555 225 605 230 705 230" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
-          <path d="M470 185 C545 310 605 315 705 315" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
-          <path d="M705 350 C640 355 565 335 520 300" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
+          <path d="M130 185 C220 185 250 185 320 185" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
+          {servers.map((server, index) => {
+            const y = 20 + ((index + 0.5) / servers.length) * 350;
+            return (
+              <path key={server.id} d={`M470 185 C505 185 505 ${y} 540 ${y}`} stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
+            );
+          })}
         </svg>
         <div className="absolute left-5 top-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <Users className="h-6 w-6 text-slate-700" />
           <p className="mt-2 text-base font-bold text-slate-950">Clients</p>
           <p className="text-sm text-slate-600">{requestRate}/sec</p>
         </div>
-        <div className="absolute left-[39%] top-1/2 -translate-y-1/2 rounded-2xl border-2 border-slate-900 bg-white p-5 shadow-lg">
-          <GitBranch className="h-7 w-7 text-slate-800" />
-          <p className="mt-2 text-base font-bold text-slate-950">Load Balancer</p>
-          <p className="text-sm text-slate-600">routes requests</p>
+        <div className="absolute left-[44%] top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-xl border-2 border-slate-900 bg-white p-3 shadow-lg">
+          <GitBranch className="h-5 w-5 text-slate-800" />
+          <p className="mt-1 text-sm font-bold text-slate-950">Load Balancer</p>
+          <p className="text-xs text-slate-600">routes requests</p>
         </div>
-        <div className="absolute bottom-5 right-7 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <Database className="h-6 w-6 text-slate-700" />
-          <p className="mt-2 text-base font-bold text-slate-950">Database</p>
-        </div>
-        <div className="absolute right-5 top-5 grid w-[34%] gap-3">
+        <div className="absolute inset-y-5 right-5 flex w-[34%] flex-col justify-around gap-3">
           <AnimatePresence initial={false}>
             {servers.map((server) => <ServerNode key={server.id} server={server} />)}
           </AnimatePresence>
         </div>
-        {Array.from({ length: dots }).map((_, index) => (
-          <TrafficDot key={index} delay={index * 0.16} y={(index % Math.max(servers.length, 1)) * 78 - 126} load={requestRate} />
-        ))}
+        {servers.map((server, index) => {
+          const targetTop = ((20 + ((index + 0.5) / servers.length) * 350) / 390) * 100;
+          return Array.from({ length: dotsPerLine }).map((_, k) => (
+            <TrafficDot
+              key={`${server.id}-${k}`}
+              targetTop={targetTop}
+              duration={dotDuration}
+              delay={(dotDuration / dotsPerLine) * k}
+            />
+          ));
+        })}
       </div>
     </DashboardCard>
   );
