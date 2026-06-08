@@ -304,10 +304,14 @@ function ScalingCanvas({ mode, nodes, traffic }: { mode: ScalingMode; nodes: Nod
         style={{ backgroundImage: "radial-gradient(circle, rgba(100,116,139,0.18) 1px, transparent 1px)", backgroundSize: "18px 18px" }}
       >
         <svg className="absolute inset-0 h-full w-full" viewBox="0 0 820 390" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M130 190 C230 190 270 190 350 190" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
-          <path d="M410 190 C500 95 585 70 700 70" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
-          <path d="M410 190 C510 165 585 160 700 160" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
-          <path d="M410 190 C510 250 585 255 700 255" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
+          {mode === "vertical" ? (
+            <path d="M130 195 C300 195 380 195 470 195" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
+          ) : (
+            <>
+              <path d="M130 195 C220 195 250 195 290 195" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
+              <path d="M410 195 C440 195 450 195 480 195" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
+            </>
+          )}
         </svg>
         <div className="absolute left-5 top-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <Users className="h-6 w-6 text-slate-700" />
@@ -320,7 +324,7 @@ function ScalingCanvas({ mode, nodes, traffic }: { mode: ScalingMode; nodes: Nod
             <p className="mt-2 text-base font-bold text-slate-950">Balancer</p>
           </div>
         )}
-        <div className={cn("absolute right-5 top-5 grid w-[42%] gap-3", mode === "vertical" ? "grid-cols-1" : "grid-cols-2")}>
+        <div className={cn("absolute right-5 grid w-[42%] gap-3", mode === "vertical" ? "inset-y-5 grid-cols-1 content-center" : "top-5 grid-cols-2")}>
           <AnimatePresence initial={false}>{nodes.map((node) => <NodeCard key={node.id} node={node} mode={mode} />)}</AnimatePresence>
         </div>
         {Array.from({ length: dots }).map((_, index) => (
