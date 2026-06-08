@@ -377,7 +377,7 @@ function ConceptSnapshot() {
       {/* Visual flow */}
       <div className="overflow-x-auto pb-1">
         <div className="flex items-stretch gap-0 min-w-max">
-          {flow.map((node, i) => (
+          {flow.map((node) => (
             <div key={node.label} className="flex items-center">
               <div className="flex flex-col items-center">
                 <div className="px-4 py-2.5 rounded-xl text-center min-w-[90px]" style={{ backgroundColor: node.color }}>
@@ -626,8 +626,6 @@ function OverloadSim() {
   const status         = serverLoad < 0.5 ? "Healthy" : serverLoad < 0.8 ? "Busy" : serverLoad < 1.0 ? "Overloaded" : "Failing";
   const statusColor    = serverLoad < 0.5 ? "text-emerald-600" : serverLoad < 0.8 ? "text-amber-600" : "text-red-600";
 
-  const heatColor = (v: number) => v >= 1 ? "#ef4444" : v >= 0.75 ? "#f59e0b" : "#1e293b";
-
   // Overload sim uses its own simpler canvas
   const visibleNodes = useMemo((): Set<NodeId> => {
     const s = new Set<NodeId>(["client", "internet", "server", "database"]);
@@ -764,7 +762,7 @@ function OverloadSim() {
                           cy: [srcCy + jitter, srcCy + jitter, dstCy],
                           opacity: overloaded && i % 4 === 0 ? [0, 1, 0.2, 0] : [0, 0.9, 0],
                         }}
-                        transition={{ duration: 0.8 + Math.random() * 0.4, repeat: Infinity, repeatDelay: delay, ease: "linear" }}
+                        transition={{ duration: 0.8 + (i % 5) * 0.08, repeat: Infinity, repeatDelay: delay, ease: "linear" }}
                       />
                     );
                   })}
@@ -958,7 +956,7 @@ function MiniChallenges() {
   const [shownHints, setShownHints] = useState<Set<string>>(new Set());
 
   const toggle = (id: string, setState: Dispatch<SetStateAction<Set<string>>>) =>
-    setState(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+    setState(prev => { const s = new Set(prev); if (s.has(id)) s.delete(id); else s.add(id); return s; });
 
   return (
     <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-3">
@@ -1036,8 +1034,8 @@ export function ClientServerVisual() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
             {([
-              { key: "flow" as const,     label: "Request / Response", icon: "📡" },
-              { key: "overload" as const, label: "Overload & Scaling",  icon: "🔴" },
+              { key: "flow" as const,     label: "Request / Response", icon: "Flow" },
+              { key: "overload" as const, label: "Overload & Scaling",  icon: "Load" },
             ]).map(t => (
               <button key={t.key} onClick={() => setTab(t.key)}
                 className={cn("flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all",
