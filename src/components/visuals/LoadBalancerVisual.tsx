@@ -228,38 +228,6 @@ function ScenarioHero({ scenario, onScenario }: { scenario: Scenario; onScenario
               </span>
             </motion.button>
           ))}
-        </div>
-      </div>
-    </DashboardCard>
-  );
-}
-
-function AlgorithmSelector({ algorithm, onAlgorithm }: { algorithm: Algorithm; onAlgorithm: (algorithm: Algorithm) => void }) {
-  return (
-    <DashboardCard>
-      <SectionHeader eyebrow="Algorithms" title="Pick a routing strategy" subtitle="Every strategy changes how requests move through the same architecture." />
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {(Object.keys(algorithms) as Algorithm[]).map((id) => {
-          const item = algorithms[id];
-          return (
-            <motion.button
-              key={id}
-              type="button"
-              onClick={() => onAlgorithm(id)}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              className={cn(
-                "rounded-[1.5rem] border bg-white p-4 text-left transition",
-                algorithm === id ? "border-2 border-slate-900 shadow-lg scale-[1.01]" : "border-slate-200 hover:border-slate-300",
-              )}
-            >
-              <span className="block text-base font-bold text-slate-950">{item.label}</span>
-              <span className="mt-2 block text-sm leading-6 text-slate-600">{item.changed}</span>
-              <span className="mt-3 block text-sm font-semibold text-slate-700">Best: {item.use}</span>
-              <span className="mt-1 block text-sm leading-6 text-slate-500">Tradeoff: {item.tradeoff}</span>
-            </motion.button>
-          );
-        })}
       </div>
     </DashboardCard>
   );
@@ -479,39 +447,6 @@ function InsightPanel({ algorithm }: { algorithm: Algorithm }) {
   );
 }
 
-function FailureSimulation({
-  failedServers,
-  setFailedServers,
-  healthChecks,
-  setHealthChecks,
-}: {
-  failedServers: Set<string>;
-  setFailedServers: (next: Set<string>) => void;
-  healthChecks: boolean;
-  setHealthChecks: (value: boolean) => void;
-}) {
-  const toggleFailure = (id: string) => {
-    const next = new Set(failedServers);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setFailedServers(next);
-  };
-
-  return (
-    <DashboardCard>
-      <SectionHeader eyebrow="Failure simulation" title="Fail and recover servers" subtitle="With health checks enabled, failed servers stop receiving traffic." />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-        {serverIds.slice(0, 3).map((id) => (
-          <ToggleChip key={id} active={failedServers.has(id)} label={failedServers.has(id) ? `Recover ${id}` : `Fail Server ${id}`} onClick={() => toggleFailure(id)} />
-        ))}
-        <ToggleChip active={false} label="Recover All" onClick={() => setFailedServers(new Set())} />
-        <ToggleChip active={healthChecks} label="Enable Checks" onClick={() => setHealthChecks(true)} />
-        <ToggleChip active={!healthChecks} label="Disable Checks" onClick={() => setHealthChecks(false)} />
-      </div>
-    </DashboardCard>
-  );
-}
-
 function ChallengeCards({ metrics, algorithm, serverCount, healthChecks }: { metrics: ReturnType<typeof useLoadBalancerModel>["metrics"]; algorithm: Algorithm; serverCount: number; healthChecks: boolean }) {
   const challenges = [
     { title: "Keep latency below 120ms", solved: metrics.avgLatency < 120 },
@@ -631,7 +566,6 @@ export function LoadBalancerVisual() {
     <motion.div {...pageMotion} className="min-h-screen bg-slate-50 px-5 py-8 text-slate-950 md:px-8 lg:px-12">
       <div className="mx-auto max-w-[1240px] space-y-6">
         <ScenarioHero scenario={scenario} onScenario={applyScenario} />
-        <AlgorithmSelector algorithm={algorithm} onAlgorithm={setAlgorithm} />
         <div className="grid gap-5 lg:grid-cols-[1fr_1.6fr]">
           <TrafficControls
             requestRate={requestRate}
@@ -649,7 +583,6 @@ export function LoadBalancerVisual() {
         </div>
         <MetricsSummary metrics={model.metrics} />
         <InsightPanel algorithm={algorithm} />
-        <FailureSimulation failedServers={failedServers} setFailedServers={setFailedServers} healthChecks={healthChecks} setHealthChecks={setHealthChecks} />
         <ChallengeCards metrics={model.metrics} algorithm={algorithm} serverCount={serverCount} healthChecks={healthChecks} />
         <SolutionPanel tab={tab} setTab={setTab} />
         <DashboardCard>
