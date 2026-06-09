@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Space_Grotesk } from "next/font/google";
 import { Button } from "@/components/ui/button";
@@ -8,31 +9,12 @@ import {
   Code2,
   Layers,
   Network,
-  Sparkles,
 } from "lucide-react";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
 });
-
-const trackCount = TOPICS.length;
-const lessonCount = TOPICS.reduce(
-  (count, section) =>
-    count +
-    section.categories.reduce(
-      (categoryCount, category) => categoryCount + category.items.length,
-      0
-    ),
-  0
-);
-const challengeCount = TOPICS.reduce(
-  (count, section) =>
-    count +
-    section.categories.filter((category) => category.id.includes("challenge"))
-      .length,
-  0
-);
 
 const tracks = [
   {
@@ -79,15 +61,8 @@ const tracks = [
   },
 ];
 
-const heroStats = [
-  { label: "Tracks", value: trackCount.toString().padStart(2, "0") },
-  { label: "Lessons", value: lessonCount.toString().padStart(2, "0") },
-  { label: "Challenges", value: challengeCount.toString().padStart(2, "0") },
-];
-
 const pageStyle: CSSProperties = {
-  ["--page-bg" as string]:
-    "linear-gradient(180deg, #f7f7f2 0%, #fbfbf8 42%, #ffffff 100%)",
+  ["--page-bg" as string]: "#ffffff",
 };
 
 export default function Home() {
@@ -96,71 +71,64 @@ export default function Home() {
       className="relative overflow-x-clip bg-[var(--page-bg)] text-slate-950"
       style={pageStyle}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[36rem] bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.08),transparent_28%),radial-gradient(circle_at_80%_10%,rgba(20,184,166,0.06),transparent_30%)]" />
-
-      <section className="relative px-4 pb-20 pt-10 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl">
-          <div className="space-y-10">
-            <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/70 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm backdrop-blur">
-              <Sparkles className="h-4 w-4 text-amber-500" />
-              Interactive engineering practice
-            </div>
-
-            <div className="space-y-6">
-              <p className="text-sm font-semibold uppercase tracking-[0.4em] text-slate-500">
-                Learn by doing
-              </p>
-              <h1
-                className={`${spaceGrotesk.className} max-w-4xl text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl lg:text-7xl`}
-              >
-                Practice systems and algorithms visually.
-              </h1>
-              <p className="max-w-xl text-lg leading-8 text-slate-600 sm:text-xl">
-                Three tracks. Live demos. Challenge modes.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-4">
-              <Button
-                asChild
-                size="lg"
-                className="h-12 rounded-full bg-slate-900 px-7 text-base font-semibold text-white shadow-sm hover:bg-slate-800"
-              >
-                <Link href="/system-design/challenge">
-                  Start with a challenge
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="h-12 rounded-full border-black/10 bg-white px-7 text-base font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                <Link href="/#tracks">Browse the learning tracks</Link>
-              </Button>
-            </div>
-
-            <div className="grid max-w-3xl gap-3 sm:grid-cols-3">
-              {heroStats.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="rounded-3xl border border-black/5 bg-white px-5 py-4 shadow-sm"
+      <section className="relative overflow-hidden px-4 pb-6 pt-2 sm:px-6 lg:px-8 lg:pt-3">
+        <div className="mx-auto max-w-[1440px]">
+          <div className="grid min-h-[500px] items-start gap-8 pt-8 lg:grid-cols-[590px_minmax(0,1fr)] xl:grid-cols-[610px_minmax(0,1fr)]">
+            <div className="relative z-10 max-w-[640px] space-y-12">
+              <div className="space-y-9">
+                <p className="text-sm font-semibold uppercase tracking-[0.55em] text-slate-500">
+                  Learn by doing
+                </p>
+                <br></br>
+                <h1
+                  className={`${spaceGrotesk.className} text-4xl font-bold leading-[1.12] tracking-[-0.055em] text-slate-950 sm:text-5xl lg:text-[3.55rem] xl:text-[4rem]`}
                 >
-                  <div
-                    className={`${spaceGrotesk.className} text-3xl font-bold tracking-[-0.05em]`}
-                  >
-                    {stat.value}
-                  </div>
-                  <div className="text-sm text-slate-500">{stat.label}</div>
-                </div>
-              ))}
+                  Practice systems and algorithms visually.
+                </h1>
+                <br></br>
+                <p className="max-w-xl text-lg leading-8 text-slate-600 sm:text-xl">
+                  Three tracks. Live demos. Challenge modes.
+                </p>
+              </div>
+              <br></br>
+              <div className="flex flex-wrap gap-5">
+                <Button
+                  asChild
+                  size="lg"
+                  className="h-14 rounded-full bg-slate-950 px-7 text-base font-semibold text-white shadow-sm hover:bg-slate-800"
+                >
+                  <Link href="/system-design/challenge">
+                    Start with a challenge
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="h-14 rounded-full border-black/10 bg-white px-8 text-base font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                >
+                  <Link href="/#tracks">Browse the learning tracks</Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="relative flex min-h-[460px] items-start justify-end lg:min-h-[540px]">
+              <Image
+                src="/computer-science-islands.png"
+                alt="Computer science island map with systems, databases, networking, algorithms, and operating systems"
+                width={1536}
+                height={1024}
+                priority
+                sizes="(min-width: 1280px) 940px, (min-width: 1024px) 760px, 100vw"
+                className="w-full max-w-[760px] object-contain xl:max-w-[940px]"
+              />
             </div>
           </div>
         </div>
       </section>
 
-      <section id="tracks" className="relative px-4 py-20 sm:px-6 lg:px-8">
+      <section id="tracks" className="relative px-4 pb-20 pt-10 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl space-y-10">
           <div className="max-w-3xl space-y-4">
             <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
