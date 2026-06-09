@@ -60,7 +60,9 @@ export function LinkedListVisual() {
         setNodes(initialNodes);
     };
 
+    // Populate after mount (reads window size; deferred to avoid SSR/hydration mismatch).
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         initNodes();
     }, []);
 
@@ -103,7 +105,7 @@ export function LinkedListVisual() {
                 const next = nodes[nodeIndex + 1];
                 const prev = nodes[nodeIndex - 1];
 
-                let updated = { ...n };
+                const updated = { ...n };
                 if (updated.nextId === id) updated.nextId = next ? next.id : null;
                 if (mode === "doubly" && updated.prevId === id) updated.prevId = prev ? prev.id : null;
                 return updated;

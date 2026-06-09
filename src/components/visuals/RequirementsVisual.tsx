@@ -510,10 +510,10 @@ function ArchCanvas({
     <svg viewBox="0 0 760 420" className="w-full h-full" style={{ display: "block" }}>
       <defs>
         <pattern id="rq-dots" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">
-          <circle cx="0.8" cy="0.8" r="0.8" fill="#cbd5e1" />
+          <circle cx="0.8" cy="0.8" r="0.8" fill="#d9cfbd" />
         </pattern>
       </defs>
-      <rect width="760" height="420" fill="#f9f9f6" />
+      <rect width="760" height="420" fill="#faf6ea" />
       <rect width="760" height="420" fill="url(#rq-dots)" />
 
       <AnimatePresence>
@@ -623,8 +623,8 @@ function ReqChip({
       layout
       onClick={onToggle}
       className={cn(
-        "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border text-sm font-medium transition-all text-left",
-        selected ? on : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+        "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border text-base font-medium transition-all text-left",
+        selected ? on : "bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50"
       )}
     >
       <div className={cn("w-2 h-2 rounded-full shrink-0 transition-colors", selected ? dot : "bg-slate-300")} />
@@ -635,7 +635,7 @@ function ReqChip({
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0", tag)}
+            className={cn("text-base font-bold px-1.5 py-0.5 rounded-md shrink-0", tag)}
           >
             +{n}
           </motion.span>
@@ -650,15 +650,15 @@ function OutOfScopeChip({ req, selected, onToggle }: { req: Req; selected: boole
     <button
       onClick={onToggle}
       className={cn(
-        "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border text-sm transition-all text-left",
+        "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border text-base transition-all text-left",
         selected
-          ? "bg-slate-100 border-slate-200 text-slate-400"
-          : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+          ? "bg-slate-100 border-slate-200 text-slate-500"
+          : "bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50"
       )}
     >
       <div className={cn("w-2 h-2 rounded-full shrink-0", selected ? "bg-slate-400" : "bg-slate-300")} />
       <span className={cn("flex-1", selected && "line-through")}>{req.label}</span>
-      {selected && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide shrink-0">Deferred</span>}
+      {selected && <span className="text-base font-bold text-slate-500 uppercase tracking-wide shrink-0">Deferred</span>}
     </button>
   );
 }
@@ -666,7 +666,7 @@ function OutOfScopeChip({ req, selected, onToggle }: { req: Req; selected: boole
 function MetricCard({ label, value, good, warn }: { label: string; value: string; good: boolean; warn: boolean }) {
   return (
     <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-      <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="text-base font-bold uppercase tracking-wider text-slate-500">{label}</p>
       <motion.p
         key={value}
         initial={{ opacity: 0, y: -3 }}
@@ -688,8 +688,8 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
   const color = score >= 8 ? "bg-emerald-400" : score >= 5 ? "bg-amber-400" : "bg-red-400";
   return (
     <div className="space-y-1.5">
-      <div className="flex justify-between text-xs font-semibold">
-        <span className="text-slate-600">{label}</span>
+      <div className="flex justify-between text-base font-semibold">
+        <span className="text-slate-700">{label}</span>
         <span className={cn("tabular-nums font-bold",
           score >= 8 ? "text-emerald-600" : score >= 5 ? "text-amber-600" : "text-red-500"
         )}>{score}/10</span>
@@ -708,14 +708,18 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
 function WalkthroughView({ productId }: { productId: string }) {
   const [stepIdx, setStepIdx] = useState(0);
 
-  useEffect(() => { setStepIdx(0); }, [productId]);
+  // Reset to the first step when the product changes (render-phase reset pattern).
+  const [prevProductId, setPrevProductId] = useState(productId);
+  if (productId !== prevProductId) {
+    setPrevProductId(productId);
+    setStepIdx(0);
+  }
 
   const solution = PRODUCT_SOLUTIONS[productId];
-  if (!solution) return null;
-  const { steps } = solution;
+  const steps = useMemo(() => solution?.steps ?? [], [solution]);
   const step = steps[stepIdx];
 
-  const stepNodes = useMemo(() => new Set(step.nodes), [step]);
+  const stepNodes = useMemo(() => new Set(step?.nodes ?? []), [step]);
   const prevNodes = useMemo(
     () => stepIdx > 0 ? new Set(steps[stepIdx - 1].nodes) : new Set<NodeId>(),
     [stepIdx, steps]
@@ -725,6 +729,8 @@ function WalkthroughView({ productId }: { productId: string }) {
     for (const n of stepNodes) { if (!prevNodes.has(n)) s.add(n); }
     return s;
   }, [stepNodes, prevNodes]);
+
+  if (!solution) return null;
 
   return (
     <div className="space-y-4">
@@ -737,7 +743,7 @@ function WalkthroughView({ productId }: { productId: string }) {
             )}
           />
         ))}
-        <span className="ml-auto text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+        <span className="ml-auto text-base font-bold text-slate-500 uppercase tracking-wider">
           {stepIdx + 1} / {steps.length}
         </span>
       </div>
@@ -752,7 +758,7 @@ function WalkthroughView({ productId }: { productId: string }) {
             transition={{ duration: 0.2 }}
             className="space-y-3"
           >
-            <p className="text-sm font-bold text-slate-900">{step.title}</p>
+            <p className="text-base font-bold text-slate-900">{step.title}</p>
 
             {/* Active reqs */}
             <div className="flex flex-wrap gap-1.5">
@@ -762,10 +768,10 @@ function WalkthroughView({ productId }: { productId: string }) {
                 const isNew = stepIdx > 0 && !steps[stepIdx - 1].reqs.includes(reqId);
                 return (
                   <span key={reqId}
-                    className={cn("px-2.5 py-1 rounded-lg text-[11px] font-semibold border",
+                    className={cn("px-2.5 py-1 rounded-lg text-base font-semibold border",
                       isNew
                         ? "bg-sky-100 border-sky-300 text-sky-800"
-                        : "bg-slate-100 border-slate-200 text-slate-600"
+                        : "bg-slate-100 border-slate-200 text-slate-700"
                     )}>
                     {req.label}
                   </span>
@@ -773,11 +779,11 @@ function WalkthroughView({ productId }: { productId: string }) {
               })}
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-base text-slate-700 leading-relaxed">
               {step.why}
             </div>
 
-            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 leading-relaxed">
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-base text-amber-800 leading-relaxed">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-500" />
               <span><strong>Tradeoff: </strong>{step.tradeoff}</span>
             </div>
@@ -795,19 +801,19 @@ function WalkthroughView({ productId }: { productId: string }) {
         <button
           onClick={() => setStepIdx(i => Math.max(0, i - 1))}
           disabled={stepIdx === 0}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-base font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
         >
           <ChevronLeft className="w-4 h-4" /> Previous
         </button>
 
         {stepIdx === steps.length - 1 ? (
-          <div className="flex items-center gap-2 text-sm font-bold text-emerald-700">
+          <div className="flex items-center gap-2 text-base font-bold text-emerald-700">
             <CheckCircle2 className="w-4 h-4" /> Walkthrough complete
           </div>
         ) : (
           <button
             onClick={() => setStepIdx(i => i + 1)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-base font-semibold hover:bg-slate-800 transition-all"
           >
             Next <ChevronRight className="w-4 h-4" />
           </button>
@@ -846,12 +852,12 @@ function CompareView({ selected, productId }: { selected: Set<string>; productId
           { label: "Simplicity",  score: scores.simplicity  },
         ].map(s => (
           <div key={s.label} className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{s.label}</p>
+            <p className="text-base font-bold uppercase tracking-wider text-slate-500">{s.label}</p>
             <div className="flex items-end gap-1">
               <span className={cn("text-2xl font-black tabular-nums leading-none",
                 s.score >= 8 ? "text-emerald-600" : s.score >= 5 ? "text-amber-600" : "text-red-500"
               )}>{s.score}</span>
-              <span className="text-xs text-slate-400 mb-0.5">/10</span>
+              <span className="text-base text-slate-500 mb-0.5">/10</span>
             </div>
             <ScoreBar label="" score={s.score} />
           </div>
@@ -861,15 +867,15 @@ function CompareView({ selected, productId }: { selected: Set<string>; productId
       {/* Missing */}
       {missingReqs.length > 0 && (
         <div className="p-4 rounded-xl bg-red-50 border border-red-200 space-y-2">
-          <p className="text-xs font-bold text-red-700 uppercase tracking-wider">Missing considerations</p>
+          <p className="text-base font-bold text-red-700 uppercase tracking-wider">Missing considerations</p>
           <div className="flex flex-wrap gap-2">
             {missingReqs.map(r => (
-              <span key={r.id} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-red-100 border border-red-300 text-red-800">
+              <span key={r.id} className="px-2.5 py-1 rounded-lg text-base font-semibold bg-red-100 border border-red-300 text-red-800">
                 {r.label}
               </span>
             ))}
           </div>
-          <p className="text-xs text-red-600 leading-relaxed">
+          <p className="text-base text-red-600 leading-relaxed">
             These would materially change your architecture — adding them shifts the design toward the recommended solution.
           </p>
         </div>
@@ -878,15 +884,15 @@ function CompareView({ selected, productId }: { selected: Set<string>; productId
       {/* Extra */}
       {extraReqs.length > 0 && (
         <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-2">
-          <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">Potential overengineering</p>
+          <p className="text-base font-bold text-amber-700 uppercase tracking-wider">Potential overengineering</p>
           <div className="flex flex-wrap gap-2">
             {extraReqs.map(r => (
-              <span key={r.id} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-100 border border-amber-300 text-amber-800">
+              <span key={r.id} className="px-2.5 py-1 rounded-lg text-base font-semibold bg-amber-100 border border-amber-300 text-amber-800">
                 {r.label}
               </span>
             ))}
           </div>
-          <p className="text-xs text-amber-600 leading-relaxed">
+          <p className="text-base text-amber-600 leading-relaxed">
             These add cost and complexity beyond what&apos;s typical for {PRODUCTS.find(p => p.id === productId)?.label} at early scale.
           </p>
         </div>
@@ -897,14 +903,14 @@ function CompareView({ selected, productId }: { selected: Set<string>; productId
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-3">
           <Trophy className="w-5 h-5 text-emerald-600 shrink-0" />
           <div>
-            <p className="text-sm font-bold text-emerald-700">Perfect match!</p>
-            <p className="text-xs text-emerald-600">Your requirements exactly match the recommended solution.</p>
+            <p className="text-base font-bold text-emerald-700">Perfect match!</p>
+            <p className="text-base text-emerald-600">Your requirements exactly match the recommended solution.</p>
           </div>
         </div>
       )}
 
       {/* Verdict */}
-      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
+      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-base text-slate-700 leading-relaxed">
         <strong>System type:</strong> {solution.systemType}.{" "}
         {totalScore >= 8 && "Strong design — you've correctly identified the core tradeoffs."}
         {totalScore >= 6 && totalScore < 8 && "Good foundation. Add the missing requirements to round it out."}
@@ -970,11 +976,11 @@ function InterviewView({ selected, productId }: { selected: Set<string>; product
       <div className="space-y-5 py-2 text-center">
         <div className="space-y-2">
           <p className="text-base font-bold text-slate-900">System Design Interview</p>
-          <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+          <p className="text-base text-slate-600 max-w-md mx-auto leading-relaxed">
             10 minutes. Design {product?.label}. Three surprise constraint changes will test your adaptability. Your score updates live.
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-3 text-xs text-slate-500 max-w-xs mx-auto">
+        <div className="grid grid-cols-3 gap-3 text-base text-slate-600 max-w-xs mx-auto">
           {[["10:00", "Time limit"], ["3", "Constraints"], ["4", "Score axes"]].map(([v, l]) => (
             <div key={l} className="p-3 rounded-xl bg-slate-50 border border-slate-200">
               <p className="text-lg font-bold text-slate-900">{v}</p>
@@ -982,7 +988,7 @@ function InterviewView({ selected, productId }: { selected: Set<string>; product
             </div>
           ))}
         </div>
-        <p className="text-xs text-slate-400">Use the requirements panel above to build your architecture while the timer runs.</p>
+        <p className="text-base text-slate-500">Use the requirements panel above to build your architecture while the timer runs.</p>
         <button onClick={startInterview}
           className="px-8 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-colors">
           Start Interview
@@ -997,10 +1003,10 @@ function InterviewView({ selected, productId }: { selected: Set<string>; product
         <div className="flex items-center gap-3">
           <Trophy className="w-5 h-5 text-amber-500 shrink-0" />
           <div>
-            <p className="text-sm font-bold text-slate-900">Time&apos;s up — final score</p>
-            <p className="text-xs text-slate-500">{product?.label} architecture assessment</p>
+            <p className="text-base font-bold text-slate-900">Time&apos;s up — final score</p>
+            <p className="text-base text-slate-600">{product?.label} architecture assessment</p>
           </div>
-          <button onClick={startInterview} className="ml-auto text-xs text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50">
+          <button onClick={startInterview} className="ml-auto text-base text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50">
             Retry
           </button>
         </div>
@@ -1010,7 +1016,7 @@ function InterviewView({ selected, productId }: { selected: Set<string>; product
           <ScoreBar label={`Performance — ${scores.performance}/10`} score={scores.performance} />
           <ScoreBar label={`Simplicity — ${scores.simplicity}/10`}   score={scores.simplicity} />
         </div>
-        <div className={cn("p-4 rounded-xl border text-sm font-semibold",
+        <div className={cn("p-4 rounded-xl border text-base font-semibold",
           totalScore >= 8 ? "bg-emerald-50 border-emerald-200 text-emerald-700" :
           totalScore >= 6 ? "bg-amber-50 border-amber-200 text-amber-700" :
           "bg-red-50 border-red-200 text-red-700"
@@ -1036,10 +1042,10 @@ function InterviewView({ selected, productId }: { selected: Set<string>; product
           <Clock className="w-5 h-5" />
           {mins}:{secs}
         </div>
-        <p className="text-xs text-slate-500 flex-1">Build your architecture above — score updates live as you toggle requirements.</p>
+        <p className="text-base text-slate-600 flex-1">Build your architecture above — score updates live as you toggle requirements.</p>
         <button
           onClick={() => { setEnded(true); if (intervalRef.current) clearInterval(intervalRef.current); }}
-          className="text-xs text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50"
+          className="text-base text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50"
         >
           End early
         </button>
@@ -1054,14 +1060,14 @@ function InterviewView({ selected, productId }: { selected: Set<string>; product
           { label: "Simplicity",  score: scores.simplicity  },
         ].map(s => (
           <div key={s.label} className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{s.label}</p>
+            <p className="text-base font-bold uppercase tracking-wider text-slate-500">{s.label}</p>
             <motion.p key={s.score}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               className={cn("text-xl font-black tabular-nums",
                 s.score >= 8 ? "text-emerald-600" : s.score >= 5 ? "text-amber-600" : "text-red-500"
               )}>
-              {s.score}<span className="text-xs text-slate-400">/10</span>
+              {s.score}<span className="text-base text-slate-500">/10</span>
             </motion.p>
           </div>
         ))}
@@ -1078,8 +1084,8 @@ function InterviewView({ selected, productId }: { selected: Set<string>; product
           >
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
-                <p className="text-sm font-bold text-red-800">⚡ {ev.text}</p>
-                <p className="text-xs text-red-600">{ev.hint}</p>
+                <p className="text-base font-bold text-red-800">⚡ {ev.text}</p>
+                <p className="text-base text-red-600">{ev.hint}</p>
               </div>
               <button onClick={() => setEvents(es => es.filter(e => e.at !== ev.at))}
                 className="text-red-400 hover:text-red-600 shrink-0 mt-0.5">
@@ -1122,20 +1128,20 @@ function SolutionPanel({
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-bold text-slate-900">Solution Mode</p>
-          <p className="text-xs text-slate-500">Step-by-step reasoning for {PRODUCTS.find(p => p.id === productId)?.label}.</p>
+          <p className="text-base font-bold text-slate-900">Solution Mode</p>
+          <p className="text-base text-slate-600">Step-by-step reasoning for {PRODUCTS.find(p => p.id === productId)?.label}.</p>
         </div>
         <button onClick={onClose}
           className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors">
-          <X className="w-4 h-4 text-slate-500" />
+          <X className="w-4 h-4 text-slate-600" />
         </button>
       </div>
 
       <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
         {modeTabs.map(t => (
           <button key={t.key} onClick={() => setMode(t.key)}
-            className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-semibold transition-all",
-              mode === t.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+            className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-base font-semibold transition-all",
+              mode === t.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700"
             )}>
             <span>{t.icon}</span>
             <span>{t.label}</span>
@@ -1186,7 +1192,7 @@ export function RequirementsVisual() {
   const toggle = (id: string) =>
     setSelected(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
 
@@ -1220,12 +1226,12 @@ export function RequirementsVisual() {
       <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Step 1 — Pick a product</p>
-            <p className="text-sm text-slate-500 mt-0.5">Requirements depend on what you&apos;re building.</p>
+            <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Step 1 — Pick a product</p>
+            <p className="text-base text-slate-600 mt-0.5">Requirements depend on what you&apos;re building.</p>
           </div>
           <button
             onClick={() => selectProduct(currentProduct)}
-            className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 border border-slate-200 rounded-lg px-3 py-1.5 transition-colors"
+            className="flex items-center gap-1.5 text-base text-slate-600 hover:text-slate-800 border border-slate-200 rounded-lg px-3 py-1.5 transition-colors"
           >
             <RotateCcw className="w-3 h-3" /> Reset
           </button>
@@ -1236,17 +1242,17 @@ export function RequirementsVisual() {
               key={p.id}
               onClick={() => selectProduct(p)}
               className={cn(
-                "px-4 py-1.5 rounded-full text-sm font-semibold border transition-all",
+                "px-4 py-1.5 rounded-full text-base font-semibold border transition-all",
                 p.id === productId
                   ? "bg-slate-900 text-white border-slate-900"
-                  : "bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-900"
+                  : "bg-white text-slate-700 border-slate-200 hover:border-slate-400 hover:text-slate-900"
               )}
             >
               {p.label}
             </button>
           ))}
         </div>
-        <p className="mt-3 text-xs text-slate-500 leading-relaxed">
+        <p className="mt-3 text-base text-slate-600 leading-relaxed">
           <span className="font-semibold text-slate-700">{currentProduct.users}</span>
           {" · "}{currentProduct.traffic}{" · "}{currentProduct.useCase}
         </p>
@@ -1258,8 +1264,8 @@ export function RequirementsVisual() {
         {/* Left: requirement chips */}
         <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm flex flex-col gap-4">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Step 2 — Choose requirements</p>
-            <p className="text-sm text-slate-500 mt-0.5">Toggle on/off — the architecture updates live.</p>
+            <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Step 2 — Choose requirements</p>
+            <p className="text-base text-slate-600 mt-0.5">Toggle on/off — the architecture updates live.</p>
           </div>
 
           <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
@@ -1268,17 +1274,17 @@ export function RequirementsVisual() {
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all",
+                  "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-base font-semibold transition-all",
                   activeTab === tab.key
                     ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
+                    : "text-slate-600 hover:text-slate-700"
                 )}
               >
                 {tab.label}
                 {tab.count > 0 && (
                   <span className={cn(
-                    "w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold",
-                    activeTab === tab.key ? "bg-slate-900 text-white" : "bg-slate-300 text-slate-600"
+                    "w-4 h-4 rounded-full text-base flex items-center justify-center font-bold",
+                    activeTab === tab.key ? "bg-slate-900 text-white" : "bg-slate-300 text-slate-700"
                   )}>
                     {tab.count}
                   </span>
@@ -1305,7 +1311,7 @@ export function RequirementsVisual() {
               )}
               {activeTab === "outOfScope" && (
                 <motion.div key="oos" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-2">
-                  <p className="text-[11px] text-slate-400 pb-1">Click to mark each as explicitly deferred — shows scope discipline in interviews.</p>
+                  <p className="text-base text-slate-500 pb-1">Click to mark each as explicitly deferred — shows scope discipline in interviews.</p>
                   {oosReqs.map(r => (
                     <OutOfScopeChip key={r.id} req={r} selected={selected.has(r.id)} onToggle={() => toggle(r.id)} />
                   ))}
@@ -1320,12 +1326,12 @@ export function RequirementsVisual() {
           <div className="rounded-[1.5rem] border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="px-5 pt-4 pb-2 flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Step 3 — Architecture</p>
-                <p className="text-xs text-slate-500 mt-0.5">Hover any node to understand its role.</p>
+                <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Step 3 — Architecture</p>
+                <p className="text-base text-slate-600 mt-0.5">Hover any node to understand its role.</p>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Live</span>
+                <span className="text-base font-bold text-slate-500 uppercase tracking-wider">Live</span>
               </div>
             </div>
 
@@ -1338,7 +1344,7 @@ export function RequirementsVisual() {
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 4 }}
-                      className="absolute bottom-3 left-3 right-3 p-3 bg-slate-900 text-white text-xs rounded-xl shadow-xl leading-relaxed pointer-events-none z-10"
+                      className="absolute bottom-3 left-3 right-3 p-3 bg-slate-900 text-white text-base rounded-xl shadow-lg leading-relaxed pointer-events-none z-10"
                     >
                       <Info className="inline w-3 h-3 mr-1.5 opacity-60" />
                       {tooltip}
@@ -1351,7 +1357,7 @@ export function RequirementsVisual() {
 
           {/* Metrics */}
           <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-slate-400 mb-3">System metrics</p>
+            <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500 mb-3">System metrics</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <MetricCard label="Response Time" value={`${metrics.latency}ms`} good={metrics.latency <= 100} warn={metrics.latency <= 200} />
               <MetricCard label="Availability" value={`${metrics.availability.toFixed(1)}%`} good={metrics.availability >= 99} warn={metrics.availability >= 97} />
@@ -1365,19 +1371,19 @@ export function RequirementsVisual() {
       {/* ── Step 4: Tradeoff Insights ─────────────────────────────────────────── */}
       {(insights.length > 0 || warnings.length > 0) && (
         <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Step 4 — Design insights</p>
+          <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Step 4 — Design insights</p>
           <div className="space-y-2">
             <AnimatePresence>
               {warnings.map(w => (
                 <motion.div key={w} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                  className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm leading-relaxed">
+                  className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-base leading-relaxed">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
                   {w}
                 </motion.div>
               ))}
               {insights.map(ins => (
                 <motion.div key={ins} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                  className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-sm leading-relaxed">
+                  className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-base leading-relaxed">
                   <div className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0 mt-2" />
                   {ins}
                 </motion.div>
@@ -1391,12 +1397,12 @@ export function RequirementsVisual() {
       <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Mini Challenges</p>
-            <p className="text-sm text-slate-500 mt-0.5">Can you build an architecture that satisfies each goal?</p>
+            <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Mini Challenges</p>
+            <p className="text-base text-slate-600 mt-0.5">Can you build an architecture that satisfies each goal?</p>
           </div>
           <button
             onClick={() => setShowSolution(s => !s)}
-            className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all shrink-0",
+            className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-base font-semibold border transition-all shrink-0",
               showSolution
                 ? "bg-slate-900 text-white border-slate-900"
                 : "bg-white text-slate-700 border-slate-300 hover:border-slate-700"
@@ -1423,11 +1429,11 @@ export function RequirementsVisual() {
                     ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                     : <div className="w-4 h-4 rounded-full border-2 border-slate-300 shrink-0" />
                   }
-                  <p className={cn("text-xs font-bold", solved ? "text-emerald-700" : "text-slate-700")}>
+                  <p className={cn("text-base font-bold", solved ? "text-emerald-700" : "text-slate-700")}>
                     {ch.label}
                   </p>
                 </div>
-                <p className="text-xs text-slate-500 leading-relaxed pl-6">{ch.description}</p>
+                <p className="text-base text-slate-600 leading-relaxed pl-6">{ch.description}</p>
               </motion.div>
             );
           })}

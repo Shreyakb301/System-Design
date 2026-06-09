@@ -38,7 +38,7 @@ function DashboardCard({ className, children }: { className?: string; children: 
 function SectionHeader({ eyebrow, title, subtitle }: { eyebrow?: string; title: string; subtitle?: string }) {
   return (
     <div className="mb-5">
-      {eyebrow && <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">{eyebrow}</p>}
+      {eyebrow && <p className="text-base font-semibold uppercase tracking-[0.16em] text-slate-500">{eyebrow}</p>}
       <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">{title}</h2>
       {subtitle && <p className="mt-2 max-w-[720px] text-base leading-7 text-slate-600">{subtitle}</p>}
     </div>
@@ -48,7 +48,7 @@ function SectionHeader({ eyebrow, title, subtitle }: { eyebrow?: string; title: 
 function ScaleControl({ label, level, setLevel, format }: { label: string; level: number; setLevel: (v: number) => void; format: (level: number) => string }) {
   return (
     <label className="block rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <span className="flex items-center justify-between gap-4 text-sm font-semibold text-slate-700">
+      <span className="flex items-center justify-between gap-4 text-base font-semibold text-slate-700">
         <span>{label}</span>
         <motion.span key={format(level)} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="tabular-nums text-slate-950">{format(level)}</motion.span>
       </span>
@@ -60,7 +60,7 @@ function ScaleControl({ label, level, setLevel, format }: { label: string; level
 function IntControl({ label, value, min, max, suffix, onChange }: { label: string; value: number; min: number; max: number; suffix?: string; onChange: (v: number) => void }) {
   return (
     <label className="block rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <span className="flex items-center justify-between gap-4 text-sm font-semibold text-slate-700">
+      <span className="flex items-center justify-between gap-4 text-base font-semibold text-slate-700">
         <span>{label}</span>
         <motion.span key={value} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="tabular-nums text-slate-950">{value}{suffix}</motion.span>
       </span>
@@ -77,7 +77,7 @@ function ToggleChip({ active, label, onClick }: { active: boolean; label: string
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition",
+        "min-h-11 rounded-full border px-4 py-2 text-base font-semibold transition",
         active ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
       )}
     >
@@ -236,14 +236,14 @@ function NodeBox({ styleKey, icon: Icon, title, sub, compact }: { styleKey: keyo
   return (
     <div className={cn("flex flex-col items-center rounded-2xl border-2 text-center shadow-sm", NODE_STYLES[styleKey], compact ? "px-2 py-1.5" : "px-3 py-2.5")}>
       <Icon className={cn("text-current", compact ? "h-4 w-4" : "h-5 w-5")} />
-      <span className={cn("mt-1 font-bold text-slate-950", compact ? "text-[0.7rem] leading-tight" : "text-sm")}>{title}</span>
-      {sub && <span className={cn("text-slate-500", compact ? "text-[0.65rem]" : "text-xs")}>{sub}</span>}
+      <span className={cn("mt-1 font-bold text-slate-950", compact ? "text-base leading-tight" : "text-base")}>{title}</span>
+      {sub && <span className={cn("text-slate-500", compact ? "text-base" : "text-base")}>{sub}</span>}
     </div>
   );
 }
 
 function MoreChip({ count }: { count: number }) {
-  return <span className="flex items-center rounded-xl border-2 border-dashed border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-500">+{count}</span>;
+  return <span className="flex items-center rounded-xl border-2 border-dashed border-slate-300 bg-white px-2 py-1 text-base font-semibold text-slate-500">+{count}</span>;
 }
 
 function Arrow() {
@@ -288,7 +288,7 @@ function Cluster({ mode, replicas, shards, failure, saturated }: { mode: Mode; r
         <div key={i} className="flex items-center gap-1.5">
           <NodeBox compact styleKey={failure && i === 0 ? "danger" : "shard"} icon={Layers} title={`Shard ${String.fromCharCode(65 + i)}`} />
           {replicas > 0 && Array.from({ length: repShown }).map((_, r) => <span key={r} className="h-6 w-6 rounded-lg border-2 border-cyan-300 bg-cyan-50" title="Replica" />)}
-          {replicas > repShown && <span className="text-xs font-semibold text-slate-400">+{replicas - repShown}</span>}
+          {replicas > repShown && <span className="text-base font-semibold text-slate-400">+{replicas - repShown}</span>}
         </div>
       ))}
       {shards > shown && <MoreChip count={shards - shown} />}
@@ -310,15 +310,15 @@ function ArchitectureCanvas({ mode, read, write, replicas, shards, failure, satu
           <h2 className="text-2xl font-bold text-slate-950">Live architecture</h2>
           <p className="text-base text-slate-600">{MODE_META[mode].feel}</p>
         </div>
-        <div className="flex items-center gap-2 text-xs font-semibold">
+        <div className="flex items-center gap-2 text-base font-semibold">
           <span className="flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-sky-700"><span className="h-2 w-2 rounded-full bg-sky-400" /> reads</span>
           <span className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-700"><span className="h-2 w-2 rounded-full bg-amber-400" /> writes</span>
         </div>
       </div>
 
       <div
-        className="relative overflow-hidden rounded-[1.25rem] border border-slate-200 bg-slate-50 p-5"
-        style={{ backgroundImage: "radial-gradient(circle, rgba(100,116,139,0.16) 1px, transparent 1px)", backgroundSize: "18px 18px" }}
+        className="relative overflow-hidden rounded-[1.25rem] border border-slate-200 bg-amber-50/40 p-5"
+        style={{ backgroundImage: "radial-gradient(circle, rgba(120,113,108,0.16) 1px, transparent 1px)", backgroundSize: "18px 18px" }}
       >
         {/* animated traffic */}
         {Array.from({ length: readDots }).map((_, i) => (
@@ -373,15 +373,15 @@ const TONE_TEXT: Record<Tone, string> = { good: "Strong", warn: "Tradeoff", bad:
 function MetricCard({ icon: Icon, label, block }: { icon: typeof Activity; label: string; block: MetricBlock }) {
   return (
     <div className={cn("flex flex-col rounded-2xl border bg-white p-4 shadow-sm", TONE_BORDER[block.tone])}>
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-600"><Icon className="h-4 w-4" />{label}</div>
+      <div className="flex items-center gap-2 text-base font-semibold text-slate-600"><Icon className="h-4 w-4" />{label}</div>
       <div className="mt-3 flex items-end justify-between">
         <motion.span key={block.score} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="text-2xl font-bold tabular-nums text-slate-950">{block.score}</motion.span>
-        <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", TONE_CHIP[block.tone])}>{TONE_TEXT[block.tone]}</span>
+        <span className={cn("rounded-full px-2 py-0.5 text-base font-semibold", TONE_CHIP[block.tone])}>{TONE_TEXT[block.tone]}</span>
       </div>
       <div className="mt-3 h-2 rounded-full bg-slate-100">
         <motion.div className={cn("h-full rounded-full", TONE_BAR[block.tone])} animate={{ width: `${block.score}%` }} transition={{ duration: 0.3, ease: "easeInOut" }} />
       </div>
-      <p className="mt-2 text-xs leading-5 text-slate-500">{block.hint}</p>
+      <p className="mt-2 text-base leading-5 text-slate-500">{block.hint}</p>
     </div>
   );
 }
@@ -397,7 +397,7 @@ function ConceptSnapshot({ workload, onWorkload }: { workload: Workload; onWorkl
       <div className="grid items-stretch gap-4 lg:grid-cols-2">
         {/* Replication */}
         <div className="flex min-h-[220px] flex-col rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="flex items-center gap-2"><Copy className="h-5 w-5 text-cyan-600" /><p className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">Replication</p></div>
+          <div className="flex items-center gap-2"><Copy className="h-5 w-5 text-cyan-600" /><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Replication</p></div>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <NodeBox styleKey="primary" icon={Database} title="DB" />
             <Arrow />
@@ -406,29 +406,29 @@ function ConceptSnapshot({ workload, onWorkload }: { workload: Workload; onWorkl
             </div>
           </div>
           <p className="mt-auto pt-4 text-base font-semibold text-slate-800">&ldquo;Copy the same thing many times.&rdquo;</p>
-          <p className="mt-1 text-sm text-slate-600">Same data copied — store multiple copies.</p>
+          <p className="mt-1 text-base text-slate-600">Same data copied — store multiple copies.</p>
         </div>
         {/* Sharding */}
         <div className="flex min-h-[220px] flex-col rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="flex items-center gap-2"><Split className="h-5 w-5 text-purple-600" /><p className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">Sharding</p></div>
+          <div className="flex items-center gap-2"><Split className="h-5 w-5 text-purple-600" /><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Sharding</p></div>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {["A", "B", "C"].map((k) => <NodeBox key={k} compact styleKey="shard" icon={Layers} title={`Shard ${k}`} />)}
           </div>
           <p className="mt-auto pt-4 text-base font-semibold text-slate-800">&ldquo;Split the work.&rdquo;</p>
-          <p className="mt-1 text-sm text-slate-600">Data divided — store different pieces.</p>
+          <p className="mt-1 text-base text-slate-600">Data divided — store different pieces.</p>
         </div>
       </div>
 
       <div className="mt-5">
-        <p className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">Pick a workload</p>
+        <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Pick a workload</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {(Object.keys(WORKLOADS) as Workload[]).map((id) => (
             <ToggleChip key={id} active={workload === id} label={WORKLOADS[id].label} onClick={() => onWorkload(id)} />
           ))}
         </div>
         <div className="mt-4 grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
-          <div><p className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-1 text-base leading-7 text-slate-700">{active.changed}</p></div>
-          <div><p className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-1 text-base leading-7 text-slate-700">{active.matters}</p></div>
+          <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-1 text-base leading-7 text-slate-700">{active.changed}</p></div>
+          <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-1 text-base leading-7 text-slate-700">{active.matters}</p></div>
         </div>
       </div>
     </DashboardCard>
@@ -447,7 +447,7 @@ function ModeTabs({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void })
           key={id}
           type="button"
           onClick={() => setMode(id)}
-          className={cn("min-w-[120px] flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition", mode === id ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+          className={cn("min-w-[120px] flex-1 rounded-xl px-3 py-2 text-base font-semibold transition", mode === id ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-700")}
         >
           {label}
         </button>
@@ -479,14 +479,14 @@ function Controls(props: {
       </div>
       <div className="mt-4 space-y-3">
         <div>
-          <p className="mb-2 text-sm font-bold uppercase tracking-[0.12em] text-slate-500">Node health</p>
+          <p className="mb-2 text-base font-bold uppercase tracking-[0.12em] text-slate-500">Node health</p>
           <div className="flex flex-wrap gap-2">
             <ToggleChip active={!failure} label="Healthy" onClick={() => setFailure(false)} />
             <ToggleChip active={failure} label="Node failure" onClick={() => setFailure(true)} />
           </div>
         </div>
         <div>
-          <p className="mb-2 text-sm font-bold uppercase tracking-[0.12em] text-slate-500">Consistency</p>
+          <p className="mb-2 text-base font-bold uppercase tracking-[0.12em] text-slate-500">Consistency</p>
           <div className="flex flex-wrap gap-2">
             {(["high", "medium", "low"] as Consistency[]).map((c) => (
               <ToggleChip key={c} active={consistency === c} label={c[0].toUpperCase() + c.slice(1)} onClick={() => setConsistency(c)} />
@@ -507,9 +507,9 @@ function InsightPanel({ mode, warning }: { mode: Mode; warning: string | null })
     <DashboardCard>
       <SectionHeader eyebrow="Step 05–09 · Cause and effect" title="What just happened?" />
       <div className="grid gap-4 md:grid-cols-3">
-        <div><p className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-2 text-base leading-7 text-slate-700">{meta.changed}</p></div>
-        <div><p className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-2 text-base leading-7 text-slate-700">{meta.matters}</p></div>
-        <div><p className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">Where&apos;s the bottleneck</p><p className="mt-2 text-base leading-7 text-slate-700">{meta.bottleneck}</p></div>
+        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-2 text-base leading-7 text-slate-700">{meta.changed}</p></div>
+        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-2 text-base leading-7 text-slate-700">{meta.matters}</p></div>
+        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Where&apos;s the bottleneck</p><p className="mt-2 text-base leading-7 text-slate-700">{meta.bottleneck}</p></div>
       </div>
       <AnimatePresence>
         {warning && (
@@ -541,9 +541,9 @@ function Challenges({ mode }: { mode: Mode }) {
                 <span className={cn("mt-0.5 rounded-full border p-1", solved ? "border-emerald-300 bg-white" : "border-slate-200")}>
                   <Check className={cn("h-4 w-4", solved ? "text-emerald-600" : "text-slate-300")} />
                 </span>
-                <p className="text-sm font-semibold leading-6 text-slate-800">{c.prompt}</p>
+                <p className="text-base font-semibold leading-6 text-slate-800">{c.prompt}</p>
               </div>
-              <p className={cn("mt-3 text-xs font-bold uppercase tracking-wide", solved ? "text-emerald-700" : "text-slate-400")}>{c.answerLabel}</p>
+              <p className={cn("mt-3 text-base font-bold uppercase tracking-wide", solved ? "text-emerald-700" : "text-slate-400")}>{c.answerLabel}</p>
             </motion.div>
           );
         })}
@@ -591,12 +591,12 @@ function SolutionPanel({ tab, setTab }: { tab: SolTab; setTab: (t: SolTab) => vo
               <div key={k} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                 <div className="flex items-center gap-2">
                   {k === "replication" ? <Copy className="h-5 w-5 text-cyan-600" /> : <Split className="h-5 w-5 text-purple-600" />}
-                  <p className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">{k}</p>
+                  <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">{k}</p>
                 </div>
-                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-emerald-700">Pros</p>
-                <ul className="mt-1 space-y-1">{pros[k].map((p) => <li key={p} className="flex items-center gap-2 text-sm text-slate-700"><Check className="h-4 w-4 text-emerald-600" />{p}</li>)}</ul>
-                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-red-600">Cons</p>
-                <ul className="mt-1 space-y-1">{cons[k].map((c) => <li key={c} className="flex items-center gap-2 text-sm text-slate-700"><AlertTriangle className="h-4 w-4 text-red-500" />{c}</li>)}</ul>
+                <p className="mt-3 text-base font-bold uppercase tracking-wide text-emerald-700">Pros</p>
+                <ul className="mt-1 space-y-1">{pros[k].map((p) => <li key={p} className="flex items-center gap-2 text-base text-slate-700"><Check className="h-4 w-4 text-emerald-600" />{p}</li>)}</ul>
+                <p className="mt-3 text-base font-bold uppercase tracking-wide text-red-600">Cons</p>
+                <ul className="mt-1 space-y-1">{cons[k].map((c) => <li key={c} className="flex items-center gap-2 text-base text-slate-700"><AlertTriangle className="h-4 w-4 text-red-500" />{c}</li>)}</ul>
               </div>
             ))}
           </motion.div>
