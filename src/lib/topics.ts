@@ -73,7 +73,7 @@ export const TOPICS: TopicSection[] = [
         icon: Database,
         items: [
           { id: "sql-nosql", title: "SQL vs NoSQL", href: "/system-design/sql-nosql" },
-          { id: "replication", title: "Replication & Sharding", href: "/system-design/replication" },
+          { id: "replication", title: "Replication vs Sharding", href: "/system-design/replication" },
         ]
       },
       {

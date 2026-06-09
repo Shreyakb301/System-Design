@@ -3,7 +3,9 @@
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 
-export function SidebarLayout({ children, sectionId }: { children: React.ReactNode, sectionId: any }) {
+type SectionId = "system-design" | "data-structures" | "programming-languages";
+
+export function SidebarLayout({ children, sectionId }: { children: React.ReactNode, sectionId: SectionId }) {
     const pathname = usePathname();
     const isChallenge = pathname?.includes('/challenge');
 
