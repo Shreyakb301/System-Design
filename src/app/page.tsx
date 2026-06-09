@@ -95,16 +95,6 @@ export default function Home() {
                 <Button
                   asChild
                   size="lg"
-                  className="h-14 rounded-full bg-slate-950 px-7 text-base font-semibold text-white shadow-sm hover:bg-slate-800"
-                >
-                  <Link href="/system-design/challenge">
-                    Start with a challenge
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  size="lg"
                   variant="outline"
                   className="h-14 rounded-full border-black/10 bg-white px-8 text-base font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
                 >
@@ -295,7 +285,7 @@ export default function Home() {
               <h2
                 className={`${spaceGrotesk.className} text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl`}
               >
-                Start with a challenge or browse all three tracks.
+                Browse all three tracks and start practicing.
               </h2>
             </div>
 
