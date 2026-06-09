@@ -1,899 +1,538 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
-  AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight,
-  Lightbulb, Eye, EyeOff, RefreshCw,
+  AlertTriangle, CheckCircle2, Info,
+  ChevronLeft, ChevronRight, X, Boxes, Box,
 } from "lucide-react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────────
+type ScenarioId = "startup" | "small" | "growth" | "large" | "global" | "highdeploy";
+type Mode       = "monolith" | "microservices" | "compare";
+type DeployFreq = "weekly" | "daily" | "hourly" | "continuous";
+type Growth     = "low" | "medium" | "high";
+type KillTarget = "none" | "app" | "auth" | "orders" | "db";
+type NodeId     = "users" | "gateway" | "monolith" | "auth" | "orders" | "payments" | "inventory" | "notification" | "db";
+type MicroNodeId = "users" | "gateway" | "auth" | "orders" | "payments" | "inventory" | "notification" | "db";
 
-type ServiceId = "auth" | "search" | "cart" | "orders" | "payment" | "notifs";
-type FailureId = "payment_fails" | "db_fails" | "notif_bug" | "auth_slow";
-type SimTab = "arch" | "failure" | "scale";
+interface NodeDef { label: string; x: number; y: number; w: number; h: number; color: string; tooltip: string; }
+interface Scenario { id: ScenarioId; label: string; description: string; favored: Mode; traffic: number; teamSize: number; deploy: DeployFreq; services: number; growth: Growth; }
 
-interface ServiceDef {
-  id: ServiceId;
-  label: string;
-  icon: string;
-  color: string;
-  bg: string;
-  description: string;
-}
-
-interface FailureEventDef {
-  id: FailureId;
-  label: string;
-  emoji: string;
-  monolithAffected: ServiceId[];
-  msAffected: ServiceId[];
-  msWarning: ServiceId[];
-  monolithMessage: string;
-  msMessage: string;
-  monoAvail: number;
-  msAvail: number;
-  monoErrors: number;
-  msErrors: number;
-}
-
-interface ScenarioDef {
-  id: string;
-  label: string;
-  hotService: ServiceId | null;
-  monoNote: string;
-  msNote: string;
-  monoInstances: number;
-  hotInstances: number;
-}
-
-interface SolutionStep {
-  title: string;
-  why: string;
-  highlight: ServiceId[];
-  recommendation: string;
-  icon: string;
-}
-
-interface Challenge {
-  id: string;
-  icon: string;
-  label: string;
-  description: string;
-  answer: "monolith" | "microservices";
-  answerLabel: string;
-  explanation: string;
-}
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
-
-const SERVICES: ServiceDef[] = [
-  { id: "auth",    label: "Auth",    icon: "🔑", color: "#4338ca", bg: "#eef2ff", description: "Handles login and session tokens." },
-  { id: "search",  label: "Search",  icon: "🔍", color: "#0e7490", bg: "#ecfeff", description: "Indexes and queries restaurant data." },
-  { id: "cart",    label: "Cart",    icon: "🛒", color: "#d97706", bg: "#fffbeb", description: "Manages user cart and item selection." },
-  { id: "orders",  label: "Orders",  icon: "📦", color: "#1e40af", bg: "#eff6ff", description: "Processes order placement and tracking." },
-  { id: "payment", label: "Payment", icon: "💳", color: "#6d28d9", bg: "#f5f3ff", description: "Handles payment processing and refunds." },
-  { id: "notifs",  label: "Notifs",  icon: "🔔", color: "#047857", bg: "#ecfdf5", description: "Sends push / email / SMS notifications." },
+// ─── Scenarios ─────────────────────────────────────────────────────────────────
+const SCENARIOS: Scenario[] = [
+  { id: "startup",    label: "Startup",            description: "Tiny team, MVP speed matters most. Keep it simple.",          favored: "monolith",      traffic: 500,    teamSize: 3,   deploy: "weekly",     services: 1,  growth: "low" },
+  { id: "small",      label: "Small Team",          description: "A handful of engineers. One codebase is easier to reason about.", favored: "monolith",  traffic: 5000,   teamSize: 8,   deploy: "daily",      services: 1,  growth: "medium" },
+  { id: "growth",     label: "Rapid Growth",        description: "Traffic and team growing fast. Splitting hot paths starts to help.", favored: "microservices", traffic: 80000, teamSize: 40, deploy: "daily",   services: 5,  growth: "high" },
+  { id: "large",      label: "Large Organization",  description: "Many teams need independent ownership and deployment.",       favored: "microservices", traffic: 300000, teamSize: 200, deploy: "hourly",     services: 12, growth: "high" },
+  { id: "global",     label: "Global Product",      description: "Massive scale, regional traffic, isolated failure domains.",  favored: "microservices", traffic: 800000, teamSize: 350, deploy: "continuous", services: 18, growth: "high" },
+  { id: "highdeploy", label: "High Deploy Freq",    description: "Continuous delivery across teams demands small blast radius.", favored: "microservices", traffic: 200000, teamSize: 120, deploy: "continuous", services: 14, growth: "high" },
 ];
 
-const FAILURE_EVENTS: FailureEventDef[] = [
-  {
-    id: "payment_fails", label: "Payment Crashes", emoji: "💳",
-    monolithAffected: ["auth", "search", "cart", "orders", "payment", "notifs"],
-    msAffected: ["payment"], msWarning: ["orders", "cart"],
-    monolithMessage: "Shared process crash. Entire app is down — browsing, auth, and orders all unavailable.",
-    msMessage: "Only Payment fails. Users can still browse, search, and add to cart.",
-    monoAvail: 0, msAvail: 80, monoErrors: 100, msErrors: 20,
-  },
-  {
-    id: "db_fails", label: "Database Fails", emoji: "🗄️",
-    monolithAffected: ["auth", "search", "cart", "orders", "payment", "notifs"],
-    msAffected: ["orders", "cart"], msWarning: ["payment", "notifs"],
-    monolithMessage: "Single shared DB crash. Every feature that persists data is broken.",
-    msMessage: "Only services sharing this DB are affected. Auth and Search keep working.",
-    monoAvail: 0, msAvail: 60, monoErrors: 100, msErrors: 40,
-  },
-  {
-    id: "notif_bug", label: "Notif Bug", emoji: "🔔",
-    monolithAffected: ["orders", "payment", "notifs"],
-    msAffected: ["notifs"], msWarning: [],
-    monolithMessage: "Memory leak in notifications causes process instability. Orders start timing out.",
-    msMessage: "Notifications crash in isolation. Orders complete normally — just no email confirmation.",
-    monoAvail: 60, msAvail: 97, monoErrors: 40, msErrors: 3,
-  },
-  {
-    id: "auth_slow", label: "Auth Slow", emoji: "🔑",
-    monolithAffected: ["auth", "search", "cart", "orders"],
-    msAffected: ["auth"], msWarning: ["search", "cart"],
-    monolithMessage: "Slow auth blocks the shared thread pool. All features requiring login degrade.",
-    msMessage: "Auth is slow but isolated. Existing sessions stay active. Only new logins are affected.",
-    monoAvail: 40, msAvail: 85, monoErrors: 60, msErrors: 15,
-  },
-];
-
-const SCALING_SCENARIOS: ScenarioDef[] = [
-  {
-    id: "search_spike", label: "Search 5×",
-    hotService: "search",
-    monoNote: "Full monolith duplicates — auth, payment, and orders all replicate even though only Search is hot.",
-    msNote: "Only Search scales from 1 → 3 instances. All other services stay at 1.",
-    monoInstances: 3, hotInstances: 3,
-  },
-  {
-    id: "payment_spike", label: "Payment 10×",
-    hotService: "payment",
-    monoNote: "4× full-stack duplication. Every module gets replicated regardless of load.",
-    msNote: "Payment auto-scales to 4 instances. Others are untouched.",
-    monoInstances: 4, hotInstances: 4,
-  },
-  {
-    id: "peak_load", label: "Peak Load",
-    hotService: null,
-    monoNote: "Scale 5 complete monolith copies — every feature scales together whether it needs it or not.",
-    msNote: "Each service scales to its own demand. Total footprint is more efficient.",
-    monoInstances: 5, hotInstances: 3,
-  },
-];
-
-const SOLUTION_STEPS: SolutionStep[] = [
-  { title: "Start with product scale", icon: "🌱", highlight: [],
-    why: "Small teams and early products benefit from a single codebase. Microservices' operational overhead isn't worth it yet.",
-    recommendation: "≤ 5 devs / startup → Start with Monolith" },
-  { title: "Identify pain points", icon: "🔍", highlight: ["payment", "search"],
-    why: "If one module causes slow deploys, reliability issues, or scaling needs — that module is your first microservice candidate.",
-    recommendation: "One hot module → Extract it first" },
-  { title: "Check team structure", icon: "👥", highlight: ["orders", "notifs"],
-    why: "Conway's Law: systems mirror teams. Multiple independent teams naturally own and deploy separate services.",
-    recommendation: "5+ independent teams → Microservices fit naturally" },
-  { title: "Evaluate failure isolation", icon: "🛡️", highlight: ["payment"],
-    why: "High-value features like payments benefit from isolation so a bug can't bring down the entire product.",
-    recommendation: "Critical / risky features → Isolate them" },
-  { title: "Consider operational cost", icon: "⚙️", highlight: [],
-    why: "Microservices require service discovery, distributed tracing, per-service CI/CD, API versioning, and network reliability.",
-    recommendation: "High ops maturity required before splitting" },
-  { title: "The recommended path", icon: "🗺️", highlight: [],
-    why: "Shopify, Twitter, Airbnb all started as monoliths and extracted services selectively as they scaled.",
-    recommendation: "Monolith first → Extract microservices as needed" },
-];
-
-const CHALLENGES: Challenge[] = [
-  { id: "c1", icon: "🚀", label: "MVP — 3 Developers",
-    description: "Building a food delivery MVP with 3 developers. Which architecture is better right now?",
-    answer: "monolith", answerLabel: "Monolith",
-    explanation: "Simpler deployment, no network overhead, faster iteration. Operational simplicity wins at this scale." },
-  { id: "c2", icon: "📈", label: "Payment Traffic 10×",
-    description: "Payment gets 10× more traffic than any other feature. Scale it efficiently.",
-    answer: "microservices", answerLabel: "Extract Payment Service",
-    explanation: "Independent scaling means only Payment gets more instances — much cheaper than duplicating the whole monolith." },
-  { id: "c3", icon: "🛡️", label: "Notif Bug Breaks Orders",
-    description: "A notification bug is causing order placement failures. Fix the blast radius.",
-    answer: "microservices", answerLabel: "Isolate Notifications",
-    explanation: "A separate Notifications service crashes in isolation — orders keep completing normally." },
-  { id: "c4", icon: "🚢", label: "Deploy Search Daily",
-    description: "Your search team deploys updates daily. Reduce deployment risk for other features.",
-    answer: "microservices", answerLabel: "Independent Search Service",
-    explanation: "A standalone Search service deploys without restarting or affecting any other service." },
-];
-
-// ─── SVG Architecture Canvas ──────────────────────────────────────────────────
-
-const MNW = 148, MNH = 34;
-const SNW = 128, SNH = 30;
-
-const MONO_POS: Record<ServiceId, { x: number; y: number }> = {
-  auth:    { x: 15,  y: 35 },
-  search:  { x: 183, y: 35 },
-  cart:    { x: 15,  y: 82 },
-  orders:  { x: 183, y: 82 },
-  payment: { x: 15,  y: 129 },
-  notifs:  { x: 183, y: 129 },
+// ─── Canvas node definitions ────────────────────────────────────────────────────
+const MONO_NODES: Record<string, NodeDef> = {
+  users:    { label: "Users",    x: 40,  y: 185, w: 100, h: 44, color: "#475569", tooltip: "Clients sending requests to the application." },
+  monolith: { label: "Application", x: 300, y: 110, w: 200, h: 200, color: "#1e293b", tooltip: "One deployable unit containing multiple responsibilities." },
+  db:       { label: "Database", x: 620, y: 185, w: 100, h: 44, color: "#6d28d9", tooltip: "Shared database for the whole application." },
 };
 
-const MS_POS: Record<ServiceId, { x: number; y: number }> = {
-  auth:    { x: 378, y: 25 },
-  search:  { x: 552, y: 25 },
-  cart:    { x: 378, y: 90 },
-  orders:  { x: 552, y: 90 },
-  payment: { x: 378, y: 155 },
-  notifs:  { x: 552, y: 155 },
+const MICRO_NODES: Record<MicroNodeId, NodeDef> = {
+  users:        { label: "Users",        x: 30,  y: 192, w: 96,  h: 40, color: "#475569", tooltip: "Clients sending requests." },
+  gateway:      { label: "API Gateway",  x: 200, y: 192, w: 108, h: 40, color: "#0e7490", tooltip: "Routes traffic between clients and services." },
+  auth:         { label: "Auth",         x: 400, y: 40,  w: 104, h: 38, color: "#4338ca", tooltip: "One independently deployable service: authentication." },
+  orders:       { label: "Orders",       x: 400, y: 110, w: 104, h: 38, color: "#4338ca", tooltip: "One independently deployable service: orders." },
+  payments:     { label: "Payments",     x: 400, y: 180, w: 104, h: 38, color: "#4338ca", tooltip: "One independently deployable service: payments." },
+  inventory:    { label: "Inventory",    x: 400, y: 250, w: 104, h: 38, color: "#4338ca", tooltip: "One independently deployable service: inventory." },
+  notification: { label: "Notification", x: 400, y: 320, w: 104, h: 38, color: "#4338ca", tooltip: "One independently deployable service: notifications." },
+  db:           { label: "Databases",    x: 600, y: 180, w: 104, h: 40, color: "#6d28d9", tooltip: "Each service owns its own data store." },
 };
+const MICRO_SERVICE_IDS: MicroNodeId[] = ["auth", "orders", "payments", "inventory", "notification"];
 
-const MS_CONNECTIONS: Array<{ from: ServiceId; to: ServiceId }> = [
-  { from: "auth",   to: "orders"  },
-  { from: "cart",   to: "orders"  },
-  { from: "orders", to: "payment" },
-  { from: "orders", to: "notifs"  },
-];
-
-const SHAKE_T = { duration: 0.4, times: [0, 0.2, 0.4, 0.6, 0.8, 1] };
-
-interface ArchCanvasProps {
-  monoAffected: Set<ServiceId>;
-  msAffected: Set<ServiceId>;
-  msWarning: Set<ServiceId>;
-  shakeKey?: number;
+// ─── Metrics math ──────────────────────────────────────────────────────────────
+interface Metrics { deployComplexity: number; scalability: number; opsOverhead: number; teamIndependence: number; }
+function clamp(v: number) { return Math.max(2, Math.min(98, Math.round(v))); }
+function monolithMetrics(traffic: number, teamSize: number, growth: Growth): Metrics {
+  const growthW = growth === "high" ? 30 : growth === "medium" ? 15 : 5;
+  return {
+    deployComplexity: clamp(20 + teamSize * 0.15 + growthW),
+    scalability:      clamp(85 - Math.log10(Math.max(traffic, 100)) * 14),
+    opsOverhead:      clamp(15 + teamSize * 0.05),
+    teamIndependence: clamp(70 - teamSize * 0.25),
+  };
+}
+function microMetrics(traffic: number, teamSize: number, services: number, growth: Growth): Metrics {
+  const growthW = growth === "high" ? 6 : 0;
+  return {
+    deployComplexity: clamp(35 + services * 2.5),
+    scalability:      clamp(60 + Math.log10(Math.max(traffic, 100)) * 6 + services * 1.5),
+    opsOverhead:      clamp(30 + services * 3.2 + growthW),
+    teamIndependence: clamp(45 + services * 3 + teamSize * 0.05),
+  };
 }
 
-function ArchCanvas({ monoAffected, msAffected, msWarning, shakeKey = 0 }: ArchCanvasProps) {
-  const monoErr = monoAffected.size > 0;
-
-  return (
-    <svg viewBox="0 0 720 210" className="w-full rounded-xl" style={{ background: "#f9f9f6" }}>
-      <defs>
-        <pattern id="archDotPat" width="18" height="18" patternUnits="userSpaceOnUse">
-          <circle cx="9" cy="9" r="0.8" fill="#e2e8f0" />
-        </pattern>
-      </defs>
-      <rect width="720" height="210" fill="url(#archDotPat)" />
-
-      <text x="178" y="13" fontSize={9} fontWeight="700" textAnchor="middle" fill="#94a3b8" letterSpacing="2" fontFamily="system-ui,sans-serif">MONOLITH</text>
-      <text x="558" y="13" fontSize={9} fontWeight="700" textAnchor="middle" fill="#94a3b8" letterSpacing="2" fontFamily="system-ui,sans-serif">MICROSERVICES</text>
-      <line x1="365" y1="0" x2="365" y2="210" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4,4" />
-
-      {/* ── Monolith ── */}
-      <motion.g
-        key={`mono-${shakeKey}`}
-        animate={monoErr ? { x: [-3, 3, -2, 2, -1, 0] } : { x: 0 }}
-        transition={monoErr ? SHAKE_T : {}}
-      >
-        <rect x="5" y="20" width="352" height="183" rx="10"
-          fill={monoErr ? "#fff5f5" : "white"}
-          stroke={monoErr ? "#ef4444" : "#e2e8f0"}
-          strokeWidth="1.5"
-        />
-        {SERVICES.map(s => {
-          const p = MONO_POS[s.id];
-          const err = monoAffected.has(s.id);
-          return (
-            <g key={s.id}>
-              <rect x={p.x} y={p.y} width={MNW} height={MNH} rx={6}
-                fill={err ? "#fef2f2" : s.bg} stroke={err ? "#ef4444" : s.color} strokeWidth="1.5" />
-              <text x={p.x + 10} y={p.y + MNH / 2} fontSize={13} dominantBaseline="middle">{s.icon}</text>
-              <text x={p.x + 28} y={p.y + MNH / 2} fontSize={9} fontWeight="600"
-                fill={err ? "#dc2626" : "#475569"} dominantBaseline="middle" fontFamily="system-ui,sans-serif">{s.label}</text>
-              {err && <circle cx={p.x + MNW - 8} cy={p.y + 8} r={5} fill="#ef4444" />}
-            </g>
-          );
-        })}
-        <rect x="101" y="172" width="155" height="24" rx={5}
-          fill={monoErr ? "#fef2f2" : "#f8fafc"}
-          stroke={monoErr ? "#ef4444" : "#94a3b8"}
-          strokeWidth="1.5" strokeDasharray="4,3" />
-        <text x="178" y="184" fontSize={9} fontWeight="600"
-          fill={monoErr ? "#dc2626" : "#64748b"}
-          textAnchor="middle" dominantBaseline="middle" fontFamily="system-ui,sans-serif">🗄️ Shared Database</text>
-      </motion.g>
-
-      {/* ── Microservices ── */}
-      {MS_CONNECTIONS.map(c => {
-        const f = MS_POS[c.from], t = MS_POS[c.to];
-        return (
-          <line key={`${c.from}-${c.to}`}
-            x1={f.x + SNW / 2} y1={f.y + SNH / 2}
-            x2={t.x + SNW / 2} y2={t.y + SNH / 2}
-            stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,3" />
-        );
-      })}
-
-      {SERVICES.map(s => {
-        const p = MS_POS[s.id];
-        const err = msAffected.has(s.id);
-        const warn = msWarning.has(s.id);
-        return (
-          <motion.g
-            key={`${s.id}-${shakeKey}-${err ? 1 : 0}`}
-            animate={err ? { x: [-2, 2, -1, 1, 0] } : { x: 0 }}
-            transition={err ? SHAKE_T : {}}
-          >
-            <rect x={p.x} y={p.y} width={SNW} height={SNH} rx={6}
-              fill={err ? "#fef2f2" : warn ? "#fffbeb" : s.bg}
-              stroke={err ? "#ef4444" : warn ? "#f59e0b" : s.color}
-              strokeWidth={err || warn ? 2 : 1.5} />
-            <text x={p.x + 9} y={p.y + SNH / 2} fontSize={12} dominantBaseline="middle">{s.icon}</text>
-            <text x={p.x + 26} y={p.y + SNH / 2} fontSize={9} fontWeight="600"
-              fill={err ? "#dc2626" : warn ? "#b45309" : "#475569"}
-              dominantBaseline="middle" fontFamily="system-ui,sans-serif">{s.label}</text>
-            {err && <circle cx={p.x + SNW - 8} cy={p.y + 8} r={5} fill="#ef4444" />}
-            {warn && !err && <circle cx={p.x + SNW - 8} cy={p.y + 8} r={5} fill="#f59e0b" />}
-            <rect x={p.x + SNW / 2 - 18} y={p.y + SNH + 6} width="36" height="12" rx={3}
-              fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="2,2" />
-          </motion.g>
-        );
-      })}
-    </svg>
-  );
+function fmtTraffic(n: number): string {
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(0)}K`;
+  return `${n}`;
 }
 
-// ─── Section 1: Concept Snapshot ─────────────────────────────────────────────
+// ─── Shared components ─────────────────────────────────────────────────────────
+function Eyebrow({ children }: { children: string }) {
+  return <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500 mb-1">{children}</p>;
+}
 
-function ConceptSnapshot() {
+function MetricCard({ label, value, higherIsBetter, suffix = "%" }: { label: string; value: number; higherIsBetter: boolean; suffix?: string }) {
+  const score = higherIsBetter ? value : 100 - value;
+  const good = score >= 66, warn = score >= 40;
   return (
-    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Concept Snapshot</p>
-        <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-          A monolith keeps all features in one app; microservices split them into independent services that communicate over a network.
-        </p>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {/* Monolith */}
-        <div className="rounded-xl border-2 border-slate-200 bg-slate-50 p-3 space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">🏢 Monolith</p>
-          <div className="rounded-lg border border-slate-200 bg-white p-2 space-y-1.5">
-            {SERVICES.map(s => (
-              <div key={s.id} className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium text-slate-600"
-                style={{ background: s.bg, border: `1px solid ${s.color}22` }}>
-                <span>{s.icon}</span> {s.label}
-              </div>
-            ))}
-            <div className="mt-1 px-2 py-1 rounded-md text-[10px] text-center text-slate-500 border border-dashed border-slate-300 bg-slate-50">
-              🗄️ Shared DB
-            </div>
-          </div>
-        </div>
-
-        {/* Microservices */}
-        <div className="rounded-xl border-2 border-slate-200 bg-slate-50 p-3 space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">🔷 Microservices</p>
-          <div className="grid grid-cols-2 gap-1.5">
-            {SERVICES.map(s => (
-              <div key={s.id} className="rounded-lg border p-1.5 space-y-1" style={{ background: s.bg, borderColor: s.color + "44" }}>
-                <div className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
-                  <span>{s.icon}</span> {s.label}
-                </div>
-                <div className="text-[9px] text-slate-500 border border-dashed border-slate-300 bg-white rounded px-1 text-center">db</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+      <p className="text-base font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <motion.p key={value} initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }}
+        className={cn("text-lg font-bold tabular-nums leading-none", good ? "text-emerald-600" : warn ? "text-amber-600" : "text-red-500")}>
+        {value}{suffix}
+      </motion.p>
     </div>
   );
 }
 
-// ─── Section 2: Simulations ───────────────────────────────────────────────────
-
-function ArchTab() {
+function InsightPanel({ text, type }: { text: string; type: "success" | "warning" | "risk" | "neutral" }) {
+  const styles = {
+    success: "bg-emerald-50 border-emerald-200 text-emerald-700",
+    warning: "bg-amber-50 border-amber-200 text-amber-800",
+    risk:    "bg-red-50 border-red-200 text-red-700",
+    neutral: "bg-slate-50 border-slate-200 text-slate-700",
+  };
+  const icon = {
+    success: <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />,
+    warning: <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-500" />,
+    risk:    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-red-500" />,
+    neutral: <div className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0 mt-1.5" />,
+  };
   return (
-    <div className="space-y-3">
-      <ArchCanvas
-        monoAffected={new Set()} msAffected={new Set()} msWarning={new Set()} />
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1.5">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">🏢 Monolith</p>
-          <p className="text-xs text-slate-500 leading-relaxed">One process, one deploy, one database. Simple to build and reason about early on.</p>
-          <div className="flex flex-wrap gap-1 pt-1">
-            {["Simple deploy", "Low overhead", "Shared memory"].map(t => (
-              <span key={t} className="px-2 py-0.5 rounded-full bg-white border border-slate-200 text-[10px] text-slate-500">{t}</span>
-            ))}
-          </div>
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1.5">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">🔷 Microservices</p>
-          <p className="text-xs text-slate-500 leading-relaxed">Each service owns its data and deploys independently. More complexity, more flexibility.</p>
-          <div className="flex flex-wrap gap-1 pt-1">
-            {["Independent scale", "Fault isolation", "Network overhead"].map(t => (
-              <span key={t} className="px-2 py-0.5 rounded-full bg-white border border-slate-200 text-[10px] text-slate-500">{t}</span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MetricBar({ label, mono, ms }: { label: string; mono: number; ms: number }) {
-  const betterMs = ms >= mono;
-  return (
-    <div className="space-y-1">
-      <p className="text-[10px] text-slate-500">{label}</p>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[9px] text-slate-400">
-            <span>Monolith</span><span className="font-bold text-slate-600">{mono}%</span>
-          </div>
-          <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-            <motion.div className="h-full rounded-full bg-red-400" animate={{ width: `${mono}%` }} transition={{ duration: 0.5 }} />
-          </div>
-        </div>
-        <div className="space-y-0.5">
-          <div className="flex items-center justify-between text-[9px] text-slate-400">
-            <span>Microservices</span><span className={cn("font-bold", betterMs ? "text-emerald-600" : "text-red-600")}>{ms}%</span>
-          </div>
-          <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-            <motion.div className={cn("h-full rounded-full", betterMs ? "bg-emerald-400" : "bg-red-400")} animate={{ width: `${ms}%` }} transition={{ duration: 0.5 }} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FailureTab() {
-  const [activeId, setActiveId] = useState<FailureId | null>(null);
-  const [shakeKey, setShakeKey] = useState(0);
-
-  const event = FAILURE_EVENTS.find(e => e.id === activeId) ?? null;
-
-  const select = useCallback((id: FailureId) => {
-    setActiveId(id);
-    setShakeKey(k => k + 1);
-  }, []);
-
-  useEffect(() => {
-    if (!activeId) return;
-    const t = setTimeout(() => setActiveId(null), 6000);
-    return () => clearTimeout(t);
-  }, [activeId, shakeKey]);
-
-  const monoAffected = new Set<ServiceId>(event?.monolithAffected ?? []);
-  const msAffected = new Set<ServiceId>(event?.msAffected ?? []);
-  const msWarning = new Set<ServiceId>(event?.msWarning ?? []);
-
-  return (
-    <div className="space-y-3">
-      {/* Failure buttons */}
-      <div className="flex flex-wrap gap-2">
-        {FAILURE_EVENTS.map(e => (
-          <button key={e.id} onClick={() => select(e.id)}
-            className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all",
-              activeId === e.id
-                ? "bg-red-600 text-white border-red-600 shadow"
-                : "bg-white border-slate-200 text-slate-600 hover:border-red-300 hover:bg-red-50"
-            )}>
-            <span>{e.emoji}</span> {e.label}
-          </button>
-        ))}
-        {activeId && (
-          <button onClick={() => setActiveId(null)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold border border-slate-200 bg-white text-slate-500 hover:bg-slate-50">
-            <RefreshCw className="w-3 h-3" /> Reset
-          </button>
-        )}
-      </div>
-
-      <ArchCanvas monoAffected={monoAffected} msAffected={msAffected} msWarning={msWarning} shakeKey={shakeKey} />
-
-      <AnimatePresence mode="wait">
-        {event ? (
-          <motion.div key={event.id}
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border-2 border-red-200 bg-red-50 p-3 space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-red-600">🏢 Monolith</p>
-                <p className="text-xs text-red-700 leading-relaxed">{event.monolithMessage}</p>
-                <div className="flex flex-wrap gap-1 pt-1">
-                  {event.monolithAffected.map(id => {
-                    const s = SERVICES.find(x => x.id === id)!;
-                    return <span key={id} className="px-1.5 py-0.5 rounded text-[9px] font-semibold text-red-700 bg-red-100">{s.icon} {s.label}</span>;
-                  })}
-                </div>
-              </div>
-              <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-3 space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">🔷 Microservices</p>
-                <p className="text-xs text-emerald-800 leading-relaxed">{event.msMessage}</p>
-                <div className="flex flex-wrap gap-1 pt-1">
-                  {event.msAffected.map(id => {
-                    const s = SERVICES.find(x => x.id === id)!;
-                    return <span key={id} className="px-1.5 py-0.5 rounded text-[9px] font-semibold text-red-700 bg-red-100">{s.icon} {s.label}</span>;
-                  })}
-                  {event.msWarning.map(id => {
-                    const s = SERVICES.find(x => x.id === id)!;
-                    return <span key={id} className="px-1.5 py-0.5 rounded text-[9px] font-semibold text-amber-700 bg-amber-100">{s.icon} {s.label} ⚠</span>;
-                  })}
-                  {event.msAffected.length === 0 && event.msWarning.length === 0 && (
-                    <span className="text-[10px] text-emerald-600">All services healthy ✓</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Impact Metrics</p>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                <MetricBar label="Availability" mono={event.monoAvail} ms={event.msAvail} />
-                <MetricBar label="Error Rate" mono={event.monoErrors} ms={event.msErrors} />
-              </div>
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <AlertTriangle className="w-4 h-4 text-slate-400 shrink-0" />
-            <p className="text-xs text-slate-500">Pick a failure event above to see how the blast radius differs between architectures.</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function ScaleInstance({ label, hot, isNew }: { label: string; hot?: boolean; isNew?: boolean }) {
-  return (
-    <motion.div
-      initial={isNew ? { opacity: 0, scaleY: 0 } : false}
-      animate={{ opacity: 1, scaleY: 1 }}
-      transition={{ duration: 0.3 }}
-      style={{ transformOrigin: "top" }}
-      className={cn("rounded-xl border-2 p-2 space-y-1", hot ? "border-violet-400 bg-violet-50" : "border-slate-200 bg-white")}
-    >
-      <p className={cn("text-[9px] font-bold uppercase tracking-widest", hot ? "text-violet-600" : "text-slate-400")}>{label}</p>
-      <div className="grid grid-cols-3 gap-1">
-        {SERVICES.map(s => (
-          <div key={s.id} className="flex items-center justify-center gap-0.5 rounded px-1 py-0.5 text-[9px]"
-            style={{ background: s.bg }}>
-            {s.icon}
-          </div>
-        ))}
-      </div>
+    <motion.div initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+      className={cn("flex items-start gap-2.5 p-3 rounded-xl border text-base leading-relaxed", styles[type])}>
+      {icon[type]}{text}
     </motion.div>
   );
 }
 
-function ScaleTab() {
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [isDeploying, setIsDeploying] = useState<"mono" | "ms" | null>(null);
-
-  const scenario = SCALING_SCENARIOS.find(s => s.id === activeId) ?? null;
-
-  const deploy = useCallback((target: "mono" | "ms") => {
-    setIsDeploying(target);
-    setTimeout(() => setIsDeploying(null), 3000);
-  }, []);
-
-  const monoInstances = scenario?.monoInstances ?? 1;
-  const msHotService = scenario?.hotService ?? null;
-  const msHotInstances = scenario?.hotInstances ?? 1;
-
+function SegmentedControl<T extends string | number>({ options, value, onChange }: { options: { key: T; label: string }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <div className="space-y-3">
-      {/* Scenario buttons */}
-      <div className="space-y-1.5">
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Traffic Scenarios</p>
+    <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
+      {options.map((o) => (
+        <button key={String(o.key)} onClick={() => onChange(o.key)}
+          className={cn("flex-1 py-1.5 px-2 rounded-lg text-base font-semibold transition-all",
+            value === o.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700")}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Pill<T extends string | number>({ options, value, onChange }: { options: { key: T; label: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((o) => (
+        <button key={String(o.key)} onClick={() => onChange(o.key)}
+          className={cn("px-3 py-1 rounded-full text-base font-semibold border transition-all",
+            value === o.key ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-200 hover:border-slate-400")}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── SVG canvas ─────────────────────────────────────────────────────────────────
+function TrafficDot({ x1, y1, x2, y2, color, delay }: { x1: number; y1: number; x2: number; y2: number; color: string; delay: number }) {
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+  return (
+    <motion.circle r={3.5} fill={color} fillOpacity={0.85}
+      initial={{ cx: x1, cy: y1, opacity: 0 }}
+      animate={{ cx: [x1, mx, x2], cy: [y1, my, y2], opacity: [0, 0.9, 0] }}
+      transition={{ duration: 1.5, repeat: Infinity, repeatDelay: delay, ease: "linear" }} />
+  );
+}
+
+function NodeRect({ def, fill, label, onTooltip, dim }: { def: NodeDef; fill: string; label?: string; onTooltip: (t: string | null) => void; dim?: boolean }) {
+  const cx = def.x + def.w / 2, cy = def.y + def.h / 2;
+  return (
+    <motion.g
+      initial={{ opacity: 0, scale: 0.55 }} animate={{ opacity: dim ? 0.4 : 1, scale: 1 }} exit={{ opacity: 0, scale: 0.55 }}
+      transition={{ type: "spring", stiffness: 300, damping: 22 }}
+      style={{ transformOrigin: `${cx}px ${cy}px` }}
+      onMouseEnter={() => onTooltip(def.tooltip)} onMouseLeave={() => onTooltip(null)} className="cursor-help">
+      <rect x={def.x} y={def.y} width={def.w} height={def.h} rx={8} fill={fill} />
+      <text x={cx} y={cy + 0.5} textAnchor="middle" dominantBaseline="central" fill="white" fontSize={10.5} fontWeight={600}
+        style={{ pointerEvents: "none", userSelect: "none" }}>{label ?? def.label}</text>
+    </motion.g>
+  );
+}
+
+function MonolithCanvas({ growth, killed, scaledUp, onTooltip }: { growth: Growth; killed: boolean; scaledUp: boolean; onTooltip: (t: string | null) => void }) {
+  const grow = growth === "high" ? 30 : growth === "medium" ? 14 : 0;
+  const scaleBump = scaledUp ? 20 : 0;
+  const mono = { ...MONO_NODES.monolith, x: 300 - (grow + scaleBump) / 2, y: 110 - (grow + scaleBump) / 2, w: 200 + grow + scaleBump, h: 200 + grow + scaleBump };
+  const fill = killed ? "#dc2626" : MONO_NODES.monolith.color;
+  const modules = ["Auth", "Payments", "Orders", "Users", "Inventory"];
+  return (
+    <svg viewBox="0 0 760 420" className="w-full h-full" style={{ display: "block" }}>
+      <defs><pattern id="mono-dots" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="0.8" cy="0.8" r="0.8" fill="#d9cfbd" /></pattern></defs>
+      <rect width="760" height="420" fill="#faf6ea" /><rect width="760" height="420" fill="url(#mono-dots)" />
+      <line x1={MONO_NODES.users.x + MONO_NODES.users.w} y1={207} x2={mono.x} y2={207} stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="5 4" />
+      <line x1={mono.x + mono.w} y1={207} x2={MONO_NODES.db.x} y2={207} stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="5 4" />
+      {!killed && <>
+        <TrafficDot x1={MONO_NODES.users.x + MONO_NODES.users.w} y1={207} x2={mono.x} y2={207} color="#64748b" delay={0.2} />
+        <TrafficDot x1={mono.x + mono.w} y1={207} x2={MONO_NODES.db.x} y2={207} color="#8b5cf6" delay={0.6} />
+      </>}
+      <NodeRect def={MONO_NODES.users} fill={MONO_NODES.users.color} onTooltip={onTooltip} />
+      <NodeRect def={MONO_NODES.db} fill={MONO_NODES.db.color} onTooltip={onTooltip} />
+      <motion.g onMouseEnter={() => onTooltip(MONO_NODES.monolith.tooltip)} onMouseLeave={() => onTooltip(null)} className="cursor-help">
+        <motion.rect animate={{ x: mono.x, y: mono.y, width: mono.w, height: mono.h, fill }} transition={{ duration: 0.4, ease: "easeInOut" }} rx={12} />
+        <text x={mono.x + mono.w / 2} y={mono.y + 16} textAnchor="middle" fill="white" fontSize={10} fontWeight={700} style={{ pointerEvents: "none" }}>ONE APPLICATION</text>
+        {modules.map((m, i) => (
+          <g key={m} style={{ pointerEvents: "none" }}>
+            <rect x={mono.x + 16} y={mono.y + 30 + i * ((mono.h - 44) / 5)} width={mono.w - 32} height={(mono.h - 44) / 5 - 6} rx={5} fill="rgba(255,255,255,0.14)" />
+            <text x={mono.x + mono.w / 2} y={mono.y + 30 + i * ((mono.h - 44) / 5) + ((mono.h - 44) / 5 - 6) / 2} textAnchor="middle" dominantBaseline="central" fill="white" fontSize={9} fontWeight={500}>{m}</text>
+          </g>
+        ))}
+      </motion.g>
+      {killed && <text x={mono.x + mono.w / 2} y={mono.y + mono.h + 16} textAnchor="middle" fill="#dc2626" fontSize={10} fontWeight={700}>entire app down</text>}
+    </svg>
+  );
+}
+
+function MicroCanvas({ serviceCount, killed, scaledService, onTooltip }: { serviceCount: number; killed: KillTarget; scaledService: MicroNodeId | null; onTooltip: (t: string | null) => void }) {
+  const visibleServices = MICRO_SERVICE_IDS.slice(0, Math.min(5, Math.max(1, Math.ceil(serviceCount / 6))));
+  return (
+    <svg viewBox="0 0 760 420" className="w-full h-full" style={{ display: "block" }}>
+      <defs><pattern id="micro-dots" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="0.8" cy="0.8" r="0.8" fill="#d9cfbd" /></pattern></defs>
+      <rect width="760" height="420" fill="#faf6ea" /><rect width="760" height="420" fill="url(#micro-dots)" />
+      <line x1={MICRO_NODES.users.x + MICRO_NODES.users.w} y1={212} x2={MICRO_NODES.gateway.x} y2={212} stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="5 4" />
+      <TrafficDot x1={MICRO_NODES.users.x + MICRO_NODES.users.w} y1={212} x2={MICRO_NODES.gateway.x} y2={212} color="#64748b" delay={0.2} />
+      <AnimatePresence>
+        {visibleServices.map((sid, i) => {
+          const node = MICRO_NODES[sid];
+          const gx = MICRO_NODES.gateway.x + MICRO_NODES.gateway.w, gy = 212;
+          const sx = node.x, sy = node.y + node.h / 2;
+          const dead = killed === sid;
+          return (
+            <g key={sid}>
+              <motion.line x1={gx} y1={gy} x2={sx} y2={sy} stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="5 4"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }} />
+              <motion.line x1={node.x + node.w} y1={sy} x2={MICRO_NODES.db.x} y2={200} stroke="#94a3b8" strokeWidth="1.2" strokeDasharray="4 4"
+                initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }} />
+              {!dead && killed !== "db" && <TrafficDot x1={gx} y1={gy} x2={sx} y2={sy} color="#6366f1" delay={i * 0.25} />}
+            </g>
+          );
+        })}
+      </AnimatePresence>
+      <NodeRect def={MICRO_NODES.users} fill={MICRO_NODES.users.color} onTooltip={onTooltip} />
+      <NodeRect def={MICRO_NODES.gateway} fill={MICRO_NODES.gateway.color} onTooltip={onTooltip} />
+      <NodeRect def={MICRO_NODES.db} fill={killed === "db" ? "#dc2626" : MICRO_NODES.db.color} onTooltip={onTooltip} dim={killed === "db"} />
+      <AnimatePresence>
+        {visibleServices.map((sid) => {
+          const node = MICRO_NODES[sid];
+          const dead = killed === sid;
+          const scaled = scaledService === sid;
+          return (
+            <g key={sid}>
+              <NodeRect def={node} fill={dead ? "#dc2626" : node.color} onTooltip={onTooltip} dim={dead} />
+              {scaled && (
+                <motion.rect initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  x={node.x + 10} y={node.y + 5} width={node.w} height={node.h} rx={8} fill={node.color} fillOpacity={0.25} style={{ pointerEvents: "none" }} />
+              )}
+            </g>
+          );
+        })}
+      </AnimatePresence>
+    </svg>
+  );
+}
+
+// ─── Step 01: Intro ─────────────────────────────────────────────────────────────
+function IntroCard({ scenario, onSelect }: { scenario: ScenarioId; onSelect: (s: ScenarioId) => void }) {
+  const sc = SCENARIOS.find(s => s.id === scenario)!;
+  return (
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+      <div>
+        <Eyebrow>Step 01 · Concept Snapshot</Eyebrow>
+        <p className="text-2xl font-bold text-slate-900">One application vs many cooperating services</p>
+        <p className="text-base text-slate-600 mt-0.5 leading-relaxed">See how architecture changes scaling, deployments, failures, and team ownership.</p>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+          <div className="flex items-center gap-1.5"><Box className="w-3.5 h-3.5 text-slate-700" /><span className="text-base font-bold uppercase tracking-widest text-slate-600">Monolith</span></div>
+          <div className="rounded-lg border-2 border-slate-700 bg-white p-1.5 space-y-1">
+            {["Auth", "Payments", "Orders", "Users", "Inventory"].map(m => (
+              <div key={m} className="rounded bg-slate-100 text-base font-semibold text-slate-700 text-center py-0.5">{m}</div>
+            ))}
+          </div>
+          <p className="text-base text-slate-500">Everything ships together.</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+          <div className="flex items-center gap-1.5"><Boxes className="w-3.5 h-3.5 text-indigo-600" /><span className="text-base font-bold uppercase tracking-widest text-indigo-500">Microservices</span></div>
+          <div className="grid grid-cols-2 gap-1">
+            {["Auth", "Orders", "Payments", "Inventory"].map(m => (
+              <div key={m} className="rounded border border-indigo-300 bg-white text-base font-semibold text-indigo-700 text-center py-1">{m}</div>
+            ))}
+          </div>
+          <p className="text-base text-slate-500">Independent services communicate.</p>
+        </div>
+      </div>
+      <div>
+        <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500 mb-2">Choose a context</p>
         <div className="flex flex-wrap gap-2">
-          {SCALING_SCENARIOS.map(s => (
-            <button key={s.id} onClick={() => setActiveId(prev => prev === s.id ? null : s.id)}
-              className={cn("px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all",
-                activeId === s.id
-                  ? "bg-slate-900 text-white border-slate-900"
-                  : "bg-white border-slate-200 text-slate-600 hover:border-slate-400"
-              )}>
+          {SCENARIOS.map((s) => (
+            <button key={s.id} onClick={() => onSelect(s.id)}
+              className={cn("px-4 py-1.5 rounded-full text-lg font-semibold border transition-all",
+                s.id === scenario ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-200 hover:border-slate-400 hover:text-slate-900")}>
               {s.label}
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Scale visual */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Monolith scaling */}
-        <div className="space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">🏢 Monolith</p>
-          <div className="space-y-2">
-            <AnimatePresence>
-              {Array.from({ length: monoInstances }, (_, i) => (
-                <ScaleInstance key={i} label={`Instance ${i + 1}`} isNew={i > 0 && !!scenario} />
-              ))}
-            </AnimatePresence>
-          </div>
-          {scenario && (
-            <p className="text-[10px] text-red-600 leading-relaxed pt-1">{scenario.monoNote}</p>
-          )}
-        </div>
-
-        {/* Microservices scaling */}
-        <div className="space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">🔷 Microservices</p>
-          <div className="grid grid-cols-2 gap-2">
-            {SERVICES.map(s => {
-              const isHot = s.id === msHotService;
-              const count = isHot ? msHotInstances : 1;
-              return (
-                <div key={s.id} className="space-y-1">
-                  {Array.from({ length: count }, (_, i) => (
-                    <motion.div key={i}
-                      initial={i > 0 && !!scenario ? { opacity: 0, scaleY: 0 } : false}
-                      animate={{ opacity: 1, scaleY: 1 }}
-                      transition={{ duration: 0.3 }}
-                      style={{ transformOrigin: "top" }}
-                      className={cn("rounded-lg border-2 p-1.5 flex items-center gap-1",
-                        isHot && i > 0 ? "border-violet-300 bg-violet-50" : "border-slate-200 bg-white"
-                      )}>
-                      <span className="text-sm">{s.icon}</span>
-                      <span className="text-[9px] font-semibold text-slate-600">{s.label}</span>
-                      {isHot && i === 0 && scenario && (
-                        <span className="ml-auto text-[8px] font-bold text-violet-600 bg-violet-100 px-1 rounded">HOT</span>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-          {scenario && (
-            <p className="text-[10px] text-emerald-700 leading-relaxed pt-1">{scenario.msNote}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Deploy section */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Deployment Impact</p>
-        <div className="grid grid-cols-2 gap-2">
-          <button onClick={() => deploy("mono")}
-            disabled={isDeploying !== null}
-            className={cn("flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-semibold border-2 transition-all",
-              isDeploying === "mono"
-                ? "border-amber-400 bg-amber-50 text-amber-700"
-                : "border-slate-200 bg-white text-slate-600 hover:border-slate-400 disabled:opacity-40"
-            )}>
-            {isDeploying === "mono"
-              ? <><motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="inline-block">↺</motion.span> Deploying all…</>
-              : "Deploy (Monolith)"}
-          </button>
-          <button onClick={() => deploy("ms")}
-            disabled={isDeploying !== null}
-            className={cn("flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-semibold border-2 transition-all",
-              isDeploying === "ms"
-                ? "border-emerald-400 bg-emerald-50 text-emerald-700"
-                : "border-slate-200 bg-white text-slate-600 hover:border-slate-400 disabled:opacity-40"
-            )}>
-            {isDeploying === "ms"
-              ? <><motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="inline-block">↺</motion.span> Updating one…</>
-              : "Deploy (Microservices)"}
-          </button>
-        </div>
-        <AnimatePresence>
-          {isDeploying && (
-            <motion.p key={isDeploying}
-              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-              className="text-[10px] leading-relaxed overflow-hidden">
-              {isDeploying === "mono"
-                ? "⚠️ Full monolith restart — all 6 features briefly unavailable during rollout."
-                : "✅ Only the changed service restarts. All other services stay live and unaffected."}
-            </motion.p>
-          )}
-        </AnimatePresence>
+        <p className="mt-2 text-base text-slate-600">{sc.description} <span className="font-semibold text-slate-700">Favored: {sc.favored === "monolith" ? "Monolith" : "Microservices"}.</span></p>
       </div>
     </div>
   );
 }
 
-function SimulationPanel() {
-  const [tab, setTab] = useState<SimTab>("arch");
+// ─── Step 05: Deployment panel ─────────────────────────────────────────────────
+function DeploymentPanel({ mode, services }: { mode: Exclude<Mode, "compare">; services: number }) {
+  const [progress, setProgress] = useState(0);
+  const [deploying, setDeploying] = useState(false);
+  const [targetService, setTargetService] = useState<MicroNodeId | null>(null);
 
-  const tabs: { id: SimTab; label: string }[] = [
-    { id: "arch",    label: "Architecture" },
-    { id: "failure", label: "Failure Blast Radius" },
-    { id: "scale",   label: "Scale & Deploy" },
-  ];
+  const runDeploy = () => {
+    setDeploying(true); setProgress(0);
+    if (mode === "microservices") setTargetService(MICRO_SERVICE_IDS[Math.floor(Math.random() * Math.min(5, services))]);
+    const dur = mode === "monolith" ? 1800 : 700;
+    const start = Date.now();
+    const tick = () => {
+      const p = Math.min(100, ((Date.now() - start) / dur) * 100);
+      setProgress(p);
+      if (p < 100) requestAnimationFrame(tick); else setDeploying(false);
+    };
+    requestAnimationFrame(tick);
+  };
 
   return (
     <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-4">
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Interactive Simulation</p>
+        <Eyebrow>Step 05 · Deployment Simulation</Eyebrow>
+        <p className="text-2xl font-bold text-slate-900">What happens when shipping a feature?</p>
+        <p className="text-base text-slate-600 mt-0.5">Showing: {mode === "monolith" ? "Monolith" : "Microservices"} (switch mode above).</p>
       </div>
-
-      {/* Tab bar */}
-      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={cn("px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all",
-              tab === t.id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-            )}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      <AnimatePresence mode="wait">
-        <motion.div key={tab}
-          initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.15 }}>
-          {tab === "arch"    && <ArchTab />}
-          {tab === "failure" && <FailureTab />}
-          {tab === "scale"   && <ScaleTab />}
-        </motion.div>
-      </AnimatePresence>
-    </div>
-  );
-}
-
-// ─── Section 3: Solution Walkthrough ─────────────────────────────────────────
-
-function SolutionWalkthrough() {
-  const [open, setOpen] = useState(false);
-  const [stepIdx, setStepIdx] = useState(0);
-
-  const step = SOLUTION_STEPS[stepIdx];
-  const highlightSet = new Set<ServiceId>(step.highlight as ServiceId[]);
-
-  return (
-    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Solution Walkthrough</p>
-          <p className="text-xs text-slate-500 mt-0.5">When should you choose monolith vs microservices?</p>
+      {mode === "monolith" ? (
+        <div className="rounded-xl border-2 border-slate-700 bg-slate-50 p-4 space-y-2">
+          <div className="flex items-center justify-between"><span className="text-lg font-bold text-slate-700">Entire application redeploys</span><span className="text-base text-slate-500 tabular-nums">{Math.round(progress)}%</span></div>
+          <div className="h-3 bg-slate-200 rounded-full overflow-hidden"><motion.div animate={{ width: `${progress}%` }} className="h-full bg-slate-700 rounded-full" /></div>
+          <div className="grid grid-cols-5 gap-1">
+            {["Auth", "Payments", "Orders", "Users", "Inventory"].map(m => (
+              <div key={m} className={cn("text-base font-semibold text-center py-1 rounded transition-colors", deploying ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600")}>{m}</div>
+            ))}
+          </div>
         </div>
-        <button onClick={() => { setOpen(o => !o); setStepIdx(0); }}
-          className={cn("px-3 py-1.5 rounded-lg text-[11px] font-semibold border-2 transition-all",
-            open ? "bg-slate-900 text-white border-slate-900" : "bg-white border-slate-200 text-slate-600 hover:border-slate-900"
-          )}>
-          {open ? "Hide" : "Show Solution"}
-        </button>
-      </div>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden">
-            <div className="space-y-4 pt-1">
-              {/* Step navigator */}
-              <div className="flex items-center gap-2">
-                <button onClick={() => setStepIdx(i => Math.max(0, i - 1))} disabled={stepIdx === 0}
-                  className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-30">
-                  <ChevronLeft className="w-3.5 h-3.5 text-slate-600" />
-                </button>
-                <div className="flex gap-1">
-                  {SOLUTION_STEPS.map((_, i) => (
-                    <button key={i} onClick={() => setStepIdx(i)}
-                      className={cn("h-1.5 rounded-full transition-all", i === stepIdx ? "w-6 bg-slate-900" : "w-1.5 bg-slate-300")} />
-                  ))}
-                </div>
-                <button onClick={() => setStepIdx(i => Math.min(SOLUTION_STEPS.length - 1, i + 1))} disabled={stepIdx === SOLUTION_STEPS.length - 1}
-                  className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-30">
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                </button>
-                <span className="text-[10px] text-slate-400 ml-1">Step {stepIdx + 1} of {SOLUTION_STEPS.length}</span>
+      ) : (
+        <div className="grid grid-cols-5 gap-2">
+          {MICRO_SERVICE_IDS.slice(0, Math.min(5, services)).map(sid => {
+            const active = targetService === sid && deploying;
+            const done = targetService === sid && !deploying && progress === 100;
+            return (
+              <div key={sid} className={cn("rounded-xl border-2 p-2 text-center transition-colors", active ? "border-amber-400 bg-amber-50" : done ? "border-emerald-400 bg-emerald-50" : "border-slate-200 bg-slate-50")}>
+                <p className="text-base font-bold text-slate-700 capitalize">{sid}</p>
+                {active && <div className="h-1 mt-1 bg-amber-200 rounded-full overflow-hidden"><motion.div animate={{ width: `${progress}%` }} className="h-full bg-amber-500" /></div>}
+                {done && <CheckCircle2 className="w-3 h-3 text-emerald-500 mx-auto mt-1" />}
               </div>
-
-              <AnimatePresence mode="wait">
-                <motion.div key={stepIdx}
-                  initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
-                  className="grid gap-3 md:grid-cols-2">
-                  {/* Step info */}
-                  <div className="space-y-2">
-                    <div className="flex items-start gap-2">
-                      <span className="text-xl">{step.icon}</span>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-800">{step.title}</p>
-                        <p className="text-xs text-slate-500 leading-relaxed mt-0.5">{step.why}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 text-white">
-                      <span className="text-[10px] font-semibold leading-relaxed">{step.recommendation}</span>
-                    </div>
-                    {step.highlight.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        <span className="text-[10px] text-slate-400">Highlighted:</span>
-                        {step.highlight.map(id => {
-                          const s = SERVICES.find(x => x.id === id)!;
-                          return (
-                            <span key={id} className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-slate-700"
-                              style={{ background: s.bg, border: `1px solid ${s.color}55` }}>
-                              {s.icon} {s.label}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Mini canvas */}
-                  <div className="overflow-hidden rounded-xl">
-                    <ArchCanvas
-                      monoAffected={new Set()} msAffected={new Set()} msWarning={new Set()} />
-                    {step.highlight.length > 0 && (
-                      <div className="mt-1.5 flex flex-wrap gap-1">
-                        {step.highlight.map(id => {
-                          const s = SERVICES.find(x => x.id === id)!;
-                          return (
-                            <span key={id} className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold ring-2"
-                              style={{ background: s.bg, color: s.color, outlineColor: s.color }}>
-                              ↑ {s.label}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            );
+          })}
+        </div>
+      )}
+      <button onClick={runDeploy} disabled={deploying} className="px-4 py-2 rounded-xl bg-slate-900 text-white text-lg font-semibold hover:bg-slate-800 disabled:opacity-40">
+        {deploying ? "Deploying..." : "Deploy new feature"}
+      </button>
+      <InsightPanel type={mode === "monolith" ? "warning" : "success"} text={mode === "monolith"
+        ? "What changed: one deployment affects the entire application. Why it matters: simple at first, but larger deployments become riskier and slower."
+        : "What changed: only one service redeployed. Why it matters: smaller deployments reduce blast radius and let teams ship independently."} />
     </div>
   );
 }
 
-// ─── Section 4: Mini Challenges ───────────────────────────────────────────────
+// ─── Step 06: Failure panel ────────────────────────────────────────────────────
+function FailurePanel({ mode, killed, setKilled }: { mode: Exclude<Mode, "compare">; killed: KillTarget; setKilled: (v: KillTarget) => void }) {
+  const targets: { key: KillTarget; label: string }[] = mode === "monolith"
+    ? [{ key: "none", label: "Healthy" }, { key: "app", label: "Kill app" }, { key: "db", label: "Kill DB" }]
+    : [{ key: "none", label: "Healthy" }, { key: "auth", label: "Kill Auth" }, { key: "orders", label: "Kill Orders" }, { key: "db", label: "Kill DB" }];
 
-function MiniChallenges() {
-  const [answers, setAnswers] = useState<Record<string, "monolith" | "microservices">>({});
-  const [shownHints, setShownHints] = useState<Set<string>>(new Set());
+  const availability = (() => {
+    if (killed === "none") return 99;
+    if (mode === "monolith") return killed === "app" ? 0 : 10;
+    if (killed === "auth") return 60;
+    if (killed === "orders") return 75;
+    if (killed === "db") return 20;
+    return 99;
+  })();
 
-  const toggleHint = useCallback((id: string) =>
-    setShownHints(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }), []);
-
-  const answer = useCallback((id: string, val: "monolith" | "microservices") =>
-    setAnswers(prev => ({ ...prev, [id]: val })), []);
-
-  const solved = Object.values(answers).length;
+  const effect = (() => {
+    if (killed === "none") return { type: "success" as const, text: "All systems healthy. Traffic flows normally." };
+    if (mode === "monolith") return { type: "risk" as const, text: "Monolith failure takes down the entire application — every feature stops at once. One fault, total outage." };
+    if (killed === "auth") return { type: "warning" as const, text: "Auth is down, but browsing and inventory still respond. Failure is isolated to login-dependent paths." };
+    if (killed === "orders") return { type: "warning" as const, text: "Orders failed, yet payments and browsing keep working. Microservices contain the blast radius." };
+    if (killed === "db") return { type: "risk" as const, text: "A shared database failure still hurts every service that depends on it — isolation has limits." };
+    return { type: "neutral" as const, text: "" };
+  })();
 
   return (
-    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Mini Challenges</p>
-          <p className="text-xs text-slate-500 mt-0.5">Apply what you&apos;ve learned.</p>
-        </div>
-        {solved > 0 && (
-          <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
-            {solved} / {CHALLENGES.length} solved
-          </span>
-        )}
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+      <div>
+        <Eyebrow>Step 06 · Failure Simulation</Eyebrow>
+        <p className="text-2xl font-bold text-slate-900">What breaks when something fails?</p>
+        <p className="text-base text-slate-600 mt-0.5">Showing: {mode === "monolith" ? "Monolith" : "Microservices"} (switch mode above).</p>
       </div>
+      <Pill options={targets} value={killed} onChange={setKilled} />
+      <div className="relative rounded-xl overflow-hidden border border-slate-100" style={{ aspectRatio: "760/300" }}>
+        {mode === "monolith"
+          ? <MonolithCanvas growth="low" killed={killed === "app" || killed === "db"} scaledUp={false} onTooltip={() => {}} />
+          : <MicroCanvas serviceCount={18} killed={killed} scaledService={null} onTooltip={() => {}} />}
+      </div>
+      <div>
+        <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider mb-0.5"><span>Availability</span><span className={cn("tabular-nums", availability > 80 ? "text-emerald-600" : availability > 40 ? "text-amber-600" : "text-red-500")}>{availability}%</span></div>
+        <div className="h-2 bg-slate-100 rounded-full overflow-hidden"><motion.div animate={{ width: `${availability}%` }} className={cn("h-full rounded-full", availability > 80 ? "bg-emerald-500" : availability > 40 ? "bg-amber-500" : "bg-red-500")} /></div>
+      </div>
+      <InsightPanel type={effect.type} text={effect.text} />
+      <InsightPanel type="neutral" text="Microservices improve isolation but create distributed failure scenarios — shared dependencies like a database can still cause wide outages." />
+    </div>
+  );
+}
 
+// ─── Step 07: Scaling panel ─────────────────────────────────────────────────────
+function ScalingPanel({ mode }: { mode: Exclude<Mode, "compare"> }) {
+  const [monoScaled, setMonoScaled] = useState(false);
+  const [scaledService, setScaledService] = useState<MicroNodeId>("auth");
+  const [cost, setCost] = useState(100);
+  const targets: { key: MicroNodeId; label: string }[] = [{ key: "auth", label: "Login traffic" }, { key: "orders", label: "Order traffic" }, { key: "payments", label: "Payment traffic" }];
+
+  return (
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+      <div>
+        <Eyebrow>Step 07 · Scaling Simulation</Eyebrow>
+        <p className="text-2xl font-bold text-slate-900">What needs more capacity?</p>
+        <p className="text-base text-slate-600 mt-0.5">Showing: {mode === "monolith" ? "Monolith" : "Microservices"} (switch mode above).</p>
+      </div>
+      {mode === "monolith" ? (
+        <>
+          <button onClick={() => { setMonoScaled(true); setCost(c => Math.min(900, c + 200)); }} className="px-4 py-2 rounded-xl bg-slate-900 text-white text-lg font-semibold hover:bg-slate-800">Scale for more login traffic</button>
+          <div className="relative rounded-xl overflow-hidden border border-slate-100" style={{ aspectRatio: "760/300" }}>
+            <MonolithCanvas growth="low" killed={false} scaledUp={monoScaled} onTooltip={() => {}} />
+          </div>
+          <InsightPanel type="warning" text="What changed: the entire application scaled. Why it matters: unrelated functionality (payments, inventory) consumes extra resources just to handle more logins." />
+        </>
+      ) : (
+        <>
+          <Pill options={targets} value={scaledService} onChange={(v) => { setScaledService(v); setCost(c => Math.min(500, c + 60)); }} />
+          <div className="relative rounded-xl overflow-hidden border border-slate-100" style={{ aspectRatio: "760/300" }}>
+            <MicroCanvas serviceCount={18} killed="none" scaledService={scaledService} onTooltip={() => {}} />
+          </div>
+          <InsightPanel type="success" text="What changed: only the busy service scaled (duplicated). Why it matters: other services stay untouched, so scaling is far more resource-efficient." />
+        </>
+      )}
+      <div className="flex items-center gap-2 text-base text-slate-700">
+        <span className="font-semibold">Relative cost:</span>
+        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden"><motion.div animate={{ width: `${Math.min(100, cost / 9)}%` }} className={cn("h-full rounded-full", cost > 500 ? "bg-red-500" : cost > 300 ? "bg-amber-500" : "bg-emerald-500")} /></div>
+        <span className="tabular-nums font-bold">${cost}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Step 08: Communication panel ──────────────────────────────────────────────
+function CommunicationPanel({ services, setServices }: { services: number; setServices: (v: number) => void }) {
+  const connections = Math.round(services * 1.6);
+  const networkCalls = services * 4;
+  const failureSurface = Math.min(98, services * 4);
+  const debugDifficulty = Math.min(98, 20 + services * 3);
+  const cx = 130, cy = 90, r = 68;
+  const count = Math.min(services, 12);
+  const pts = Array.from({ length: count }, (_, i) => {
+    const a = (i / count) * Math.PI * 2 - Math.PI / 2;
+    return { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r };
+  });
+  return (
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+      <div>
+        <Eyebrow>Step 08 · Communication Complexity</Eyebrow>
+        <p className="text-2xl font-bold text-slate-900">How much coordination is required?</p>
+        <p className="text-base text-slate-600 mt-0.5">Increase service count and watch the network grow.</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-[260px_1fr] gap-4 items-center">
+        <div className="rounded-xl bg-[#f9f9f6] border border-slate-200 p-2">
+          <svg viewBox="0 0 260 180" className="w-full" style={{ height: 170 }}>
+            {pts.map((p, i) => pts.slice(i + 1).map((q, j) => (
+              <motion.line key={`${i}-${j}`} x1={p.x} y1={p.y} x2={q.x} y2={q.y} stroke="#cbd5e1" strokeWidth="0.7"
+                initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} transition={{ duration: 0.3 }} />
+            )))}
+            {pts.map((p, i) => (
+              <motion.circle key={i} cx={p.x} cy={p.y} r={6} fill="#4338ca"
+                initial={{ scale: 0.55, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 300, damping: 22, delay: i * 0.02 }} />
+            ))}
+          </svg>
+        </div>
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Service count</span><span className="text-slate-800 tabular-nums">{services}</span></div>
+            <input type="range" min={1} max={30} step={1} value={services} onChange={e => setServices(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <MetricCard label="Services" value={services} higherIsBetter={true} suffix="" />
+            <MetricCard label="Calls/req" value={networkCalls} higherIsBetter={false} suffix="" />
+            <MetricCard label="Failure surface" value={failureSurface} higherIsBetter={false} />
+            <MetricCard label="Debug difficulty" value={debugDifficulty} higherIsBetter={false} />
+          </div>
+        </div>
+      </div>
+      <InsightPanel type={services > 12 ? "risk" : "neutral"} text={`What changed: ${services} services with ~${connections} communication paths. Why it matters: distributed systems multiply network calls, failure points, and debugging effort as services grow.`} />
+    </div>
+  );
+}
+
+// ─── Step 09: Challenges ────────────────────────────────────────────────────────
+const CHALLENGES = [
+  { id: "c1", label: "Two engineers building an MVP", options: ["Monolith", "Microservices"], correct: 0, explanation: "Keep complexity low. A monolith ships fastest with a tiny team." },
+  { id: "c2", label: "Hundreds of engineers, many teams", options: ["Monolith", "Microservices"], correct: 1, explanation: "Independent ownership and deployment matter more than simplicity at this size." },
+  { id: "c3", label: "Scale only the login service", options: ["Monolith", "Microservices"], correct: 1, explanation: "Microservices scale one service independently without touching the rest." },
+  { id: "c4", label: "Need the simplest possible deployment", options: ["Monolith", "Microservices"], correct: 0, explanation: "One deployable unit is the simplest thing to ship and operate." },
+  { id: "c5", label: "Isolate failures so one crash isn't total", options: ["Monolith", "Microservices"], correct: 1, explanation: "Microservices contain failures to individual services (given no shared dependency)." },
+];
+
+function ChallengeCards() {
+  const [answers, setAnswers] = useState<Record<string, number>>({});
+  return (
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+      <div><Eyebrow>Validate Your Instinct</Eyebrow><p className="text-2xl font-bold text-slate-900">Which architecture fits?</p></div>
       <div className="grid gap-3 sm:grid-cols-2">
         {CHALLENGES.map(ch => {
-          const chosen = answers[ch.id];
-          const correct = chosen === ch.answer;
-          const hintShown = shownHints.has(ch.id);
-
+          const picked = answers[ch.id];
+          const solved = picked === ch.correct;
           return (
-            <div key={ch.id} className={cn("p-4 rounded-xl border-2 space-y-2 transition-all",
-              !chosen ? "border-slate-200 bg-slate-50"
-              : correct ? "border-emerald-300 bg-emerald-50"
-              : "border-red-200 bg-red-50")}>
+            <motion.div key={ch.id} animate={{ borderColor: solved ? "#86efac" : "#e2e8f0" }}
+              className={cn("p-4 rounded-xl border-2 transition-colors space-y-2", solved ? "bg-emerald-50 border-emerald-300" : "bg-slate-50 border-slate-200")}>
               <div className="flex items-center gap-2">
-                <span className="text-xl">{ch.icon}</span>
-                <p className={cn("text-xs font-bold", chosen ? (correct ? "text-emerald-700" : "text-red-700") : "text-slate-700")}>{ch.label}</p>
+                {solved ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> : <div className="w-4 h-4 rounded-full border-2 border-slate-300 shrink-0" />}
+                <p className={cn("text-base font-bold leading-snug", solved ? "text-emerald-700" : "text-slate-700")}>{ch.label}</p>
               </div>
-              <p className="text-[11px] text-slate-500 leading-relaxed">{ch.description}</p>
-
-              {!chosen && (
-                <div className="grid grid-cols-2 gap-1.5">
-                  <button onClick={() => answer(ch.id, "monolith")}
-                    className="py-1.5 rounded-lg text-[11px] font-semibold border-2 border-slate-200 bg-white text-slate-600 hover:border-slate-900 hover:bg-slate-50 transition-all">
-                    Monolith
-                  </button>
-                  <button onClick={() => answer(ch.id, "microservices")}
-                    className="py-1.5 rounded-lg text-[11px] font-semibold border-2 border-slate-200 bg-white text-slate-600 hover:border-slate-900 hover:bg-slate-50 transition-all">
-                    Microservices
-                  </button>
-                </div>
-              )}
-
-              {chosen && (
-                <div className={cn("flex items-center gap-1.5 text-[11px] font-bold",
-                  correct ? "text-emerald-700" : "text-red-600")}>
-                  {correct ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-                  {correct ? `Correct — ${ch.answerLabel}` : `Not quite. Best answer: ${ch.answerLabel}`}
-                </div>
-              )}
-
-              <AnimatePresence>
-                {hintShown && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden">
-                    <div className="flex items-start gap-1.5 p-2 rounded-lg bg-sky-50 border border-sky-200">
-                      <Lightbulb className="w-3 h-3 text-sky-500 shrink-0 mt-0.5" />
-                      <p className="text-[10px] text-sky-800 leading-relaxed">{ch.explanation}</p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <button onClick={() => toggleHint(ch.id)}
-                className={cn("flex items-center gap-1 text-[10px] font-semibold transition-colors",
-                  hintShown ? "text-sky-600" : "text-slate-400 hover:text-slate-600")}>
-                {hintShown ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                {hintShown ? "Hide explanation" : "See explanation"}
-              </button>
-            </div>
+              <div className="flex gap-2">
+                {ch.options.map((opt, i) => (
+                  <button key={i} onClick={() => setAnswers(p => ({ ...p, [ch.id]: i }))}
+                    className={cn("flex-1 px-3 py-2 rounded-lg border text-lg font-semibold transition-all",
+                      picked === i && i === ch.correct ? "border-emerald-400 bg-emerald-100 text-emerald-800" :
+                      picked === i ? "border-red-300 bg-red-50 text-red-700" :
+                      "border-slate-200 bg-white text-slate-700 hover:border-slate-300")}>{opt}</button>
+                ))}
+              </div>
+              {picked !== undefined && <p className="text-base text-slate-600 leading-relaxed">{ch.explanation}</p>}
+            </motion.div>
           );
         })}
       </div>
@@ -901,15 +540,266 @@ function MiniChallenges() {
   );
 }
 
-// ─── Main Export ──────────────────────────────────────────────────────────────
+// ─── Step 10: Solution panel ────────────────────────────────────────────────────
+const WALKTHROUGH = [
+  { title: "Start with a simple application", body: "A monolith is the right default. One codebase, one deploy, fast iteration with a small team." },
+  { title: "Traffic and features increase", body: "More users and modules pile into the single application. It still works, but it grows heavy." },
+  { title: "Observe deployment complexity", body: "Every change redeploys everything. Releases get riskier as more teams touch one codebase." },
+  { title: "Observe scaling limitations", body: "You can only scale the whole app together, even when just one module is hot." },
+  { title: "Split responsibilities", body: "Carve out the hot or independently-owned parts into separate services behind a gateway." },
+  { title: "Add service communication", body: "Services now talk over the network. This adds latency, retries, and new failure modes." },
+  { title: "Observe operational tradeoffs", body: "You gained independent scaling and deployment, but pay with observability, coordination, and distributed debugging." },
+];
 
-export function ArchitectureComparisonVisual() {
+type SolutionTab = "walkthrough" | "compare" | "interview";
+function SolutionPanel({ onClose }: { onClose: () => void }) {
+  const [tab, setTab] = useState<SolutionTab>("walkthrough");
+  const [step, setStep] = useState(0);
+  const current = WALKTHROUGH[step];
   return (
-    <div className="space-y-4">
-      <ConceptSnapshot />
-      <SimulationPanel />
-      <SolutionWalkthrough />
-      <MiniChallenges />
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: 0.25 }}
+      className="rounded-[1.5rem] border-2 border-slate-900 bg-white p-5 shadow-lg space-y-4">
+      <div className="flex items-center justify-between">
+        <div><p className="text-2xl font-bold text-slate-900">Solution Panel</p><p className="text-base text-slate-600 mt-0.5">From monolith to microservices, and when to switch.</p></div>
+        <button onClick={onClose} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><X className="w-4 h-4 text-slate-600" /></button>
+      </div>
+      <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
+        {(["walkthrough", "compare", "interview"] as SolutionTab[]).map(t => (
+          <button key={t} onClick={() => setTab(t)} className={cn("flex-1 py-2 rounded-lg text-base font-semibold transition-all capitalize", tab === t ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700")}>{t}</button>
+        ))}
+      </div>
+      <AnimatePresence mode="wait">
+        {tab === "walkthrough" && (
+          <motion.div key="wt" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+            <div className="flex items-center gap-2">
+              {WALKTHROUGH.map((_, i) => <button key={i} onClick={() => setStep(i)} className={cn("h-2 rounded-full transition-all", i === step ? "bg-slate-900 w-6" : i < step ? "bg-slate-400 w-2" : "bg-slate-200 w-2")} />)}
+              <span className="ml-auto text-base font-bold text-slate-500">{step + 1}/{WALKTHROUGH.length}</span>
+            </div>
+            <AnimatePresence mode="wait">
+              <motion.div key={step} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="space-y-2">
+                <p className="text-2xl font-bold text-slate-900">{step + 1}. {current.title}</p>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-base text-slate-700 leading-relaxed">{current.body}</div>
+              </motion.div>
+            </AnimatePresence>
+            <div className="flex items-center justify-between">
+              <button onClick={() => setStep(i => Math.max(0, i - 1))} disabled={step === 0} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-lg font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed"><ChevronLeft className="w-4 h-4" /> Previous</button>
+              {step === WALKTHROUGH.length - 1
+                ? <div className="flex items-center gap-2 text-lg font-bold text-emerald-700"><CheckCircle2 className="w-4 h-4" /> Complete</div>
+                : <button onClick={() => setStep(i => i + 1)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-lg font-semibold hover:bg-slate-800">Next <ChevronRight className="w-4 h-4" /></button>}
+            </div>
+          </motion.div>
+        )}
+        {tab === "compare" && (
+          <motion.div key="cmp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <p className="text-base font-bold uppercase tracking-wider text-slate-700">Monolith</p>
+              {([["Simpler architecture", true], ["Easier deployment initially", true], ["Easier debugging", true], ["Fewer moving parts", true], ["Difficult to scale", false], ["Large deployments", false], ["Lower team independence", false], ["Larger blast radius", false]] as [string, boolean][]).map(([t, good]) => (
+                <div key={t} className="flex items-center gap-2 text-base text-slate-700"><div className={cn("w-1.5 h-1.5 rounded-full shrink-0", good ? "bg-emerald-500" : "bg-red-400")} />{t}</div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <p className="text-base font-bold uppercase tracking-wider text-indigo-600">Microservices</p>
+              {([["Independent scaling", true], ["Independent deployments", true], ["Team ownership", true], ["Better isolation", true], ["Operational complexity", false], ["Networking overhead", false], ["Distributed debugging", false], ["Service coordination", false]] as [string, boolean][]).map(([t, good]) => (
+                <div key={t} className="flex items-center gap-2 text-base text-slate-700"><div className={cn("w-1.5 h-1.5 rounded-full shrink-0", good ? "bg-emerald-500" : "bg-red-400")} />{t}</div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+        {tab === "interview" && (
+          <motion.div key="int" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-base text-slate-700 leading-relaxed space-y-2">
+            <p>A monolith packages multiple responsibilities into a single deployable application. It is simpler initially — fewer moving parts, easier debugging, and simpler deployments.</p>
+            <p>Microservices split functionality into independently deployable services that communicate over a network. This improves scalability, team ownership, deployment independence, and fault isolation, but introduces operational complexity, distributed debugging, networking overhead, and service coordination.</p>
+            <p>Many systems begin as monoliths and adopt microservices when scaling requirements, deployment frequency, or organizational complexity increase.</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// ─── Main export ───────────────────────────────────────────────────────────────
+export function ArchitectureComparisonVisual() {
+  const [scenario, setScenario] = useState<ScenarioId>("startup");
+  const [mode, setMode] = useState<Mode>("monolith");
+  const [traffic, setTraffic] = useState(500);
+  const [teamSize, setTeamSize] = useState(3);
+  const [deploy, setDeploy] = useState<DeployFreq>("weekly");
+  const [services, setServices] = useState(1);
+  const [growth, setGrowth] = useState<Growth>("low");
+  const [killed, setKilled] = useState<KillTarget>("none");
+  const [tooltip, setTooltip] = useState<string | null>(null);
+  const [showSolution, setShowSolution] = useState(false);
+
+  const selectScenario = (id: ScenarioId) => {
+    const sc = SCENARIOS.find(s => s.id === id)!;
+    setScenario(id);
+    setMode(sc.favored);
+    setTraffic(sc.traffic); setTeamSize(sc.teamSize); setDeploy(sc.deploy); setServices(sc.services); setGrowth(sc.growth);
+    setKilled("none");
+  };
+
+  const monoM  = useMemo(() => monolithMetrics(traffic, teamSize, growth), [traffic, teamSize, growth]);
+  const microM = useMemo(() => microMetrics(traffic, teamSize, services, growth), [traffic, teamSize, services, growth]);
+  const shownM = mode === "microservices" ? microM : monoM;
+  const panelMode: Exclude<Mode, "compare"> = mode === "compare" ? "monolith" : mode;
+
+  const insights = useMemo(() => {
+    const out: { text: string; type: "success" | "warning" | "risk" | "neutral" }[] = [];
+    if (mode === "monolith") {
+      if (traffic > 100000) out.push({ type: "risk", text: `At ${fmtTraffic(traffic)}/sec the whole monolith must scale together — unrelated modules consume capacity they don't need.` });
+      else out.push({ type: "success", text: "One deployable unit. Simple to build, debug, and ship while traffic and team are small." });
+      if (teamSize > 60) out.push({ type: "warning", text: `${teamSize} engineers on one codebase creates merge contention and release coordination overhead.` });
+    } else if (mode === "microservices") {
+      if (services > 12) out.push({ type: "warning", text: `${services} services means heavy operational overhead — observability, tracing, and coordination become real work.` });
+      else out.push({ type: "success", text: "Teams own and deploy their services independently. Failures can be isolated to one service." });
+      out.push({ type: "neutral", text: `Deploying ${deploy} across ${services} services favors small blast radius — exactly what microservices provide.` });
+    } else {
+      out.push({ type: "neutral", text: "Compare side by side. Notice the crossover: monolith wins early; microservices win as scale and team size grow." });
+    }
+    return out;
+  }, [mode, traffic, teamSize, services, deploy]);
+
+  return (
+    <div className="space-y-5">
+      {/* Step 01 */}
+      <IntroCard scenario={scenario} onSelect={selectScenario} />
+
+      {/* Steps 02 + 03 + 04 */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.6fr] gap-5">
+        <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+          <div>
+            <Eyebrow>Step 02 · Simulate Growth</Eyebrow>
+            <p className="text-2xl font-bold text-slate-900">Tune scale, team, and deployment</p>
+            <p className="text-base text-slate-600 mt-0.5">Watch architecture respond as the system grows.</p>
+          </div>
+          <SegmentedControl options={[{ key: "monolith", label: "Monolith" }, { key: "microservices", label: "Microservices" }, { key: "compare", label: "Compare" }]} value={mode} onChange={setMode} />
+          <div className="space-y-1">
+            <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Traffic</span><span className="text-slate-800 tabular-nums">{fmtTraffic(traffic)}/sec</span></div>
+            <input type="range" min={100} max={1000000} step={100} value={traffic} onChange={e => setTraffic(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
+          </div>
+          <div className="space-y-1">
+            <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Team size</span><span className="text-slate-800 tabular-nums">{teamSize} eng</span></div>
+            <input type="range" min={2} max={500} step={1} value={teamSize} onChange={e => setTeamSize(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Deployment frequency</p>
+            <SegmentedControl options={[{ key: "weekly", label: "Weekly" }, { key: "daily", label: "Daily" }, { key: "hourly", label: "Hourly" }, { key: "continuous", label: "Cont." }]} value={deploy} onChange={setDeploy} />
+          </div>
+          {mode !== "monolith" && (
+            <div className="space-y-1">
+              <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Service count</span><span className="text-slate-800 tabular-nums">{services}</span></div>
+              <input type="range" min={1} max={30} step={1} value={services} onChange={e => setServices(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
+            </div>
+          )}
+          <div className="space-y-1">
+            <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Feature growth</p>
+            <SegmentedControl options={[{ key: "low", label: "Low" }, { key: "medium", label: "Medium" }, { key: "high", label: "High" }]} value={growth} onChange={setGrowth} />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="rounded-[1.5rem] border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+              <div>
+                <Eyebrow>Step 03 · Live System View</Eyebrow>
+                <p className="text-base text-slate-600">{mode === "compare" ? "Both architectures shown." : "Hover any node."}</p>
+              </div>
+              <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /><span className="text-base font-bold text-slate-500 uppercase tracking-wider">Live</span></div>
+            </div>
+            <div className="relative px-3 pb-3">
+              {mode === "compare" ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="relative rounded-xl overflow-hidden border border-slate-100" style={{ aspectRatio: "760/420" }}>
+                    <MonolithCanvas growth={growth} killed={false} scaledUp={false} onTooltip={setTooltip} />
+                    <span className="absolute top-2 left-2 text-base font-bold uppercase tracking-widest text-slate-500">Monolith</span>
+                  </div>
+                  <div className="relative rounded-xl overflow-hidden border border-slate-100" style={{ aspectRatio: "760/420" }}>
+                    <MicroCanvas serviceCount={services} killed="none" scaledService={null} onTooltip={setTooltip} />
+                    <span className="absolute top-2 left-2 text-base font-bold uppercase tracking-widest text-indigo-400">Microservices</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative rounded-xl overflow-hidden" style={{ aspectRatio: "760/420" }}>
+                  {mode === "monolith"
+                    ? <MonolithCanvas growth={growth} killed={false} scaledUp={false} onTooltip={setTooltip} />
+                    : <MicroCanvas serviceCount={services} killed="none" scaledService={null} onTooltip={setTooltip} />}
+                  <AnimatePresence>
+                    {tooltip && (
+                      <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+                        className="absolute bottom-3 left-3 right-3 p-3 bg-slate-900 text-white text-lg rounded-xl shadow-lg leading-relaxed pointer-events-none z-10">
+                        <Info className="inline w-3 h-3 mr-1.5 opacity-60" />{tooltip}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
+            <Eyebrow>Step 04 · System Metrics</Eyebrow>
+            {mode === "compare" ? (
+              <div className="grid grid-cols-2 gap-3 mt-1">
+                {([["Monolith", monoM], ["Microservices", microM]] as [string, Metrics][]).map(([label, m]) => (
+                  <div key={label} className="space-y-2">
+                    <p className="text-base font-bold uppercase tracking-wider text-slate-500">{label}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <MetricCard label="Deploy Cmplx" value={m.deployComplexity} higherIsBetter={false} />
+                      <MetricCard label="Scalability" value={m.scalability} higherIsBetter={true} />
+                      <MetricCard label="Ops Overhead" value={m.opsOverhead} higherIsBetter={false} />
+                      <MetricCard label="Team Indep." value={m.teamIndependence} higherIsBetter={true} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-1">
+                <MetricCard label="Deploy Complexity" value={shownM.deployComplexity} higherIsBetter={false} />
+                <MetricCard label="Scalability" value={shownM.scalability} higherIsBetter={true} />
+                <MetricCard label="Ops Overhead" value={shownM.opsOverhead} higherIsBetter={false} />
+                <MetricCard label="Team Independence" value={shownM.teamIndependence} higherIsBetter={true} />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Step 05 */}
+      <DeploymentPanel mode={panelMode} services={services} />
+      {/* Step 06 */}
+      <FailurePanel mode={panelMode} killed={killed} setKilled={setKilled} />
+      {/* Step 07 */}
+      <ScalingPanel mode={panelMode === "monolith" ? "monolith" : "microservices"} />
+      {/* Step 08 */}
+      <CommunicationPanel services={services} setServices={setServices} />
+
+      {/* Insights */}
+      <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+        <Eyebrow>Insights & Warnings</Eyebrow>
+        <div className="space-y-2">
+          <AnimatePresence>
+            {insights.map((ins, i) => <InsightPanel key={`${i}-${ins.text.slice(0, 14)}`} text={ins.text} type={ins.type} />)}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Step 09 */}
+      <ChallengeCards />
+
+      {/* Step 10 */}
+      <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm flex items-center justify-between">
+        <div>
+          <Eyebrow>Step 10 · Solution Panel</Eyebrow>
+          <p className="text-base text-slate-700">Walkthrough, comparison, and interview answer.</p>
+        </div>
+        <button onClick={() => setShowSolution(s => !s)}
+          className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-lg font-semibold border transition-all",
+            showSolution ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300 hover:border-slate-700")}>
+          {showSolution ? "Hide" : "Open Solution"}
+        </button>
+      </div>
+      <AnimatePresence>{showSolution && <SolutionPanel onClose={() => setShowSolution(false)} />}</AnimatePresence>
     </div>
   );
 }
