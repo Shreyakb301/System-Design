@@ -493,9 +493,11 @@ function StreamingSim() {
     stopRef.current = setTimeout(stopAll, 10000);
   }, [def.intervalMs, stopAll]);
 
-  const toggle = useCallback(() => { running ? stopAll() : start(); }, [running, stopAll, start]);
+  const toggle = useCallback(() => { if (running) stopAll(); else start(); }, [running, stopAll, start]);
 
-  useEffect(() => { if (running) { stopAll(); } }, [scenario]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Tear down any running animation timers when the scenario changes.
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+  useEffect(() => { if (running) { stopAll(); } }, [scenario]);
   useEffect(() => () => stopAll(), [stopAll]);
 
   return (
@@ -800,7 +802,7 @@ function MiniChallenges() {
   const [hints, setHints]       = useState<Set<string>>(new Set());
 
   const toggleHint = useCallback((id: string) =>
-    setHints(p => { const s = new Set(p); s.has(id) ? s.delete(id) : s.add(id); return s; }), []);
+    setHints(p => { const s = new Set(p); if (s.has(id)) s.delete(id); else s.add(id); return s; }), []);
 
   const pick = useCallback((id: string, val: "rest" | "grpc") =>
     setAnswers(p => ({ ...p, [id]: val })), []);
