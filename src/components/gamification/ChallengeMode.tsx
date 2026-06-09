@@ -346,8 +346,8 @@ export function ChallengeMode() {
                     {/* Simulation is auto-running now, but we can keep/remove this button later */}
                     <div className="text-xs flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full text-slate-500">
                         <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                         </span>
                         Auto-updating metrics
                     </div>
@@ -371,12 +371,12 @@ export function ChallengeMode() {
                         "flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm shadow-sm transition-colors",
                         isCanvasDropTarget
                             ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
-                            : "border-blue-200 bg-blue-50/50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300"
+                            : "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-300"
                     )}>
                         {selectedType
                             ? <>
                                 <div className="flex items-center gap-2">
-                                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
+                                    <div className="h-2 w-2 rounded-full bg-sky-500 animate-pulse shrink-0" />
                                     <span><strong>{COMPONENT_CATALOG[selectedType].name}</strong> selected. Click in the canvas or drag from the palette to place it.</span>
                                 </div>
                                 <Button

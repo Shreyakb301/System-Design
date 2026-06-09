@@ -49,7 +49,7 @@ export function LevelCompleteDialog({
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <div className="flex items-center gap-2 mb-2">
-                        <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-full text-yellow-600 dark:text-yellow-400">
+                        <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-full text-amber-700 dark:text-amber-400">
                             <Trophy className="h-6 w-6" />
                         </div>
                         <DialogTitle className="text-xl">Exercise complete</DialogTitle>
@@ -63,11 +63,11 @@ export function LevelCompleteDialog({
                     <div className="grid grid-cols-2 gap-4">
                         <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg text-center">
                             <div className="text-xs text-muted-foreground uppercase font-bold">Latency</div>
-                            <div className="text-lg font-mono font-medium text-green-600">{metrics.latency}ms</div>
+                            <div className="text-lg font-mono font-medium text-emerald-600">{metrics.latency}ms</div>
                         </div>
                         <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg text-center">
                             <div className="text-xs text-muted-foreground uppercase font-bold">Reliability</div>
-                            <div className="text-lg font-mono font-medium text-blue-600">{(metrics.reliability * 100).toFixed(1)}%</div>
+                            <div className="text-lg font-mono font-medium text-sky-600">{(metrics.reliability * 100).toFixed(1)}%</div>
                         </div>
                         <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg text-center">
                             <div className="text-xs text-muted-foreground uppercase font-bold">Monthly Cost</div>
@@ -85,7 +85,7 @@ export function LevelCompleteDialog({
                         <RotateCcw className="h-4 w-4" />
                         Replay
                     </Button>
-                    <Button onClick={onNextLevel} className="gap-2 bg-green-600 hover:bg-green-700">
+                    <Button onClick={onNextLevel} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
                         Next Level
                         <ArrowRight className="h-4 w-4" />
                     </Button>

@@ -20,21 +20,21 @@ export function ResourceMonitor({ metrics, budget }: ResourceMonitorProps) {
                 label="Latency"
                 value={`${metrics.latency}ms`}
                 icon={Zap}
-                color={isLatencyGood ? "text-green-500" : "text-red-500"}
+                color={isLatencyGood ? "text-emerald-500" : "text-red-500"}
             />
 
             <StatsCard
                 label="Reliability"
                 value={`${(metrics.reliability * 100).toFixed(1)}%`}
                 icon={Activity}
-                color={isReliabilityGood ? "text-green-500" : "text-amber-500"}
+                color={isReliabilityGood ? "text-emerald-500" : "text-amber-500"}
             />
 
             <StatsCard
                 label="Throughput"
                 value={`${metrics.throughput} RPS`}
                 icon={Gauge}
-                color={metrics.throughput >= 500 ? "text-blue-500" : "text-indigo-500"}
+                color={metrics.throughput >= 500 ? "text-sky-500" : "text-indigo-500"}
             />
 
             <StatsCard

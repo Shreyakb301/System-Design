@@ -191,7 +191,7 @@ export function SystemCanvas({
                                 strokeDasharray="5,5"
                             />
                             {/* Animated Packet */}
-                            <circle r="4" fill="#3b82f6">
+                            <circle r="4" fill="#0ea5e9">
                                 <animateMotion
                                     dur="1s"
                                     repeatCount="indefinite"
@@ -218,7 +218,7 @@ export function SystemCanvas({
             ))}
 
             {isDraggingType && (
-                <div className="absolute left-4 top-4 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800 animate-pulse">
+                <div className="absolute left-4 top-4 rounded-full bg-sky-100 px-3 py-1 text-sm text-sky-800 animate-pulse">
                     Click or drop to place {COMPONENT_CATALOG[isDraggingType].name}
                 </div>
             )}
@@ -228,8 +228,8 @@ export function SystemCanvas({
 
 function getConfigColor(type: ComponentType) {
     switch (type) {
-        case "client": return "text-blue-500";
-        case "server": return "text-green-500";
+        case "client": return "text-sky-500";
+        case "server": return "text-emerald-500";
         case "database": return "text-amber-500";
         case "load-balancer": return "text-purple-500";
         case "cache": return "text-orange-500";
