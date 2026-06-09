@@ -1,24 +1,36 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
-  RotateCcw, Zap, HardDrive,
-  Server, CheckCircle2, AlertTriangle, Plus, Minus,
-  ChevronLeft, ChevronRight, Lightbulb, Eye, EyeOff,
+  AlertTriangle, CheckCircle2, Info,
+  ChevronLeft, ChevronRight, X,
 } from "lucide-react";
 
-// ─── Utilities ────────────────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────────
+type ScenarioId = "social" | "url" | "video" | "chat" | "delivery";
+type ReadRatio  = 1 | 10 | 100;
+type Retention  = 30 | 365 | 1825 | 3650;
+type PayloadKB  = 1 | 10 | 100 | 1000;
+type NodeId     = "users" | "api" | "cache" | "db" | "object" | "cdn";
+type PeakMult   = 2 | 3 | 5 | 10;
+type Pattern    = "flat" | "workday" | "evening" | "flash";
 
-function fmt(n: number): string {
+interface NodeDef { label: string; x: number; y: number; color: string; tooltip: string; }
+interface Scenario {
+  id: ScenarioId; label: string; description: string;
+  mau: number; dauPct: number; actions: number; readRatio: ReadRatio; payloadKB: PayloadKB; retention: Retention;
+}
+
+// ─── Formatting ────────────────────────────────────────────────────────────────
+function fmtNum(n: number): string {
   if (n >= 1e12) return `${(n / 1e12).toFixed(1)}T`;
   if (n >= 1e9)  return `${(n / 1e9).toFixed(1)}B`;
   if (n >= 1e6)  return `${(n / 1e6).toFixed(1)}M`;
   if (n >= 1e3)  return `${(n / 1e3).toFixed(1)}K`;
-  return n.toFixed(n < 10 ? 1 : 0);
+  return n.toFixed(0);
 }
-
 function fmtBytes(b: number): string {
   if (b >= 1e15) return `${(b / 1e15).toFixed(1)} PB`;
   if (b >= 1e12) return `${(b / 1e12).toFixed(1)} TB`;
@@ -28,976 +40,583 @@ function fmtBytes(b: number): string {
   return `${b.toFixed(0)} B`;
 }
 
-function fmtCost(usd: number): string {
-  if (usd >= 1e6) return `$${(usd / 1e6).toFixed(1)}M`;
-  if (usd >= 1e3) return `$${(usd / 1e3).toFixed(0)}K`;
-  return `$${usd.toFixed(0)}`;
+// ─── Scenarios ─────────────────────────────────────────────────────────────────
+const SCENARIOS: Scenario[] = [
+  { id: "social",   label: "Social app",     description: "Read-heavy feed. Many small posts, some media. Long retention.",   mau: 100e6, dauPct: 50, actions: 10, readRatio: 100, payloadKB: 10,   retention: 1825 },
+  { id: "url",      label: "URL shortener",  description: "Tiny records, extreme read:write ratio, minimal storage.",         mau: 10e6,  dauPct: 30, actions: 5,  readRatio: 100, payloadKB: 1,    retention: 3650 },
+  { id: "video",    label: "Video platform", description: "Huge media payloads. Storage and bandwidth dominate everything.", mau: 100e6, dauPct: 40, actions: 3,  readRatio: 100, payloadKB: 1000, retention: 1825 },
+  { id: "chat",     label: "Chat app",       description: "Write-heavy. Many small messages, balanced read/write.",          mau: 50e6,  dauPct: 60, actions: 50, readRatio: 10,  payloadKB: 1,    retention: 365  },
+  { id: "delivery", label: "Food delivery",  description: "Moderate traffic, transactional writes, medium payloads.",        mau: 10e6,  dauPct: 40, actions: 8,  readRatio: 10,  payloadKB: 10,   retention: 365  },
+];
+
+// ─── Canvas nodes ──────────────────────────────────────────────────────────────
+const NW = 108, NH = 36;
+const NODES: Record<NodeId, NodeDef> = {
+  users:  { label: "Users",          x: 30,  y: 192, color: "#475569", tooltip: "User count and activity drive request volume." },
+  api:    { label: "API Servers",    x: 250, y: 192, color: "#1e293b", tooltip: "Handle every request. Peak QPS determines how many you need." },
+  cache:  { label: "Cache",          x: 470, y: 60,  color: "#b91c1c", tooltip: "High read traffic may benefit from caching to offload the database." },
+  db:     { label: "Database",       x: 470, y: 192, color: "#4338ca", tooltip: "Writes and metadata increase database load." },
+  object: { label: "Object Storage", x: 470, y: 324, color: "#6d28d9", tooltip: "Large files usually belong in object storage, not the database." },
+  cdn:    { label: "CDN",            x: 630, y: 324, color: "#0e7490", tooltip: "Large static/media content may benefit from edge delivery." },
+};
+
+// ─── Core estimation math ──────────────────────────────────────────────────────
+interface Estimates {
+  dau: number; writesPerDay: number; writeQps: number; readQps: number; avgQps: number; peakQps: number;
+  dailyStorage: number; totalStorage: number; bandwidthPerSec: number;
+}
+function estimate(mau: number, dauPct: number, actions: number, readRatio: ReadRatio, payloadKB: PayloadKB, retention: Retention, peakMult: PeakMult): Estimates {
+  const dau = mau * (dauPct / 100);
+  const writesPerDay = dau * actions;
+  const writeQps = writesPerDay / 86400;
+  const readQps = writeQps * readRatio;
+  const avgQps = writeQps + readQps;
+  const peakQps = avgQps * peakMult;
+  const payloadBytes = payloadKB * 1024;
+  const dailyStorage = writesPerDay * payloadBytes;
+  const totalStorage = dailyStorage * retention;
+  const bandwidthPerSec = avgQps * payloadBytes;
+  return { dau, writesPerDay, writeQps, readQps, avgQps, peakQps, dailyStorage, totalStorage, bandwidthPerSec };
 }
 
-function clamp(v: number, lo: number, hi: number) { return Math.min(hi, Math.max(lo, v)); }
-
-// ─── Shared components ────────────────────────────────────────────────────────
-
-function Slider({
-  label, valueLabel, min, max, step, value, onChange, accent = "slate",
-}: {
-  label: string; valueLabel: string; min: number; max: number;
-  step: number; value: number; onChange: (v: number) => void; accent?: string;
-}) {
-  return (
-    <div className="space-y-2">
-      <div className="flex justify-between text-xs font-medium">
-        <span className="text-slate-500 uppercase tracking-wider">{label}</span>
-        <span className={cn("font-bold tabular-nums", accent === "sky" ? "text-sky-700" : accent === "amber" ? "text-amber-700" : "text-slate-700")}>
-          {valueLabel}
-        </span>
-      </div>
-      <input type="range" min={min} max={max} step={step} value={value}
-        onChange={e => onChange(Number(e.target.value))}
-        className={cn("w-full h-1.5 rounded-full appearance-none cursor-pointer bg-slate-200",
-          accent === "sky" ? "accent-sky-600" : accent === "amber" ? "accent-amber-500" : "accent-slate-700"
-        )}
-      />
-    </div>
-  );
+function getActiveNodes(payloadKB: PayloadKB, readRatio: ReadRatio): Set<NodeId> {
+  const s = new Set<NodeId>(["users", "api", "db"]);
+  if (readRatio >= 10) s.add("cache");
+  if (payloadKB >= 100) { s.add("object"); s.add("cdn"); }
+  return s;
 }
 
-function HeatBar({ value, label }: { value: number; label: string }) {
-  const color = value >= 0.9 ? "bg-red-500" : value >= 0.6 ? "bg-amber-500" : "bg-emerald-500";
-  const text  = value >= 0.9 ? "text-red-600" : value >= 0.6 ? "text-amber-600" : "text-emerald-600";
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-[10px] font-semibold">
-        <span className="text-slate-500 uppercase tracking-wider">{label}</span>
-        <span className={text}>{(value * 100).toFixed(0)}%</span>
-      </div>
-      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-        <motion.div animate={{ width: `${clamp(value, 0, 1) * 100}%` }} transition={{ duration: 0.3 }}
-          className={cn("h-full rounded-full", color)} />
-      </div>
-    </div>
-  );
+// ─── Shared components ─────────────────────────────────────────────────────────
+function Eyebrow({ children }: { children: string }) {
+  return <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500 mb-1">{children}</p>;
 }
 
-function StatBox({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function MetricCard({ label, value, good, warn }: { label: string; value: string; good: boolean; warn: boolean }) {
   return (
-    <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 space-y-0.5">
-      <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+      <p className="text-base font-bold uppercase tracking-wider text-slate-500">{label}</p>
       <motion.p key={value} initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }}
-        className="text-base font-bold text-slate-900 tabular-nums leading-none">
+        className={cn("text-base font-bold tabular-nums leading-none", good ? "text-emerald-600" : warn ? "text-amber-600" : "text-red-500")}>
         {value}
       </motion.p>
-      {sub && <p className="text-[10px] text-slate-400">{sub}</p>}
     </div>
   );
 }
 
-// ─── Capacity Walkthrough ─────────────────────────────────────────────────────
-
-function CapacityWalkthrough({
-  dau, rpu, peak, reqDay, avgQps, peakQps, onHighlightChange,
-}: {
-  dau: number; rpu: number; peak: number;
-  reqDay: number; avgQps: number; peakQps: number;
-  onHighlightChange: (indices: number[]) => void;
-}) {
-  const [stepIdx, setStepIdx] = useState(0);
-
-  const serversNeeded  = Math.ceil(peakQps / 500);
-  const cacheNodes     = Math.max(1, Math.ceil(peakQps / 5000));
-  const dbInstances    = Math.max(1, Math.ceil(peakQps / 300));
-
-  const steps = [
-    {
-      title: "Step 1 — Anchor to users",
-      explanation: `Start with your user base: ${fmt(dau)} DAU. This single number drives every other capacity estimate. Always clarify in an interview: is this DAU or MAU? Concurrent users? Active vs registered?`,
-      tip: "In interviews, state your assumptions explicitly. '10M DAU, each active for 30 min/day' is much cleaner than just '10M users.'",
-      highlight: [0],
-    },
-    {
-      title: "Step 2 — Total requests per day",
-      explanation: `${fmt(dau)} users × ${rpu} requests/user = ${fmt(reqDay)} total requests/day. This is your daily load budget. For YouTube, a user might generate 20–30 requests (feed load, search, video play, comments, etc.).`,
-      tip: "Think about what counts as a 'request' for your system. A single page view might generate 5–10 API calls. Factor that in.",
-      highlight: [0, 1, 2],
-    },
-    {
-      title: "Step 3 — Average QPS",
-      explanation: `Divide by seconds in a day: ${fmt(reqDay)} ÷ 86,400 = ${fmt(avgQps)} average QPS. This assumes perfectly uniform traffic — which never happens in reality. Treat this as a floor, not a ceiling.`,
-      tip: "86,400 = 24 × 60 × 60. Memorize this. Interviewers expect you to do this division confidently and quickly.",
-      highlight: [2, 3],
-    },
-    {
-      title: "Step 4 — Peak QPS",
-      explanation: `Apply the peak multiplier (${peak}×): ${fmt(avgQps)} × ${peak} = ${fmt(peakQps)} peak QPS. Traffic concentrates during specific hours — evenings for social apps, mornings for news. A viral event can spike 10–50× instantly.`,
-      tip: "A 3× peak is conservative for most apps. Design for the spike you can predict; use autoscaling for the one you can't.",
-      highlight: [3, 4],
-    },
-    {
-      title: "Step 5 — Infrastructure sizing",
-      explanation: `${fmt(peakQps)} peak QPS implies: ${serversNeeded} app servers (at 500 QPS each), ${cacheNodes} cache node${cacheNodes > 1 ? "s" : ""}, ${dbInstances} DB instance${dbInstances > 1 ? "s" : ""}. Now you can defend these numbers in the interview.`,
-      tip: "Always add 20–30% headroom above your calculated peak. Never size exactly to the expected maximum — you need room for unexpected spikes and deployments.",
-      highlight: [4],
-    },
-  ];
-
-  const step = steps[stepIdx];
-
-  useEffect(() => {
-    onHighlightChange(step.highlight);
-  }, [stepIdx, step.highlight, onHighlightChange]);
-
-  // Clear highlights on unmount
-  useEffect(() => () => onHighlightChange([]), [onHighlightChange]);
-
+function InsightPanel({ text, type }: { text: string; type: "success" | "warning" | "risk" | "neutral" }) {
+  const styles = {
+    success: "bg-emerald-50 border-emerald-200 text-emerald-700",
+    warning: "bg-amber-50 border-amber-200 text-amber-800",
+    risk:    "bg-red-50 border-red-200 text-red-700",
+    neutral: "bg-slate-50 border-slate-200 text-slate-700",
+  };
+  const icon = {
+    success: <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />,
+    warning: <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-500" />,
+    risk:    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-red-500" />,
+    neutral: <div className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0 mt-1.5" />,
+  };
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -4 }}
-      className="rounded-xl border-2 border-slate-900 bg-white p-5 space-y-4"
-    >
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-bold text-slate-900">Capacity Walkthrough</p>
-        <div className="flex items-center gap-2">
-          {steps.map((_, i) => (
-            <button key={i} onClick={() => setStepIdx(i)}
-              className={cn("h-2 rounded-full transition-all",
-                i === stepIdx ? "bg-slate-900 w-6" : i < stepIdx ? "bg-slate-400 w-2" : "bg-slate-200 w-2"
-              )}
-            />
-          ))}
-          <span className="ml-2 text-[10px] font-bold text-slate-400">{stepIdx + 1}/{steps.length}</span>
-        </div>
-      </div>
-
-      <AnimatePresence mode="wait">
-        <motion.div key={stepIdx}
-          initial={{ opacity: 0, x: -8 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="space-y-3"
-        >
-          <p className="text-sm font-bold text-slate-800">{step.title}</p>
-          <p className="text-sm text-slate-600 leading-relaxed">{step.explanation}</p>
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-sky-50 border border-sky-200 text-xs text-sky-800 leading-relaxed">
-            <Lightbulb className="w-3.5 h-3.5 shrink-0 mt-0.5 text-sky-500" />
-            <span><strong>Interview tip: </strong>{step.tip}</span>
-          </div>
-        </motion.div>
-      </AnimatePresence>
-
-      <div className="flex items-center justify-between">
-        <button onClick={() => setStepIdx(i => Math.max(0, i - 1))} disabled={stepIdx === 0}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
-          <ChevronLeft className="w-4 h-4" /> Previous
-        </button>
-        {stepIdx < steps.length - 1 ? (
-          <button onClick={() => setStepIdx(i => i + 1)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-all">
-            Next <ChevronRight className="w-4 h-4" />
-          </button>
-        ) : (
-          <div className="flex items-center gap-2 text-sm font-bold text-emerald-700">
-            <CheckCircle2 className="w-4 h-4" /> Walkthrough complete
-          </div>
-        )}
-      </div>
+    <motion.div initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+      className={cn("flex items-start gap-2.5 p-3 rounded-xl border text-base leading-relaxed", styles[type])}>
+      {icon[type]}{text}
     </motion.div>
   );
 }
 
-// ─── Simulation 1: Traffic Growth ─────────────────────────────────────────────
-
-function Sim1Traffic() {
-  const [dau,     setDau]     = useState(100_000);
-  const [rpu,     setRpu]     = useState(10);
-  const [peak,    setPeak]    = useState(3);
-  const [spiking, setSpiking] = useState(false);
-  const spikeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const qps     = (dau * rpu) / 86400;
-  const peakQps = qps * (spiking ? 10 : peak);
-  const servers = Math.max(1, Math.ceil(peakQps / 200));
-  const dots    = Math.min(60, Math.max(3, Math.round(Math.sqrt(peakQps) * 1.2)));
-
-  const triggerSpike = () => {
-    setSpiking(true);
-    if (spikeTimer.current) clearTimeout(spikeTimer.current);
-    spikeTimer.current = setTimeout(() => setSpiking(false), 5000);
-  };
-
-  useEffect(() => () => { if (spikeTimer.current) clearTimeout(spikeTimer.current); }, []);
-
-  const serverLoad = peakQps / (servers * 200);
-
+function SegmentedControl<T extends string | number>({ options, value, onChange }: { options: { key: T; label: string }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr] gap-5">
-      <div className="space-y-4">
-        <div className="rounded-xl border border-slate-200 bg-[#f9f9f6] p-4 space-y-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Traffic inputs</p>
-          <Slider label="Daily Active Users" valueLabel={fmt(dau)} min={1000} max={50_000_000} step={1000} value={dau} onChange={setDau} accent="sky" />
-          <Slider label="Requests / user / day" valueLabel={rpu.toString()} min={1} max={100} step={1} value={rpu} onChange={setRpu} accent="sky" />
-          <Slider label="Peak multiplier" valueLabel={`${peak}×`} min={1} max={20} step={1} value={peak} onChange={setPeak} accent="amber" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <StatBox label="Avg QPS" value={fmt(qps)} sub="requests/sec" />
-          <StatBox label="Peak QPS" value={fmt(peakQps)} sub={spiking ? "SPIKE!" : `${peak}× peak`} />
-          <StatBox label="Servers needed" value={`${servers}`} sub="at full peak" />
-          <StatBox label="Req / day" value={fmt(dau * rpu)} sub="total" />
-        </div>
-
-        <button onClick={triggerSpike}
-          className={cn("w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all",
-            spiking ? "bg-amber-100 text-amber-700 border border-amber-300 animate-pulse"
-                    : "bg-slate-900 text-white hover:bg-slate-800"
-          )}>
-          <Zap className="w-4 h-4" />
-          {spiking ? "Spike active — watch servers!" : "Trigger viral spike"}
+    <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
+      {options.map((o) => (
+        <button key={String(o.key)} onClick={() => onChange(o.key)}
+          className={cn("flex-1 py-1.5 px-2 rounded-lg text-base font-semibold transition-all",
+            value === o.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700")}>
+          {o.label}
         </button>
-      </div>
-
-      <div className="rounded-xl border border-slate-200 bg-[#f9f9f6] overflow-hidden">
-        <div className="p-4 pb-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">System under traffic</p>
-        </div>
-        <div className="relative" style={{ height: 280 }}>
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1">
-            <div className="w-12 h-12 rounded-xl bg-white border-2 border-slate-200 flex items-center justify-center shadow-sm">
-              <span className="text-xl">👥</span>
-            </div>
-            <p className="text-[9px] font-bold text-slate-500 text-center">{fmt(dau)} DAU</p>
-          </div>
-
-          <svg className="absolute inset-0 w-full h-full pointer-events-none">
-            {Array.from({ length: dots }).map((_, i) => {
-              const delay = (i / dots) * 2;
-              const yJitter = ((i % 7) - 3) * 18;
-              const startY = 140 + yJitter;
-              const endY   = 140 + ((i % servers) - (servers - 1) / 2) * 50;
-              const color  = spiking ? "#f59e0b" : "#6366f1";
-              return (
-                <motion.circle key={i} r={3} fill={color} fillOpacity={0.8}
-                  initial={{ cx: "12%", cy: startY }}
-                  animate={{ cx: ["12%", "55%", "70%"], cy: [startY, startY + yJitter * 0.3, endY] }}
-                  transition={{ duration: 0.9 + Math.random() * 0.4, repeat: Infinity, repeatDelay: delay, ease: "linear" }}
-                />
-              );
-            })}
-          </svg>
-
-          <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col gap-2">
-            {Array.from({ length: Math.min(servers, 6) }).map((_, i) => {
-              const load = serverLoad;
-              const isHot = load >= 0.8;
-              const isWarm = load >= 0.5;
-              return (
-                <motion.div key={i}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className={cn("w-20 h-9 rounded-lg border-2 flex items-center justify-center gap-1.5 text-xs font-bold transition-colors",
-                    isHot ? "border-red-400 bg-red-50 text-red-700" :
-                    isWarm ? "border-amber-400 bg-amber-50 text-amber-700" :
-                    "border-slate-200 bg-white text-slate-600"
-                  )}>
-                  <Server className="w-3 h-3" />
-                  S{i + 1}
-                  {isHot && <span className="text-[8px]">🔥</span>}
-                </motion.div>
-              );
-            })}
-            {servers > 6 && (
-              <div className="text-[10px] font-bold text-slate-400 text-center">+{servers - 6} more</div>
-            )}
-          </div>
-        </div>
-
-        <div className="px-4 pb-4 space-y-2">
-          <HeatBar value={clamp(serverLoad, 0, 1.2)} label={`Server load — ${fmt(peakQps)} QPS across ${servers} servers`} />
-        </div>
-      </div>
+      ))}
     </div>
   );
 }
 
-// ─── Simulation 2: QPS Formula Pipeline ───────────────────────────────────────
+function Pill<T extends string | number>({ options, value, onChange }: { options: { key: T; label: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((o) => (
+        <button key={String(o.key)} onClick={() => onChange(o.key)}
+          className={cn("px-3 py-1 rounded-full text-base font-semibold border transition-all",
+            value === o.key ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-200 hover:border-slate-400")}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
-function Sim2QPS() {
-  const [dau,   setDau]   = useState(1_000_000);
-  const [rpu,   setRpu]   = useState(10);
-  const [peak,  setPeak]  = useState(3);
-  const [spike, setSpike] = useState(false);
-  const [showWalkthrough, setShowWalkthrough] = useState(false);
-  const [highlightedSteps, setHighlightedSteps] = useState<number[]>([]);
-  const spikeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+// ─── SVG Canvas ────────────────────────────────────────────────────────────────
+function TrafficDot({ x1, y1, x2, y2, color, delay, dur }: { x1: number; y1: number; x2: number; y2: number; color: string; delay: number; dur: number }) {
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+  return (
+    <motion.circle r={3.5} fill={color} fillOpacity={0.85}
+      initial={{ cx: x1, cy: y1, opacity: 0 }}
+      animate={{ cx: [x1, mx, x2], cy: [y1, my, y2], opacity: [0, 0.9, 0] }}
+      transition={{ duration: dur, repeat: Infinity, repeatDelay: delay, ease: "linear" }}
+    />
+  );
+}
 
-  useEffect(() => () => { if (spikeTimer.current) clearTimeout(spikeTimer.current); }, []);
+function CapacityCanvas({ active, e, readRatio, onTooltip }: {
+  active: Set<NodeId>; e: Estimates; readRatio: ReadRatio; onTooltip: (t: string | null) => void;
+}) {
+  const overload = e.peakQps > 50000;
+  const dotDur = overload ? 0.8 : 1.5;
+  const readHeavy = readRatio >= 100;
 
-  const reqDay  = dau * rpu;
-  const avgQps  = reqDay / 86400;
-  const peakQps = avgQps * (spike ? 15 : peak);
-
-  const triggerSpike = () => {
-    setSpike(true);
-    if (spikeTimer.current) clearTimeout(spikeTimer.current);
-    spikeTimer.current = setTimeout(() => setSpike(false), 5000);
-  };
-
-  const steps = [
-    { label: "Daily Active Users",    value: fmt(dau),    unit: "DAU",       color: "bg-sky-50 border-sky-200 text-sky-800" },
-    { label: "Requests / user / day", value: rpu.toString(), unit: "req/user", color: "bg-indigo-50 border-indigo-200 text-indigo-800" },
-    { label: "Total requests / day",  value: fmt(reqDay), unit: "req/day",   color: "bg-violet-50 border-violet-200 text-violet-800" },
-    { label: "Average QPS",           value: fmt(avgQps), unit: "QPS",       color: "bg-amber-50 border-amber-200 text-amber-800" },
-    { label: "Peak QPS",              value: fmt(peakQps), unit: spike ? "⚡ SPIKE" : `${peak}× peak`, color: spike ? "bg-red-50 border-red-300 text-red-800" : "bg-red-50 border-red-200 text-red-800" },
-  ];
-
-  const ops = ["×", "÷ 86,400", "×"];
+  const edges = useMemo((): Array<{ a: NodeId; b: NodeId; color: string }> => {
+    const out: Array<{ a: NodeId; b: NodeId; color: string }> = [{ a: "users", b: "api", color: "#64748b" }];
+    if (active.has("cache")) out.push({ a: "api", b: "cache", color: "#0ea5e9" });
+    out.push({ a: "api", b: "db", color: "#f59e0b" });
+    if (active.has("object")) out.push({ a: "api", b: "object", color: "#8b5cf6" });
+    if (active.has("cdn") && active.has("object")) out.push({ a: "object", b: "cdn", color: "#06b6d4" });
+    return out;
+  }, [active]);
 
   return (
-    <div className="space-y-5">
-      {/* Formula pipeline */}
-      <div className="rounded-xl border border-slate-200 bg-[#f9f9f6] p-5">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">QPS derivation — live formula</p>
-          <button onClick={() => setShowWalkthrough(s => !s)}
-            className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all",
-              showWalkthrough
-                ? "bg-slate-900 text-white border-slate-900"
-                : "border-slate-300 text-slate-600 hover:border-slate-700"
-            )}>
-            {showWalkthrough ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-            {showWalkthrough ? "Hide walkthrough" : "Reveal walkthrough"}
-          </button>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {steps.map((step, i) => {
-            const isHighlighted = highlightedSteps.includes(i);
-            return (
-              <div key={i} className="flex items-center gap-2">
-                <div className={cn("rounded-xl border-2 p-3 min-w-[90px] text-center transition-all duration-300",
-                  step.color,
-                  isHighlighted && "ring-2 ring-slate-900 ring-offset-2 scale-105 shadow-md"
-                )}>
-                  <motion.p key={step.value} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                    className="text-xl font-black tabular-nums leading-none">
-                    {step.value}
-                  </motion.p>
-                  <p className="text-[10px] font-semibold mt-1 opacity-70">{step.unit}</p>
-                  <p className="text-[9px] mt-0.5 opacity-60">{step.label}</p>
-                </div>
-                {i < steps.length - 1 && (
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div className="text-slate-400 font-bold text-xs">{ops[i]}</div>
-                    <div className="w-6 h-0.5 bg-slate-300" />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+    <svg viewBox="0 0 760 420" className="w-full h-full" style={{ display: "block" }}>
+      <defs>
+        <pattern id="cap-dots" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">
+          <circle cx="0.8" cy="0.8" r="0.8" fill="#d9cfbd" />
+        </pattern>
+      </defs>
+      <rect width="760" height="420" fill="#faf6ea" />
+      <rect width="760" height="420" fill="url(#cap-dots)" />
 
-      {/* Walkthrough panel */}
       <AnimatePresence>
-        {showWalkthrough && (
-          <CapacityWalkthrough
-            dau={dau} rpu={rpu} peak={peak}
-            reqDay={reqDay} avgQps={avgQps} peakQps={peakQps}
-            onHighlightChange={setHighlightedSteps}
-          />
-        )}
+        {edges.map(({ a, b }) => {
+          const na = NODES[a], nb = NODES[b];
+          const x1 = na.x + NW / 2, y1 = na.y + NH / 2, x2 = nb.x + NW / 2, y2 = nb.y + NH / 2;
+          return (
+            <motion.line key={`e-${a}-${b}`} x1={x1} y1={y1} x2={x2} y2={y2}
+              stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="5 4"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }} />
+          );
+        })}
       </AnimatePresence>
 
-      {/* Controls */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Inputs</p>
-          <Slider label="DAU" valueLabel={fmt(dau)} min={10_000} max={500_000_000} step={10_000} value={dau} onChange={setDau} accent="sky" />
-          <Slider label="Requests / user" valueLabel={rpu.toString()} min={1} max={200} step={1} value={rpu} onChange={setRpu} accent="sky" />
-          <Slider label="Peak multiplier" valueLabel={`${peak}×`} min={1} max={20} step={1} value={peak} onChange={setPeak} accent="amber" />
-        </div>
+      <AnimatePresence>
+        {edges.flatMap(({ a, b, color }, ei) => {
+          const na = NODES[a], nb = NODES[b];
+          const count = a === "api" && b === "cache" && readHeavy ? 3 : 2;
+          return Array.from({ length: count }).map((_, di) => (
+            <TrafficDot key={`td-${a}-${b}-${di}`}
+              x1={na.x + NW / 2} y1={na.y + NH / 2} x2={nb.x + NW / 2} y2={nb.y + NH / 2}
+              color={color} delay={ei * 0.25 + di * 0.5} dur={dotDur} />
+          ));
+        })}
+      </AnimatePresence>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Benchmarks</p>
-          {[
-            { name: "Twitter at scale", dau: 350_000_000, rpu: 15 },
-            { name: "Netflix",          dau: 230_000_000, rpu: 5  },
-            { name: "Small startup",    dau: 10_000,      rpu: 8  },
-          ].map(b => (
-            <button key={b.name} onClick={() => { setDau(b.dau); setRpu(b.rpu); }}
-              className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors">
-              {b.name} <span className="text-slate-400 font-normal">— {fmt(b.dau)} DAU</span>
+      <AnimatePresence>
+        {(Object.entries(NODES) as Array<[NodeId, NodeDef]>).map(([id, def]) => {
+          if (!active.has(id)) return null;
+          const cx = def.x + NW / 2, cy = def.y + NH / 2;
+          const isApiOverload = id === "api" && overload;
+          const color = isApiOverload ? "#dc2626" : def.color;
+          return (
+            <motion.g key={id}
+              initial={{ opacity: 0, scale: 0.55 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.55 }}
+              transition={{ type: "spring", stiffness: 300, damping: 22 }}
+              style={{ transformOrigin: `${cx}px ${cy}px` }}
+              onMouseEnter={() => onTooltip(def.tooltip)} onMouseLeave={() => onTooltip(null)}
+              className="cursor-help">
+              <rect x={def.x} y={def.y} width={NW} height={NH} rx={7} fill={color} />
+              <text x={cx} y={cy + 0.5} textAnchor="middle" dominantBaseline="central"
+                fill="white" fontSize={10.5} fontWeight={600}
+                style={{ pointerEvents: "none", userSelect: "none", fontFamily: "inherit" }}>
+                {isApiOverload ? "API (peak risk)" : def.label}
+              </text>
+            </motion.g>
+          );
+        })}
+      </AnimatePresence>
+    </svg>
+  );
+}
+
+// ─── Step 01: Intro ─────────────────────────────────────────────────────────────
+function IntroCard({ scenario, onSelect }: { scenario: ScenarioId; onSelect: (s: ScenarioId) => void }) {
+  const flow = ["Users", "Activity/user", "Requests/day", "QPS", "Peak QPS", "Storage", "Bandwidth"];
+  return (
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+      <div>
+        <Eyebrow>Step 01 · Concept Snapshot</Eyebrow>
+        <p className="text-2xl font-bold text-slate-900">Capacity estimation = rough math before architecture</p>
+        <p className="text-base text-slate-600 mt-0.5 leading-relaxed">Use assumptions to estimate how much traffic, storage, bandwidth, and infrastructure the system needs.</p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        {flow.map((step, i) => (
+          <span key={step} className="flex items-center gap-1.5">
+            <span className="px-2 py-1 rounded-lg bg-slate-50 border border-slate-200 text-base font-semibold text-slate-700">{step}</span>
+            {i < flow.length - 1 && <span className="text-slate-300 text-base">→</span>}
+          </span>
+        ))}
+      </div>
+
+      <p className="text-base text-slate-600 leading-relaxed">
+        Capacity estimation is not about perfect math. It is about checking whether your design can survive the expected scale.
+      </p>
+
+      <div>
+        <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500 mb-2">Choose a scenario</p>
+        <div className="flex flex-wrap gap-2">
+          {SCENARIOS.map((sc) => (
+            <button key={sc.id} onClick={() => onSelect(sc.id)}
+              className={cn("px-4 py-1.5 rounded-full text-base font-semibold border transition-all",
+                sc.id === scenario ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-200 hover:border-slate-400 hover:text-slate-900")}>
+              {sc.label}
             </button>
           ))}
         </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Events</p>
-          <button onClick={triggerSpike}
-            className={cn("w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all",
-              spike ? "bg-red-100 text-red-700 border border-red-300 animate-pulse"
-                    : "bg-slate-900 text-white hover:bg-slate-800"
-            )}>
-            <Zap className="w-4 h-4" />
-            {spike ? "Viral spike (15×)!" : "Simulate viral spike"}
-          </button>
-          <div className={cn("p-3 rounded-xl text-xs leading-relaxed",
-            spike ? "bg-red-50 border border-red-200 text-red-700" : "bg-slate-50 border border-slate-200 text-slate-600"
-          )}>
-            {spike
-              ? `⚡ Peak QPS jumped to ${fmt(peakQps)} — your servers need to handle this instantly.`
-              : "A viral post or product launch can spike traffic 10–20× in seconds."}
-          </div>
-        </div>
+        <p className="mt-2 text-base text-slate-600">{SCENARIOS.find(s => s.id === scenario)!.description}</p>
       </div>
     </div>
   );
 }
 
-// ─── Simulation 3: Storage Estimation ─────────────────────────────────────────
-
-function Sim3Storage() {
-  const [uploadsDay,   setUploadsDay]   = useState(100_000);
-  const [fileSize,     setFileSize]     = useState(5);
-  const [retention,    setRetention]    = useState(12);
-  const [replication,  setReplication]  = useState(3);
-  const [showCost,     setShowCost]     = useState(false);
-
-  const rawPerDay      = uploadsDay * fileSize * 1e6;
-  const rawPerMonth    = rawPerDay * 30;
-  const storedPerMonth = rawPerMonth * replication;
-  const totalStored    = storedPerMonth * retention;
-  const monthlyBandwidth = rawPerDay * 30;
-  const costPerTB      = 23;
-  const monthlyCost    = (storedPerMonth / 1e12) * costPerTB;
-
-  const months = Array.from({ length: Math.min(retention, 12) }, (_, i) => i + 1);
-  const maxBar = storedPerMonth * replication * months.length;
-
+// ─── Step 02: Assumption builder ───────────────────────────────────────────────
+interface AssumptionProps {
+  mau: number; dauPct: number; actions: number; readRatio: ReadRatio; payloadKB: PayloadKB; retention: Retention;
+  setMau: (v: number) => void; setDauPct: (v: number) => void; setActions: (v: number) => void;
+  setReadRatio: (v: ReadRatio) => void; setPayloadKB: (v: PayloadKB) => void; setRetention: (v: Retention) => void;
+}
+function AssumptionCard(p: AssumptionProps) {
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[260px_1fr] gap-5">
-      <div className="space-y-4">
-        <div className="rounded-xl border border-slate-200 bg-[#f9f9f6] p-4 space-y-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Storage inputs</p>
-          <Slider label="Uploads / day" valueLabel={fmt(uploadsDay)} min={1000} max={10_000_000} step={1000} value={uploadsDay} onChange={setUploadsDay} accent="sky" />
-          <Slider label="Avg file size (MB)" valueLabel={`${fileSize} MB`} min={0.1} max={500} step={0.1} value={fileSize} onChange={setFileSize} accent="sky" />
-          <Slider label="Retention (months)" valueLabel={`${retention} mo`} min={1} max={60} step={1} value={retention} onChange={setRetention} accent="amber" />
-
-          <div className="space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Replication factor</p>
-            <div className="flex gap-2">
-              {[1, 2, 3, 5].map(r => (
-                <button key={r} onClick={() => setReplication(r)}
-                  className={cn("flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all",
-                    replication === r ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"
-                  )}>
-                  ×{r}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <StatBox label="Per month" value={fmtBytes(storedPerMonth)} sub="with replication" />
-          <StatBox label="Total storage" value={fmtBytes(totalStored)} sub={`over ${retention} mo`} />
-          <StatBox label="Monthly bandwidth" value={fmtBytes(monthlyBandwidth)} sub="upload traffic" />
-          <StatBox label="Monthly cost" value={fmtCost(monthlyCost)} sub="~S3 pricing" />
-        </div>
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+      <div>
+        <Eyebrow>Step 02 · Assumption Builder</Eyebrow>
+        <p className="text-2xl font-bold text-slate-900">Start with assumptions</p>
+        <p className="text-base text-slate-600 mt-0.5">Change product assumptions and watch estimates update live.</p>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-[#f9f9f6] p-5">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Cumulative storage growth</p>
-          <button onClick={() => setShowCost(!showCost)}
-            className="text-[10px] font-bold text-slate-500 border border-slate-200 rounded-lg px-2 py-1 hover:bg-white transition-colors">
-            {showCost ? "Show storage" : "Show cost"}
-          </button>
+      <div className="space-y-1">
+        <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Monthly active users</p>
+        <Pill options={[{ key: 1e6, label: "1M" }, { key: 10e6, label: "10M" }, { key: 100e6, label: "100M" }, { key: 1e9, label: "1B" }]} value={p.mau} onChange={p.setMau} />
+      </div>
+
+      <div className="space-y-1">
+        <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider">
+          <span>Daily active %</span><span className="text-slate-800 tabular-nums">{p.dauPct}%</span>
         </div>
+        <input type="range" min={10} max={80} step={5} value={p.dauPct} onChange={e => p.setDauPct(+e.target.value)}
+          className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
+      </div>
 
-        <div className="flex items-end gap-1.5 h-44">
-          {months.map(m => {
-            const cumulativeRaw = rawPerMonth * m;
-            const cumWithRep    = cumulativeRaw * replication;
-            const barHeight     = (cumWithRep / maxBar) * 160;
-            const barValue      = showCost ? fmtCost(monthlyCost * m) : fmtBytes(cumWithRep);
-            return (
-              <div key={m} className="flex-1 flex flex-col items-center gap-1 group relative">
-                <div className="relative flex flex-col justify-end" style={{ height: 160 }}>
-                  <motion.div
-                    animate={{ height: barHeight }}
-                    transition={{ duration: 0.4, delay: m * 0.03 }}
-                    className={cn("w-full rounded-t-md min-h-[4px]",
-                      replication >= 3 ? "bg-violet-400" : replication >= 2 ? "bg-sky-400" : "bg-emerald-400"
-                    )}
-                  />
-                </div>
-                <div className="hidden group-hover:block absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] px-2 py-1 rounded-lg whitespace-nowrap z-10">
-                  Month {m}: {barValue}
-                </div>
-                <p className="text-[9px] text-slate-400 font-medium">{m}</p>
-              </div>
-            );
-          })}
+      <div className="space-y-1">
+        <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider">
+          <span>Actions / user / day</span><span className="text-slate-800 tabular-nums">{p.actions}</span>
         </div>
+        <input type="range" min={1} max={100} step={1} value={p.actions} onChange={e => p.setActions(+e.target.value)}
+          className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
+      </div>
 
-        <p className="text-[10px] text-slate-400 mt-2 text-center">Month →</p>
+      <div className="space-y-1">
+        <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Read : Write ratio</p>
+        <SegmentedControl options={[{ key: 1, label: "1:1" }, { key: 10, label: "10:1" }, { key: 100, label: "100:1" }]} value={p.readRatio} onChange={p.setReadRatio} />
+      </div>
 
-        {replication > 1 && (
-          <div className="mt-4 p-3 rounded-xl bg-white border border-slate-200 flex items-center gap-3">
-            <div className="flex gap-1">
-              {Array.from({ length: replication }).map((_, i) => (
-                <motion.div key={i} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="w-7 h-9 rounded-md border-2 border-violet-300 bg-violet-50 flex items-center justify-center">
-                  <HardDrive className="w-3 h-3 text-violet-600" />
-                </motion.div>
-              ))}
-            </div>
-            <p className="text-xs text-slate-600">
-              ×{replication} replication means your actual storage is <strong>{replication}× the raw data</strong>.
-              {replication === 3 && " This is the AWS standard (3 copies across AZs)."}
-            </p>
-          </div>
-        )}
+      <div className="space-y-1">
+        <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Average payload</p>
+        <Pill options={[{ key: 1, label: "1KB" }, { key: 10, label: "10KB" }, { key: 100, label: "100KB" }, { key: 1000, label: "1MB" }]} value={p.payloadKB} onChange={p.setPayloadKB} />
+      </div>
+
+      <div className="space-y-1">
+        <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Data retention</p>
+        <Pill options={[{ key: 30, label: "30 days" }, { key: 365, label: "1 year" }, { key: 1825, label: "5 years" }, { key: 3650, label: "10 years" }]} value={p.retention} onChange={p.setRetention} />
       </div>
     </div>
   );
 }
 
-// ─── Simulation 4: System Bottleneck ─────────────────────────────────────────
+// ─── Step 05: QPS simulation ───────────────────────────────────────────────────
+function QpsSimPanel({ avgQps, peakMult, setPeakMult, pattern, setPattern }: {
+  avgQps: number; peakMult: PeakMult; setPeakMult: (v: PeakMult) => void; pattern: Pattern; setPattern: (v: Pattern) => void;
+}) {
+  const curve = useMemo(() => {
+    const pts: number[] = [];
+    for (let h = 0; h < 24; h++) {
+      let factor = 1;
+      if (pattern === "flat") factor = 1;
+      else if (pattern === "workday") factor = h >= 9 && h <= 17 ? 1 + (peakMult - 1) * 0.9 : 0.4;
+      else if (pattern === "evening") factor = h >= 18 && h <= 23 ? 1 + (peakMult - 1) * 0.95 : 0.5;
+      else if (pattern === "flash") factor = h === 12 ? peakMult : 0.45;
+      pts.push(avgQps * factor);
+    }
+    return pts;
+  }, [avgQps, peakMult, pattern]);
 
-const S4_SERVER_CAP = 200;
-const S4_DB_CAP    = 300;
-const S4_CACHE_CAP = 5000;
-
-function Sim4Bottleneck() {
-  const [traffic,      setTraffic]      = useState(30);
-  const [cacheEnabled, setCacheEnabled] = useState(true);
-  const [lbEnabled,    setLbEnabled]    = useState(true);
-  const [serverCount,  setServerCount]  = useState(2);
-  const [spiking,      setSpiking]      = useState(false);
-  const spikeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => () => { if (spikeTimer.current) clearTimeout(spikeTimer.current); }, []);
-
-  const triggerSpike = () => {
-    setSpiking(true);
-    if (spikeTimer.current) clearTimeout(spikeTimer.current);
-    spikeTimer.current = setTimeout(() => setSpiking(false), 5000);
-  };
-
-  const baseQps    = Math.round((traffic / 100) * 2000 * (spiking ? 5 : 1));
-  const cacheQps   = cacheEnabled ? Math.round(baseQps * 0.75) : 0;
-  const backendQps = baseQps - cacheQps;
-  const perServerQps = lbEnabled ? backendQps / serverCount : backendQps;
-  const dbQps      = backendQps;
-
-  const serverUtil = perServerQps / S4_SERVER_CAP;
-  const dbUtil     = dbQps / S4_DB_CAP;
-  const cacheUtil  = cacheQps / S4_CACHE_CAP;
-  const lbUtil     = baseQps / 10000;
-
-  const latency = Math.round(
-    20 +
-    (serverUtil > 0.8 ? (serverUtil - 0.8) * 500 : 0) +
-    (dbUtil > 0.8 ? (dbUtil - 0.8) * 800 : 0) +
-    (!cacheEnabled ? 80 : 0)
-  );
-
-  const overloaded = serverUtil > 1 || dbUtil > 1;
-
-  const nodes: Array<{ id: string; label: string; sub: string; util: number; x: number; y: number; show: boolean }> = [
-    { id: "client",  label: "Clients",       sub: `${fmt(baseQps)} QPS`,       util: 0.1,       x: 50,  y: 130, show: true },
-    { id: "lb",      label: "Load Balancer", sub: lbEnabled ? "active" : "off", util: lbUtil,   x: 170, y: 130, show: lbEnabled },
-    { id: "cache",   label: "Cache",         sub: cacheEnabled ? `${fmt(cacheQps)} hits` : "disabled", util: cacheUtil, x: 260, y: 50, show: cacheEnabled },
-    { id: "app1",    label: "App Server 1",  sub: `${fmt(perServerQps)} QPS`,  util: serverUtil, x: 350, y: serverCount > 1 ? 80 : 130, show: true },
-    { id: "app2",    label: "App Server 2",  sub: `${fmt(perServerQps)} QPS`,  util: serverUtil, x: 350, y: 180, show: serverCount >= 2 },
-    { id: "app3",    label: "App Server 3",  sub: `${fmt(perServerQps)} QPS`,  util: serverUtil, x: 350, y: 250, show: serverCount >= 3 },
-    { id: "db",      label: "Database",      sub: `${fmt(dbQps)} QPS`,         util: dbUtil,     x: 490, y: 130, show: true },
-  ];
-
-  const nodeColor = (util: number) =>
-    util >= 1   ? "#ef4444" :
-    util >= 0.7 ? "#f59e0b" : "#1e293b";
-
-  const NW = 100, NH = 34;
-  const visibleNodes = nodes.filter(n => n.show);
-
-  const edges: Array<[string, string]> = [
-    ["client", lbEnabled ? "lb" : "app1"],
-    ...(lbEnabled ? [["lb", "app1"] as [string, string]] : []),
-    ...(lbEnabled && serverCount >= 2 ? [["lb", "app2"] as [string, string]] : []),
-    ...(lbEnabled && serverCount >= 3 ? [["lb", "app3"] as [string, string]] : []),
-    ...(!lbEnabled ? [["client", "app1"] as [string, string]] : []),
-    ...(cacheEnabled ? [["client", "cache"] as [string, string], ["cache", "app1"] as [string, string]] : []),
-    ["app1", "db"], ...(serverCount >= 2 ? [["app2", "db"] as [string, string]] : []),
-    ...(serverCount >= 3 ? [["app3", "db"] as [string, string]] : []),
-  ];
+  const maxQps = Math.max(...curve, avgQps * peakMult);
+  const W = 480, H = 150, pad = 4;
+  const path = curve.map((q, i) => {
+    const x = pad + (i / 23) * (W - pad * 2);
+    const y = H - pad - (q / maxQps) * (H - pad * 2);
+    return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const avgY = H - pad - (avgQps / maxQps) * (H - pad * 2);
+  const peakY = H - pad - ((avgQps * peakMult) / maxQps) * (H - pad * 2);
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[240px_1fr] gap-5">
-      <div className="space-y-4">
-        <div className="rounded-xl border border-slate-200 bg-[#f9f9f6] p-4 space-y-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Stress test</p>
-          <Slider label="Traffic level" valueLabel={`${traffic}%`} min={0} max={100} step={1} value={traffic} onChange={setTraffic} accent="amber" />
-
-          <div className="space-y-2">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Infrastructure</p>
-            {[
-              { label: "Cache (Redis)", val: cacheEnabled, set: setCacheEnabled },
-              { label: "Load Balancer", val: lbEnabled,    set: setLbEnabled    },
-            ].map(({ label, val, set }) => (
-              <button key={label} onClick={() => set(!val)}
-                className={cn("w-full flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-semibold transition-all",
-                  val ? "bg-white border-slate-300 text-slate-800" : "bg-slate-100 border-slate-200 text-slate-400"
-                )}>
-                {label}
-                <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded",
-                  val ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"
-                )}>{val ? "ON" : "OFF"}</span>
-              </button>
-            ))}
-
-            <div className="flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 bg-white">
-              <span className="text-xs font-semibold text-slate-700">App Servers</span>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setServerCount(c => Math.max(1, c - 1))}
-                  className="w-6 h-6 rounded-md border border-slate-200 flex items-center justify-center hover:bg-slate-50">
-                  <Minus className="w-3 h-3" />
-                </button>
-                <span className="text-sm font-bold w-4 text-center">{serverCount}</span>
-                <button onClick={() => setServerCount(c => Math.min(3, c + 1))}
-                  className="w-6 h-6 rounded-md border border-slate-200 flex items-center justify-center hover:bg-slate-50">
-                  <Plus className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <StatBox label="Latency" value={`${latency}ms`} sub={latency > 200 ? "⚠ high" : "ok"} />
-          <StatBox label="DB load" value={`${Math.min(999, Math.round(dbUtil * 100))}%`} sub={dbUtil > 1 ? "OVERLOAD" : "fine"} />
-        </div>
-
-        <button onClick={triggerSpike}
-          className={cn("w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all",
-            spiking ? "bg-red-100 text-red-700 border border-red-300 animate-pulse"
-                    : "bg-slate-900 text-white hover:bg-slate-800"
-          )}>
-          <Zap className="w-4 h-4" />
-          {spiking ? "SPIKE: 5× traffic!" : "Inject traffic spike"}
-        </button>
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+      <div>
+        <Eyebrow>Step 05 · QPS Simulation</Eyebrow>
+        <p className="text-2xl font-bold text-slate-900">Estimate average and peak QPS</p>
+        <p className="text-base text-slate-600 mt-0.5">Traffic is never flat. Peak multiplier is what your servers must survive.</p>
       </div>
 
-      <div className="space-y-3">
-        <div className="rounded-xl border border-slate-200 bg-[#f9f9f6] overflow-hidden">
-          <div className="p-4 pb-1 flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Live architecture</p>
-            {overloaded && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded-lg">
-                <AlertTriangle className="w-3 h-3" /> Bottleneck detected
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Peak multiplier</p>
+          <Pill options={[{ key: 2, label: "2x" }, { key: 3, label: "3x" }, { key: 5, label: "5x" }, { key: 10, label: "10x" }]} value={peakMult} onChange={setPeakMult} />
+        </div>
+        <div className="space-y-1">
+          <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Traffic pattern</p>
+          <Pill options={[{ key: "flat", label: "Flat" }, { key: "workday", label: "Workday" }, { key: "evening", label: "Evening" }, { key: "flash", label: "Flash" }]} value={pattern} onChange={setPattern} />
+        </div>
+      </div>
+
+      <div className="rounded-xl bg-[#f9f9f6] border border-slate-200 p-3">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 150 }}>
+          <line x1={pad} y1={avgY} x2={W - pad} y2={avgY} stroke="#10b981" strokeWidth="1" strokeDasharray="4 3" />
+          <line x1={pad} y1={peakY} x2={W - pad} y2={peakY} stroke="#ef4444" strokeWidth="1" strokeDasharray="4 3" />
+          <motion.path key={path} d={path} fill="none" stroke="#0ea5e9" strokeWidth="2"
+            initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }} transition={{ duration: 0.5, ease: "easeOut" }} />
+          <text x={pad + 2} y={avgY - 3} fontSize="8" fill="#059669" fontWeight="600">avg {fmtNum(avgQps)}</text>
+          <text x={pad + 2} y={peakY + 9} fontSize="8" fill="#dc2626" fontWeight="600">peak {fmtNum(avgQps * peakMult)}</text>
+        </svg>
+        <div className="flex justify-between text-base text-slate-500 font-mono px-1"><span>00:00</span><span>12:00</span><span>24:00</span></div>
+      </div>
+
+      <InsightPanel type="warning" text={`Peak QPS is ${peakMult}x average. Designing only for average QPS (${fmtNum(avgQps)}) would underestimate real load — your servers must handle ${fmtNum(avgQps * peakMult)} at peak.`} />
+    </div>
+  );
+}
+
+// ─── Step 06: Storage estimation ───────────────────────────────────────────────
+function StoragePanel({ writesPerDay, retention }: { writesPerDay: number; retention: Retention }) {
+  const [recordKB, setRecordKB] = useState(2);
+  const [mediaPct, setMediaPct] = useState(10);
+  const [mediaMB, setMediaMB] = useState(1);
+  const [replication, setReplication] = useState<1 | 2 | 3>(3);
+
+  const metaBytesDay  = writesPerDay * recordKB * 1024;
+  const mediaBytesDay = writesPerDay * (mediaPct / 100) * mediaMB * 1024 * 1024;
+  const rawDay = metaBytesDay + mediaBytesDay;
+  const totalRaw = rawDay * retention;
+  const totalReplicated = totalRaw * replication;
+  const mediaShare = rawDay > 0 ? (mediaBytesDay / rawDay) * 100 : 0;
+  const metaW = rawDay > 0 ? (metaBytesDay / rawDay) * 100 : 50;
+  const mediaW = 100 - metaW;
+
+  return (
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+      <div>
+        <Eyebrow>Step 06 · Storage Estimation</Eyebrow>
+        <p className="text-2xl font-bold text-slate-900">Estimate storage growth</p>
+        <p className="text-base text-slate-600 mt-0.5">Media and replication usually dominate raw record size.</p>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+        {/* Left column: controls + raw mix */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3">
+            <div className="space-y-1">
+              <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Record size</span><span className="text-slate-800 tabular-nums">{recordKB} KB</span></div>
+              <input type="range" min={0.5} max={20} step={0.5} value={recordKB} onChange={e => setRecordKB(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Media %</span><span className="text-slate-800 tabular-nums">{mediaPct}%</span></div>
+              <input type="range" min={0} max={100} step={5} value={mediaPct} onChange={e => setMediaPct(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Media size</span><span className="text-slate-800 tabular-nums">{mediaMB} MB</span></div>
+              <input type="range" min={0.1} max={50} step={0.1} value={mediaMB} onChange={e => setMediaMB(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Replication</p>
+              <SegmentedControl options={[{ key: 1, label: "1x" }, { key: 2, label: "2x" }, { key: 3, label: "3x" }]} value={replication} onChange={v => setReplication(v as 1 | 2 | 3)} />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex h-6 rounded-lg overflow-hidden border border-slate-200">
+              <motion.div animate={{ width: `${metaW}%` }} className="bg-indigo-400 flex items-center justify-center">
+                {metaW > 12 && <span className="text-base font-bold text-white">Metadata</span>}
               </motion.div>
-            )}
-          </div>
-
-          <div className="relative" style={{ height: 310 }}>
-            <svg className="absolute inset-0 w-full h-full">
-              <defs>
-                <pattern id="bt-dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                  <circle cx="0.5" cy="0.5" r="0.5" fill="#e2e8f0" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="#f9f9f6" />
-              <rect width="100%" height="100%" fill="url(#bt-dots)" />
-
-              {edges.map(([a, b]) => {
-                const na = visibleNodes.find(n => n.id === a);
-                const nb = visibleNodes.find(n => n.id === b);
-                if (!na || !nb) return null;
-                const x1 = na.x + NW / 2, y1 = na.y + NH / 2;
-                const x2 = nb.x + NW / 2, y2 = nb.y + NH / 2;
-                return (
-                  <motion.line key={`${a}-${b}`}
-                    x1={`${(x1 / 620) * 100}%`} y1={y1}
-                    x2={`${(x2 / 620) * 100}%`} y2={y2}
-                    stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="5 4"
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  />
-                );
-              })}
-
-              {edges.slice(0, 4).map(([a, b], i) => {
-                const na = visibleNodes.find(n => n.id === a);
-                const nb = visibleNodes.find(n => n.id === b);
-                if (!na || !nb) return null;
-                const x1 = (na.x + NW / 2) / 620 * 100;
-                const y1 = na.y + NH / 2;
-                const x2 = (nb.x + NW / 2) / 620 * 100;
-                const y2 = nb.y + NH / 2;
-                const dotColor = overloaded ? "#ef4444" : spiking ? "#f59e0b" : "#6366f1";
-                return Array.from({ length: Math.min(3, Math.max(1, Math.round(traffic / 20))) }).map((_, j) => (
-                  <motion.circle key={`dot-${a}-${b}-${j}`} r={3} fill={dotColor} fillOpacity={0.7}
-                    initial={{ cx: `${x1}%`, cy: y1 }}
-                    animate={{ cx: [`${x1}%`, `${x2}%`], cy: [y1, y2], opacity: [0, 1, 0] }}
-                    transition={{ duration: 1.2, repeat: Infinity, repeatDelay: i * 0.3 + j * 0.4, ease: "linear" }}
-                  />
-                ));
-              })}
-
-              {visibleNodes.map(node => {
-                const color = nodeColor(node.util);
-                const isHot = node.util >= 0.9;
-                const cx = (node.x + NW / 2) / 620 * 100;
-                const cy = node.y + NH / 2;
-                return (
-                  <g key={node.id}>
-                    {isHot && (
-                      <motion.rect x={`${((node.x - 5) / 620) * 100}%`} y={node.y - 5} width={`${((NW + 10) / 620) * 100}%`} height={NH + 10} rx={10}
-                        fill="none" stroke="#ef4444" strokeWidth={2}
-                        animate={{ opacity: [0.8, 0.2, 0.8] }} transition={{ duration: 1, repeat: Infinity }} />
-                    )}
-                    <rect x={`${(node.x / 620) * 100}%`} y={node.y} width={`${(NW / 620) * 100}%`} height={NH} rx={7} fill={color} />
-                    <text x={`${cx}%`} y={cy - 4} textAnchor="middle" dominantBaseline="central"
-                      fill="white" fontSize={9.5} fontWeight={600} style={{ userSelect: "none" }}>
-                      {node.label}
-                    </text>
-                    <text x={`${cx}%`} y={cy + 8} textAnchor="middle" dominantBaseline="central"
-                      fill="rgba(255,255,255,0.65)" fontSize={8} style={{ userSelect: "none" }}>
-                      {node.sub}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-
-          <div className="px-4 pb-4 space-y-2">
-            <HeatBar value={clamp(serverUtil, 0, 1.2)} label="App server load" />
-            <HeatBar value={clamp(dbUtil, 0, 1.2)} label="Database load" />
+              <motion.div animate={{ width: `${mediaW}%` }} className="bg-purple-400 flex items-center justify-center">
+                {mediaW > 12 && <span className="text-base font-bold text-white">Media</span>}
+              </motion.div>
+            </div>
+            <p className="text-base text-slate-500">Daily raw mix · replication adds {replication}x on top for durability</p>
           </div>
         </div>
 
-        {/* Overload recommendation */}
-        <AnimatePresence>
-          {overloaded && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="p-4 rounded-xl bg-white border-2 border-red-200 space-y-2"
-            >
-              <p className="text-xs font-bold text-red-700 uppercase tracking-wider">How to fix this bottleneck</p>
-              {serverUtil > 1 && !lbEnabled && (
-                <p className="text-xs text-slate-700 flex gap-2"><span className="text-red-500 font-bold">→</span> Enable the Load Balancer to distribute traffic across multiple app servers.</p>
-              )}
-              {serverUtil > 1 && lbEnabled && serverCount < 3 && (
-                <p className="text-xs text-slate-700 flex gap-2"><span className="text-red-500 font-bold">→</span> App servers are overloaded — add more servers (click + above) to spread the load.</p>
-              )}
-              {dbUtil > 1 && !cacheEnabled && (
-                <p className="text-xs text-slate-700 flex gap-2"><span className="text-red-500 font-bold">→</span> Enable Cache (Redis) — it absorbs ~75% of DB reads, immediately cutting database pressure.</p>
-              )}
-              {dbUtil > 1 && cacheEnabled && (
-                <p className="text-xs text-slate-700 flex gap-2"><span className="text-red-500 font-bold">→</span> DB still overloaded despite cache — the next step is a read replica or database sharding.</p>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Right column: results */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <MetricCard label="Per day"   value={fmtBytes(rawDay)}          good={rawDay < 1e9}        warn={rawDay < 1e12} />
+          <MetricCard label="Per year"  value={fmtBytes(rawDay * 365)}    good={rawDay * 365 < 1e12} warn={rawDay * 365 < 1e15} />
+          <MetricCard label="Retained"  value={fmtBytes(totalRaw)}        good={totalRaw < 1e12}     warn={totalRaw < 1e15} />
+          <MetricCard label={`With ${replication}x`} value={fmtBytes(totalReplicated)} good={totalReplicated < 1e12} warn={totalReplicated < 1e15} />
+        </div>
       </div>
+
+      {mediaShare > 70 && <InsightPanel type="warning" text={`Media is ${mediaShare.toFixed(0)}% of storage even though only ${mediaPct}% of records include it. Large files dominate — store them in object storage, not the database.`} />}
+      {replication > 1 && <InsightPanel type="neutral" text={`Replication factor ${replication}x means real storage is ${replication}x the raw data. Durability and availability cost storage.`} />}
     </div>
   );
 }
 
-// ─── Simulation 5: Scaling Strategies ─────────────────────────────────────────
+// ─── Step 07: Bandwidth estimation ─────────────────────────────────────────────
+function BandwidthPanel({ avgQps }: { avgQps: number }) {
+  const [responseKB, setResponseKB] = useState(50);
+  const [cacheHit, setCacheHit] = useState(70);
+  const [cdnEnabled, setCdnEnabled] = useState(true);
 
-function Sim5Scaling() {
-  const [cdn,      setCdn]      = useState(false);
-  const [cache,    setCache]    = useState(false);
-  const [lb,       setLb]       = useState(false);
-  const [replica,  setReplica]  = useState(false);
-  const [sharding, setSharding] = useState(false);
-
-  const toggles = [
-    { key: "cdn",      label: "CDN",           active: cdn,      set: setCdn,      cost: 30,  desc: "Caches static content at edge nodes globally — cuts latency for distant users." },
-    { key: "cache",    label: "Cache (Redis)", active: cache,    set: setCache,    cost: 45,  desc: "Stores hot data in memory — serves reads 10× faster than hitting the database." },
-    { key: "lb",       label: "Load Balancer", active: lb,       set: setLb,       cost: 20,  desc: "Distributes traffic across multiple app servers — removes single point of failure." },
-    { key: "replica",  label: "Read Replica",  active: replica,  set: setReplica,  cost: 60,  desc: "Copy of the DB handling read traffic — offloads the primary database." },
-    { key: "sharding", label: "DB Sharding",   active: sharding, set: setSharding, cost: 100, desc: "Splits data across multiple DB nodes — scales write throughput horizontally." },
-  ];
-
-  const baseCost    = 100;
-  const totalCost   = baseCost + toggles.filter(t => t.active).reduce((s, t) => s + t.cost, 0);
-  const activeCount = toggles.filter(t => t.active).length;
-
-  const latency      = Math.max(20, 200 - (cdn ? 60 : 0) - (cache ? 70 : 0) - (lb ? 10 : 0));
-  const availability = Math.min(99.99, 95 + (lb ? 2 : 0) + (replica ? 2 : 0) + (cdn ? 0.5 : 0));
-  const scalability  = Math.min(100, 20 + (lb ? 20 : 0) + (cache ? 20 : 0) + (sharding ? 25 : 0) + (replica ? 10 : 0) + (cdn ? 5 : 0));
-  const complexity   = activeCount * 20;
-
-  const metrics = [
-    { label: "Latency",      value: `${latency}ms`,              bar: 1 - latency / 200,       good: latency < 80 },
-    { label: "Availability", value: `${availability.toFixed(2)}%`, bar: (availability - 95) / 5, good: availability >= 99 },
-    { label: "Scalability",  value: `${scalability}%`,           bar: scalability / 100,       good: scalability >= 60 },
-    { label: "Complexity",   value: `${complexity}%`,            bar: complexity / 100,        good: false },
-    { label: "Monthly Cost", value: fmtCost(totalCost),          bar: totalCost / 500,         good: false },
-  ];
+  const totalBps = avgQps * responseKB * 1024;
+  const afterCache = totalBps * (1 - cacheHit / 100);
+  const originBps = cdnEnabled ? afterCache * 0.2 : afterCache;
+  const cdnBps = cdnEnabled ? afterCache * 0.8 : 0;
+  const maxBps = Math.max(totalBps, 1);
+  const pipe = (v: number) => Math.max(4, (v / maxBps) * 100);
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[1fr_260px] gap-5">
-      <div className="space-y-4">
-        <div className="rounded-xl border border-slate-200 bg-[#f9f9f6] p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 mb-3">Add infrastructure</p>
-          <div className="space-y-2">
-            {toggles.map(t => (
-              <motion.button key={t.key} layout onClick={() => t.set(!t.active)}
-                className={cn("w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all",
-                  t.active ? "bg-white border-slate-300 shadow-sm" : "bg-[#f9f9f6] border-slate-200 hover:bg-white"
-                )}>
-                <div className={cn("w-3 h-3 rounded-full shrink-0 mt-0.5", t.active ? "bg-emerald-500" : "bg-slate-300")} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-slate-800">{t.label}</span>
-                    <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded",
-                      t.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
-                    )}>+${t.cost}/mo</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 leading-relaxed mt-0.5">{t.desc}</p>
-                </div>
-              </motion.button>
-            ))}
-          </div>
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+      <div>
+        <Eyebrow>Step 07 · Bandwidth Estimation</Eyebrow>
+        <p className="text-2xl font-bold text-slate-900">Estimate bandwidth pressure</p>
+        <p className="text-base text-slate-600 mt-0.5">Bandwidth grows fast with payload size, even at moderate QPS.</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3">
+        <div className="space-y-1">
+          <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Response size</span><span className="text-slate-800 tabular-nums">{responseKB} KB</span></div>
+          <input type="range" min={1} max={2000} step={1} value={responseKB} onChange={e => setResponseKB(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
+        </div>
+        <div className="space-y-1">
+          <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Cache hit rate</span><span className="text-slate-800 tabular-nums">{cacheHit}%</span></div>
+          <input type="range" min={0} max={95} step={5} value={cacheHit} onChange={e => setCacheHit(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">CDN</p>
+          <SegmentedControl options={[{ key: "on", label: "Enabled" }, { key: "off", label: "Disabled" }]} value={cdnEnabled ? "on" : "off"} onChange={v => setCdnEnabled(v === "on")} />
         </div>
       </div>
 
-      <div className="space-y-4">
-        <div className="rounded-xl border border-slate-200 bg-[#f9f9f6] p-4 space-y-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Tradeoff impact</p>
-          {metrics.map(m => (
-            <div key={m.label} className="space-y-1">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-600">{m.label}</span>
-                <motion.span key={m.value} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  className={cn("tabular-nums", m.good ? "text-emerald-600" : m.label === "Complexity" || m.label === "Monthly Cost" ? "text-amber-600" : "text-slate-700")}>
-                  {m.value}
-                </motion.span>
-              </div>
-              <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                <motion.div animate={{ width: `${clamp(m.bar, 0, 1) * 100}%` }} transition={{ duration: 0.4 }}
-                  className={cn("h-full rounded-full",
-                    m.label === "Complexity" || m.label === "Monthly Cost" ? "bg-amber-400" :
-                    m.good ? "bg-emerald-400" : "bg-sky-400"
-                  )}
-                />
-              </div>
+      <div className="space-y-2.5">
+        {[
+          { label: "Total user traffic", v: totalBps, color: "bg-slate-400" },
+          { label: "Origin bandwidth",   v: originBps, color: "bg-indigo-400" },
+          { label: "CDN bandwidth",       v: cdnBps, color: "bg-sky-400" },
+        ].map(({ label, v, color }) => (
+          <div key={label} className="space-y-0.5">
+            <div className="flex justify-between text-base font-semibold text-slate-700"><span>{label}</span><span className="tabular-nums">{fmtBytes(v)}/s</span></div>
+            <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+              <motion.div animate={{ width: `${pipe(v)}%` }} transition={{ duration: 0.4 }} className={cn("h-full rounded-full", color)} />
             </div>
-          ))}
-        </div>
-
-        <div className="p-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-600 leading-relaxed">
-          {activeCount === 0 && "Start with a basic server setup. Add infrastructure to see how tradeoffs change."}
-          {activeCount > 0 && !cache && !cdn && "Adding cache or CDN will dramatically reduce latency."}
-          {(cache || cdn) && !lb && "High availability requires a load balancer for failover."}
-          {lb && !replica && "Read replicas let you scale DB reads without overloading the primary."}
-          {activeCount >= 4 && "Full stack — high cost and complexity, but excellent performance and reliability."}
-        </div>
+          </div>
+        ))}
       </div>
+
+      <InsightPanel type={cdnEnabled ? "success" : "warning"} text={cdnEnabled
+        ? `CDN serves ${fmtBytes(cdnBps)}/s, leaving origin at just ${fmtBytes(originBps)}/s. Cache hit rate + CDN dramatically cut origin egress.`
+        : `Without a CDN, origin must serve ${fmtBytes(originBps)}/s directly. Large payloads make this expensive fast.`} />
     </div>
   );
 }
 
-// ─── Mini Challenges ───────────────────────────────────────────────────────────
+// ─── Step 08: Recommendations ──────────────────────────────────────────────────
+function getRecommendations(e: Estimates, readRatio: ReadRatio, payloadKB: PayloadKB): { title: string; what: string; why: string; tradeoff: string }[] {
+  const recs: { title: string; what: string; why: string; tradeoff: string }[] = [];
+  if (readRatio >= 10 || e.readQps > e.writeQps * 5)
+    recs.push({ title: "Add Cache", what: "Read QPS is much higher than write QPS.", why: "Repeated reads can be served from memory instead of hitting the database.", tradeoff: "Cache adds invalidation and consistency complexity." });
+  if (payloadKB >= 100)
+    recs.push({ title: "Add CDN", what: "Payloads are large (static/media).", why: "Edge delivery cuts latency and offloads origin bandwidth.", tradeoff: "CDN adds cost, TTL tuning, and cache-freshness concerns." });
+  if (e.peakQps > 10000)
+    recs.push({ title: "Add Load Balancer", what: `Peak QPS (${fmtNum(e.peakQps)}) exceeds single-server comfort.`, why: "Traffic spreads across multiple API servers for headroom and failover.", tradeoff: "Adds a component that must itself be highly available." });
+  if (payloadKB >= 100)
+    recs.push({ title: "Use Object Storage", what: "Large media files are in scope.", why: "Object storage holds blobs cheaply, keeping the database lean.", tradeoff: "Two stores to coordinate: metadata in DB, bytes in object storage." });
+  if (e.totalStorage > 1e12)
+    recs.push({ title: "Consider Sharding", what: `Total storage (${fmtBytes(e.totalStorage)}) is very large.`, why: "Partitioning spreads data and writes across nodes for horizontal scale.", tradeoff: "Cross-shard queries and rebalancing add significant complexity." });
+  return recs;
+}
 
-const CHALLENGES = [
-  {
-    id: "c1", label: "Handle 10M DAU", icon: "🚀",
-    description: "Build a system that can handle 10 million daily users.",
-    hint: "Traffic tab → push DAU to 10M → watch server count scale. Peak QPS will determine how many servers you need.",
-  },
-  {
-    id: "c2", label: "Latency under 80ms", icon: "⚡",
-    description: "Reduce system latency below 80ms in the Scaling tab.",
-    hint: "Scaling tab → enable CDN (−60ms) + Cache (−70ms). Together they push latency below 80ms.",
-  },
-  {
-    id: "c3", label: "Survive a viral spike", icon: "📈",
-    description: "Trigger a spike in the Bottleneck tab without the DB overloading.",
-    hint: "Enable cache (absorbs 75% of DB reads) and add 2+ app servers before hitting Inject Spike.",
-  },
-  {
-    id: "c4", label: "1 year of video storage", icon: "💾",
-    description: "Estimate 1 year of storage for 100K daily video uploads.",
-    hint: "Storage tab → 100K uploads/day, 50MB avg file, 12 months retention, ×3 replication.",
-  },
-];
-
-function MiniChallenges() {
-  const [completed, setCompleted] = useState<Set<string>>(new Set());
-  const [shownHints, setShownHints] = useState<Set<string>>(new Set());
-
-  const toggleComplete = (id: string) => setCompleted(prev => {
-    const next = new Set(prev);
-    next.has(id) ? next.delete(id) : next.add(id);
-    return next;
-  });
-
-  const toggleHint = (id: string) => setShownHints(prev => {
-    const next = new Set(prev);
-    next.has(id) ? next.delete(id) : next.add(id);
-    return next;
-  });
-
+function RecommendationsCard({ recs }: { recs: ReturnType<typeof getRecommendations> }) {
   return (
     <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">Mini Challenges</p>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {CHALLENGES.map(ch => {
-          const done      = completed.has(ch.id);
-          const hintShown = shownHints.has(ch.id);
+      <div>
+        <Eyebrow>Step 08 · Architecture Recommendation</Eyebrow>
+        <p className="text-2xl font-bold text-slate-900">Turn estimates into architecture choices</p>
+      </div>
+      {recs.length === 0 ? (
+        <InsightPanel type="success" text="Current estimates are modest — a single database and API tier can likely handle this. Add components only as scale demands." />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <AnimatePresence>
+            {recs.map((r) => (
+              <motion.div key={r.title} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1.5">
+                <p className="text-base font-bold text-slate-900">{r.title}</p>
+                <p className="text-base text-slate-700 leading-relaxed"><span className="font-semibold text-slate-700">What changed:</span> {r.what}</p>
+                <p className="text-base text-slate-700 leading-relaxed"><span className="font-semibold text-slate-700">Why it matters:</span> {r.why}</p>
+                <p className="text-base text-amber-700 leading-relaxed"><span className="font-semibold">Tradeoff:</span> {r.tradeoff}</p>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Step 10: Challenges ────────────────────────────────────────────────────────
+const CHALLENGES = [
+  { id: "c1", label: "Calculate DAU",           scenario: "100M MAU, 30% daily active", options: ["3M DAU", "30M DAU", "300M DAU"], correct: 1 },
+  { id: "c2", label: "Estimate write QPS",       scenario: "30M DAU, 2 writes/day each",  options: ["≈ 69 writes/sec", "≈ 694 writes/sec", "≈ 6,940 writes/sec"], correct: 1 },
+  { id: "c3", label: "Find peak QPS",            scenario: "Avg 1,000 QPS, peak 3x",      options: ["1,300 QPS", "3,000 QPS", "10,000 QPS"], correct: 1 },
+  { id: "c4", label: "Spot storage pressure",    scenario: "10% of posts have 1MB media", options: ["Metadata dominates", "Media dominates", "Both equal"], correct: 1 },
+  { id: "c5", label: "Choose architecture help", scenario: "Read QPS is 100x write QPS",  options: ["Add sharding", "Add a cache", "Add object storage"], correct: 1 },
+];
+
+function ChallengeCards() {
+  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const answer = (id: string, idx: number) => setAnswers(prev => ({ ...prev, [id]: idx }));
+  return (
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+      <div>
+        <Eyebrow>Step 10 · Validate Your Instinct</Eyebrow>
+        <p className="text-2xl font-bold text-slate-900">Quick estimation checks</p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {CHALLENGES.map((ch) => {
+          const picked = answers[ch.id];
+          const solved = picked === ch.correct;
           return (
-            <div key={ch.id}
-              className={cn("p-4 rounded-xl border-2 transition-all space-y-2", done ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-slate-50")}>
+            <motion.div key={ch.id} animate={{ borderColor: solved ? "#86efac" : "#e2e8f0" }}
+              className={cn("p-4 rounded-xl border-2 transition-colors space-y-2", solved ? "bg-emerald-50 border-emerald-300" : "bg-slate-50 border-slate-200")}>
               <div className="flex items-center gap-2">
-                <span className="text-xl">{ch.icon}</span>
-                <p className={cn("text-xs font-bold", done ? "text-emerald-700" : "text-slate-700")}>{ch.label}</p>
+                {solved ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> : <div className="w-4 h-4 rounded-full border-2 border-slate-300 shrink-0" />}
+                <p className={cn("text-base font-bold", solved ? "text-emerald-700" : "text-slate-700")}>{ch.label}</p>
               </div>
-              <p className="text-[11px] text-slate-500 leading-relaxed">{ch.description}</p>
-
-              <AnimatePresence>
-                {hintShown && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="flex items-start gap-1.5 p-2 rounded-lg bg-sky-50 border border-sky-200">
-                      <Lightbulb className="w-3 h-3 text-sky-500 shrink-0 mt-0.5" />
-                      <p className="text-[10px] text-sky-800 leading-relaxed">{ch.hint}</p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <div className="flex gap-1.5">
-                <button onClick={() => toggleHint(ch.id)}
-                  className={cn("flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-semibold border transition-all flex-1",
-                    hintShown ? "bg-sky-100 text-sky-700 border-sky-200" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
-                  )}>
-                  {hintShown ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                  {hintShown ? "Hide hint" : "Hint"}
-                </button>
-                <button onClick={() => toggleComplete(ch.id)}
-                  className={cn("flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold border transition-all flex-1",
-                    done ? "bg-emerald-100 text-emerald-700 border-emerald-300"
-                         : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                  )}>
-                  {done ? <><CheckCircle2 className="w-3 h-3" /> Done!</> : "Mark done"}
-                </button>
+              <p className="text-base text-slate-600 leading-relaxed">{ch.scenario}</p>
+              <div className="flex flex-col gap-1">
+                {ch.options.map((opt, i) => (
+                  <button key={i} onClick={() => answer(ch.id, i)}
+                    className={cn("text-left px-2 py-1 rounded-lg border text-base font-medium transition-all",
+                      picked === i && i === ch.correct ? "border-emerald-400 bg-emerald-100 text-emerald-800" :
+                      picked === i ? "border-red-300 bg-red-50 text-red-700" :
+                      "border-slate-200 bg-white text-slate-700 hover:border-slate-300")}>
+                    {opt}
+                  </button>
+                ))}
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
@@ -1005,52 +624,229 @@ function MiniChallenges() {
   );
 }
 
-// ─── Main export ──────────────────────────────────────────────────────────────
-
-type Tab = "traffic" | "qps" | "storage" | "bottleneck" | "scaling";
-
-const TABS: Array<{ key: Tab; label: string; icon: string }> = [
-  { key: "traffic",    label: "Traffic Growth",    icon: "📈" },
-  { key: "qps",        label: "QPS Calculator",    icon: "⚡" },
-  { key: "storage",    label: "Storage",           icon: "💾" },
-  { key: "bottleneck", label: "Bottlenecks",       icon: "🔴" },
-  { key: "scaling",    label: "Scaling",           icon: "⚙️"  },
+// ─── Step 11: Solution Panel ────────────────────────────────────────────────────
+const WALKTHROUGH = [
+  { title: "Define product assumptions", body: "Write down MAU, daily-active %, actions per user, payload size, read/write ratio, and retention. State them explicitly." },
+  { title: "Estimate DAU from MAU",      body: "DAU = MAU × daily-active %. For 100M MAU at 30%, DAU = 30M." },
+  { title: "Estimate writes per day",    body: "Writes/day = DAU × actions per user. This is your daily write volume." },
+  { title: "Convert to QPS",             body: "Write QPS = writes per day ÷ 86,400 (seconds in a day). Round to a clean number." },
+  { title: "Estimate read QPS",          body: "Read QPS = write QPS × read/write ratio. Read-heavy systems multiply quickly." },
+  { title: "Estimate peak QPS",          body: "Peak QPS = average QPS × peak multiplier (commonly 2x–10x). Design for peak, not average." },
+  { title: "Estimate daily storage",     body: "Daily storage = writes per day × payload size. Separate metadata from media." },
+  { title: "Multiply by retention",      body: "Total storage = daily storage × retention days. Long retention compounds fast." },
+  { title: "Add replication overhead",   body: "Real storage = total × replication factor (often 3x) for durability and availability." },
+  { title: "Guide architecture",         body: "Use results to decide on cache, CDN, load balancer, object storage, replication, or sharding." },
 ];
 
+type SolutionTab = "walkthrough" | "compare" | "interview";
+function SolutionPanel({ onClose }: { onClose: () => void }) {
+  const [tab, setTab] = useState<SolutionTab>("walkthrough");
+  const [step, setStep] = useState(0);
+  const current = WALKTHROUGH[step];
+  return (
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: 0.25 }}
+      className="rounded-[1.5rem] border-2 border-slate-900 bg-white p-5 shadow-lg space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-2xl font-bold text-slate-900">Solution Walkthrough</p>
+          <p className="text-base text-slate-600 mt-0.5">The repeatable estimation method.</p>
+        </div>
+        <button onClick={onClose} className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50"><X className="w-4 h-4 text-slate-600" /></button>
+      </div>
+
+      <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
+        {(["walkthrough", "compare", "interview"] as SolutionTab[]).map((t) => (
+          <button key={t} onClick={() => setTab(t)}
+            className={cn("flex-1 py-2 rounded-lg text-base font-semibold transition-all capitalize",
+              tab === t ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700")}>{t}</button>
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait">
+        {tab === "walkthrough" && (
+          <motion.div key="wt" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+            <div className="flex items-center gap-2">
+              {WALKTHROUGH.map((_, i) => (
+                <button key={i} onClick={() => setStep(i)} className={cn("h-2 rounded-full transition-all", i === step ? "bg-slate-900 w-6" : i < step ? "bg-slate-400 w-2" : "bg-slate-200 w-2")} />
+              ))}
+              <span className="ml-auto text-base font-bold text-slate-500">{step + 1}/{WALKTHROUGH.length}</span>
+            </div>
+            <AnimatePresence mode="wait">
+              <motion.div key={step} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="space-y-2">
+                <p className="text-base font-bold text-slate-900">{step + 1}. {current.title}</p>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-base text-slate-700 leading-relaxed">{current.body}</div>
+              </motion.div>
+            </AnimatePresence>
+            <div className="flex items-center justify-between">
+              <button onClick={() => setStep(i => Math.max(0, i - 1))} disabled={step === 0}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-base font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed"><ChevronLeft className="w-4 h-4" /> Previous</button>
+              {step === WALKTHROUGH.length - 1 ? (
+                <div className="flex items-center gap-2 text-base font-bold text-emerald-700"><CheckCircle2 className="w-4 h-4" /> Complete</div>
+              ) : (
+                <button onClick={() => setStep(i => i + 1)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-base font-semibold hover:bg-slate-800">Next <ChevronRight className="w-4 h-4" /></button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {tab === "compare" && (
+          <motion.div key="cmp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <p className="text-base font-bold uppercase tracking-wider text-red-500">Weak estimation</p>
+              {["Jumps into architecture", "No written assumptions", "No labeled units", "Ignores peak traffic", "Ignores storage growth"].map(t => (
+                <div key={t} className="flex items-center gap-2 text-base text-slate-700"><div className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />{t}</div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <p className="text-base font-bold uppercase tracking-wider text-emerald-600">Strong estimation</p>
+              {["Writes assumptions first", "Rounds to clean numbers", "Labels every unit", "Estimates QPS + storage", "Discusses bottlenecks & tradeoffs"].map(t => (
+                <div key={t} className="flex items-center gap-2 text-base text-slate-700"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />{t}</div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {tab === "interview" && (
+          <motion.div key="int" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-base text-slate-700 leading-relaxed">
+            Capacity estimation is a rough calculation process used to understand expected scale before choosing architecture.
+            I start by writing assumptions such as monthly users, daily active percentage, actions per user, payload size, read/write ratio, and retention.
+            Then I estimate DAU, QPS, peak QPS, storage, bandwidth, and possible bottlenecks.
+            The goal is not exact math, but to check whether the design needs components like caching, CDN, load balancing, object storage, replication, or sharding.
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// ─── Main export ───────────────────────────────────────────────────────────────
 export function CapacityEstimationVisual() {
-  const [tab, setTab] = useState<Tab>("traffic");
+  const [scenario, setScenario] = useState<ScenarioId>("social");
+  const [mau, setMau] = useState(100e6);
+  const [dauPct, setDauPct] = useState(50);
+  const [actions, setActions] = useState(10);
+  const [readRatio, setReadRatio] = useState<ReadRatio>(100);
+  const [payloadKB, setPayloadKB] = useState<PayloadKB>(10);
+  const [retention, setRetention] = useState<Retention>(1825);
+  const [peakMult, setPeakMult] = useState<PeakMult>(3);
+  const [pattern, setPattern] = useState<Pattern>("evening");
+  const [tooltip, setTooltip] = useState<string | null>(null);
+  const [showSolution, setShowSolution] = useState(false);
+
+  const selectScenario = (id: ScenarioId) => {
+    const sc = SCENARIOS.find(s => s.id === id)!;
+    setScenario(id);
+    setMau(sc.mau); setDauPct(sc.dauPct); setActions(sc.actions);
+    setReadRatio(sc.readRatio); setPayloadKB(sc.payloadKB); setRetention(sc.retention);
+  };
+
+  const e = useMemo(() => estimate(mau, dauPct, actions, readRatio, payloadKB, retention, peakMult), [mau, dauPct, actions, readRatio, payloadKB, retention, peakMult]);
+  const active = useMemo(() => getActiveNodes(payloadKB, readRatio), [payloadKB, readRatio]);
+  const recs = useMemo(() => getRecommendations(e, readRatio, payloadKB), [e, readRatio, payloadKB]);
+
+  const insights = useMemo(() => {
+    const out: { text: string; type: "success" | "warning" | "risk" | "neutral" }[] = [];
+    if (e.peakQps > 50000) out.push({ type: "risk", text: `Peak QPS is ${fmtNum(e.peakQps)} — well beyond a single server. Load balancing and horizontal scaling are required.` });
+    if (readRatio >= 100) out.push({ type: "neutral", text: "Read-heavy traffic (100:1) — caching can serve most reads without touching the database." });
+    if (payloadKB >= 100) out.push({ type: "warning", text: "Large payloads suggest CDN delivery and object storage rather than storing blobs in the database." });
+    if (e.totalStorage > 1e15) out.push({ type: "risk", text: `Total storage reaches ${fmtBytes(e.totalStorage)} — sharding and tiered storage become necessary.` });
+    else if (retention >= 1825 && e.dailyStorage > 1e9) out.push({ type: "warning", text: "QPS may be manageable, but storage grows quickly because retention is long. Plan archival or tiering." });
+    out.push({ type: "neutral", text: "Always label units (QPS, GB, MB/s) so estimates stay unambiguous in interviews." });
+    return out;
+  }, [e, readRatio, payloadKB, retention]);
 
   return (
     <div className="space-y-5">
-      <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 mb-3">Choose a simulation</p>
-        <div className="flex flex-wrap gap-2">
-          {TABS.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)}
-              className={cn("flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border transition-all",
-                tab === t.key
-                  ? "bg-slate-900 text-white border-slate-900"
-                  : "bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-900"
-              )}>
-              <span>{t.icon}</span>{t.label}
-            </button>
-          ))}
+      {/* Step 01 */}
+      <IntroCard scenario={scenario} onSelect={selectScenario} />
+
+      {/* Steps 02 + 03 + 04 */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.6fr] gap-5">
+        <AssumptionCard
+          mau={mau} dauPct={dauPct} actions={actions} readRatio={readRatio} payloadKB={payloadKB} retention={retention}
+          setMau={setMau} setDauPct={setDauPct} setActions={setActions} setReadRatio={setReadRatio} setPayloadKB={setPayloadKB} setRetention={setRetention} />
+
+        <div className="space-y-4">
+          <div className="rounded-[1.5rem] border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+              <div>
+                <Eyebrow>Step 03 · Live System View</Eyebrow>
+                <p className="text-base text-slate-600">Assumptions become system pressure. Hover any node.</p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-base font-bold text-slate-500 uppercase tracking-wider">Live</span>
+              </div>
+            </div>
+            <div className="relative px-3 pb-3">
+              <div className="relative rounded-xl overflow-hidden" style={{ aspectRatio: "760/420" }}>
+                <CapacityCanvas active={active} e={e} readRatio={readRatio} onTooltip={setTooltip} />
+                <AnimatePresence>
+                  {tooltip && (
+                    <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+                      className="absolute bottom-3 left-3 right-3 p-3 bg-slate-900 text-white text-base rounded-xl shadow-lg leading-relaxed pointer-events-none z-10">
+                      <Info className="inline w-3 h-3 mr-1.5 opacity-60" />{tooltip}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
+            <Eyebrow>Step 04 · System Metrics</Eyebrow>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-1">
+              <MetricCard label="Daily Active Users" value={fmtNum(e.dau)}            good={e.dau < 10e6}      warn={e.dau < 100e6} />
+              <MetricCard label="Average QPS"         value={fmtNum(e.avgQps)}         good={e.avgQps < 5000}   warn={e.avgQps < 50000} />
+              <MetricCard label="Peak QPS"            value={fmtNum(e.peakQps)}        good={e.peakQps < 10000} warn={e.peakQps < 100000} />
+              <MetricCard label="Total Storage"       value={fmtBytes(e.totalStorage)} good={e.totalStorage < 1e12} warn={e.totalStorage < 1e15} />
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
-        <AnimatePresence mode="wait">
-          <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-            {tab === "traffic"    && <Sim1Traffic />}
-            {tab === "qps"        && <Sim2QPS />}
-            {tab === "storage"    && <Sim3Storage />}
-            {tab === "bottleneck" && <Sim4Bottleneck />}
-            {tab === "scaling"    && <Sim5Scaling />}
-          </motion.div>
-        </AnimatePresence>
+      {/* Step 05 */}
+      <QpsSimPanel avgQps={e.avgQps} peakMult={peakMult} setPeakMult={setPeakMult} pattern={pattern} setPattern={setPattern} />
+
+      {/* Step 06 */}
+      <StoragePanel writesPerDay={e.writesPerDay} retention={retention} />
+
+      {/* Step 07 */}
+      <BandwidthPanel avgQps={e.avgQps} />
+
+      {/* Step 08 */}
+      <RecommendationsCard recs={recs} />
+
+      {/* Step 09 */}
+      <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+        <Eyebrow>Step 09 · Insights & Warnings</Eyebrow>
+        <div className="space-y-2">
+          <AnimatePresence>
+            {insights.map((ins, i) => <InsightPanel key={`${i}-${ins.text.slice(0, 16)}`} text={ins.text} type={ins.type} />)}
+          </AnimatePresence>
+        </div>
       </div>
 
-      <MiniChallenges />
+      {/* Step 10 */}
+      <ChallengeCards />
+
+      {/* Step 11 */}
+      <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm flex items-center justify-between">
+        <div>
+          <Eyebrow>Step 11 · Solution Panel</Eyebrow>
+          <p className="text-base text-slate-700">Method walkthrough, weak-vs-strong, and interview answer.</p>
+        </div>
+        <button onClick={() => setShowSolution(s => !s)}
+          className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-base font-semibold border transition-all",
+            showSolution ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300 hover:border-slate-700")}>
+          {showSolution ? "Hide" : "Open Solution"}
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {showSolution && <SolutionPanel onClose={() => setShowSolution(false)} />}
+      </AnimatePresence>
     </div>
   );
 }
