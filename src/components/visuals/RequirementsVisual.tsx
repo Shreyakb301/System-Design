@@ -658,7 +658,7 @@ function OutOfScopeChip({ req, selected, onToggle }: { req: Req; selected: boole
     >
       <div className={cn("w-2 h-2 rounded-full shrink-0", selected ? "bg-slate-400" : "bg-slate-300")} />
       <span className={cn("flex-1", selected && "line-through")}>{req.label}</span>
-      {selected && <span className="text-base font-bold text-slate-500 uppercase tracking-wide shrink-0">Deferred</span>}
+      {selected && <span className="text-xs font-bold text-slate-500 uppercase tracking-wide shrink-0">Deferred</span>}
     </button>
   );
 }
@@ -666,7 +666,7 @@ function OutOfScopeChip({ req, selected, onToggle }: { req: Req; selected: boole
 function MetricCard({ label, value, good, warn }: { label: string; value: string; good: boolean; warn: boolean }) {
   return (
     <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-      <p className="text-base font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
       <motion.p
         key={value}
         initial={{ opacity: 0, y: -3 }}
@@ -743,7 +743,7 @@ function WalkthroughView({ productId }: { productId: string }) {
             )}
           />
         ))}
-        <span className="ml-auto text-base font-bold text-slate-500 uppercase tracking-wider">
+        <span className="ml-auto text-xs font-bold text-slate-500 uppercase tracking-wider">
           {stepIdx + 1} / {steps.length}
         </span>
       </div>
@@ -801,7 +801,7 @@ function WalkthroughView({ productId }: { productId: string }) {
         <button
           onClick={() => setStepIdx(i => Math.max(0, i - 1))}
           disabled={stepIdx === 0}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-base font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
         >
           <ChevronLeft className="w-4 h-4" /> Previous
         </button>
@@ -813,7 +813,7 @@ function WalkthroughView({ productId }: { productId: string }) {
         ) : (
           <button
             onClick={() => setStepIdx(i => i + 1)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-base font-semibold hover:bg-slate-800 transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-all"
           >
             Next <ChevronRight className="w-4 h-4" />
           </button>
@@ -852,7 +852,7 @@ function CompareView({ selected, productId }: { selected: Set<string>; productId
           { label: "Simplicity",  score: scores.simplicity  },
         ].map(s => (
           <div key={s.label} className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
-            <p className="text-base font-bold uppercase tracking-wider text-slate-500">{s.label}</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{s.label}</p>
             <div className="flex items-end gap-1">
               <span className={cn("text-2xl font-black tabular-nums leading-none",
                 s.score >= 8 ? "text-emerald-600" : s.score >= 5 ? "text-amber-600" : "text-red-500"
@@ -867,7 +867,7 @@ function CompareView({ selected, productId }: { selected: Set<string>; productId
       {/* Missing */}
       {missingReqs.length > 0 && (
         <div className="p-4 rounded-xl bg-red-50 border border-red-200 space-y-2">
-          <p className="text-base font-bold text-red-700 uppercase tracking-wider">Missing considerations</p>
+          <p className="text-xs font-bold text-red-700 uppercase tracking-wider">Missing considerations</p>
           <div className="flex flex-wrap gap-2">
             {missingReqs.map(r => (
               <span key={r.id} className="px-2.5 py-1 rounded-lg text-base font-semibold bg-red-100 border border-red-300 text-red-800">
@@ -884,7 +884,7 @@ function CompareView({ selected, productId }: { selected: Set<string>; productId
       {/* Extra */}
       {extraReqs.length > 0 && (
         <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-2">
-          <p className="text-base font-bold text-amber-700 uppercase tracking-wider">Potential overengineering</p>
+          <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">Potential overengineering</p>
           <div className="flex flex-wrap gap-2">
             {extraReqs.map(r => (
               <span key={r.id} className="px-2.5 py-1 rounded-lg text-base font-semibold bg-amber-100 border border-amber-300 text-amber-800">
@@ -1006,7 +1006,7 @@ function InterviewView({ selected, productId }: { selected: Set<string>; product
             <p className="text-base font-bold text-slate-900">Time&apos;s up — final score</p>
             <p className="text-base text-slate-600">{product?.label} architecture assessment</p>
           </div>
-          <button onClick={startInterview} className="ml-auto text-base text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50">
+          <button onClick={startInterview} className="ml-auto text-sm text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50">
             Retry
           </button>
         </div>
@@ -1060,7 +1060,7 @@ function InterviewView({ selected, productId }: { selected: Set<string>; product
           { label: "Simplicity",  score: scores.simplicity  },
         ].map(s => (
           <div key={s.label} className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <p className="text-base font-bold uppercase tracking-wider text-slate-500">{s.label}</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{s.label}</p>
             <motion.p key={s.score}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -1140,7 +1140,7 @@ function SolutionPanel({
       <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
         {modeTabs.map(t => (
           <button key={t.key} onClick={() => setMode(t.key)}
-            className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-base font-semibold transition-all",
+            className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-all",
               mode === t.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700"
             )}>
             <span>{t.icon}</span>
@@ -1226,7 +1226,7 @@ export function RequirementsVisual() {
       <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Step 1 — Pick a product</p>
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Step 1 — Pick a product</p>
             <p className="text-base text-slate-600 mt-0.5">Requirements depend on what you&apos;re building.</p>
           </div>
           <button
@@ -1242,7 +1242,7 @@ export function RequirementsVisual() {
               key={p.id}
               onClick={() => selectProduct(p)}
               className={cn(
-                "px-4 py-1.5 rounded-full text-base font-semibold border transition-all",
+                "px-4 py-1.5 rounded-full text-sm font-semibold border transition-all",
                 p.id === productId
                   ? "bg-slate-900 text-white border-slate-900"
                   : "bg-white text-slate-700 border-slate-200 hover:border-slate-400 hover:text-slate-900"
@@ -1264,7 +1264,7 @@ export function RequirementsVisual() {
         {/* Left: requirement chips */}
         <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm flex flex-col gap-4">
           <div>
-            <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Step 2 — Choose requirements</p>
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Step 2 — Choose requirements</p>
             <p className="text-base text-slate-600 mt-0.5">Toggle on/off — the architecture updates live.</p>
           </div>
 
@@ -1274,7 +1274,7 @@ export function RequirementsVisual() {
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-base font-semibold transition-all",
+                  "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-sm font-semibold transition-all",
                   activeTab === tab.key
                     ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-600 hover:text-slate-700"
@@ -1326,12 +1326,12 @@ export function RequirementsVisual() {
           <div className="rounded-[1.5rem] border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="px-5 pt-4 pb-2 flex items-center justify-between">
               <div>
-                <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Step 3 — Architecture</p>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Step 3 — Architecture</p>
                 <p className="text-base text-slate-600 mt-0.5">Hover any node to understand its role.</p>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-base font-bold text-slate-500 uppercase tracking-wider">Live</span>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Live</span>
               </div>
             </div>
 
@@ -1357,7 +1357,7 @@ export function RequirementsVisual() {
 
           {/* Metrics */}
           <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500 mb-3">System metrics</p>
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500 mb-3">System metrics</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <MetricCard label="Response Time" value={`${metrics.latency}ms`} good={metrics.latency <= 100} warn={metrics.latency <= 200} />
               <MetricCard label="Availability" value={`${metrics.availability.toFixed(1)}%`} good={metrics.availability >= 99} warn={metrics.availability >= 97} />
@@ -1371,7 +1371,7 @@ export function RequirementsVisual() {
       {/* ── Step 4: Tradeoff Insights ─────────────────────────────────────────── */}
       {(insights.length > 0 || warnings.length > 0) && (
         <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-          <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Step 4 — Design insights</p>
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Step 4 — Design insights</p>
           <div className="space-y-2">
             <AnimatePresence>
               {warnings.map(w => (
@@ -1397,12 +1397,12 @@ export function RequirementsVisual() {
       <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Mini Challenges</p>
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Mini Challenges</p>
             <p className="text-base text-slate-600 mt-0.5">Can you build an architecture that satisfies each goal?</p>
           </div>
           <button
             onClick={() => setShowSolution(s => !s)}
-            className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-base font-semibold border transition-all shrink-0",
+            className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-all shrink-0",
               showSolution
                 ? "bg-slate-900 text-white border-slate-900"
                 : "bg-white text-slate-700 border-slate-300 hover:border-slate-700"

@@ -194,13 +194,13 @@ function CDNCanvas({ mode, cache, fallback, newlyAdded, onTooltip }: {
 
 // ─── Shared components ─────────────────────────────────────────────────────────
 function Eyebrow({ children }: { children: string }) {
-  return <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500 mb-1">{children}</p>;
+  return <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500 mb-1">{children}</p>;
 }
 
 function MetricCard({ label, value, good, warn }: { label: string; value: string; good: boolean; warn: boolean }) {
   return (
     <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-      <p className="text-base font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
       <motion.p key={value} initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }}
         className={cn("text-base font-bold tabular-nums leading-none", good ? "text-emerald-600" : warn ? "text-amber-600" : "text-red-500")}>
         {value}
@@ -233,7 +233,7 @@ function SegmentedControl<T extends string>({ options, value, onChange }: { opti
     <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
       {options.map((o) => (
         <button key={o.key} onClick={() => onChange(o.key)}
-          className={cn("flex-1 py-1.5 px-2 rounded-lg text-base font-semibold transition-all",
+          className={cn("flex-1 py-1.5 px-2 rounded-lg text-sm font-semibold transition-all",
             value === o.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700")}>
           {o.label}
         </button>
@@ -247,7 +247,7 @@ function Pill<T extends string>({ options, value, onChange }: { options: T[]; va
     <div className="flex flex-wrap gap-1.5">
       {options.map((o) => (
         <button key={o} onClick={() => onChange(o)}
-          className={cn("px-3 py-1 rounded-full text-base font-semibold border transition-all",
+          className={cn("px-3 py-1 rounded-full text-sm font-semibold border transition-all",
             value === o ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-200 hover:border-slate-400")}>
           {o}
         </button>
@@ -268,7 +268,7 @@ function IntroCard({ scenario, onSelect }: { scenario: ScenarioId; onSelect: (s:
 
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
-          <p className="text-base font-bold uppercase tracking-widest text-slate-500">Without CDN</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Without CDN</p>
           <div className="flex items-center gap-2 text-base text-slate-700 font-mono">
             <span className="px-2 py-1 rounded bg-slate-200 text-slate-700">User</span>
             <span className="text-slate-300">——</span>
@@ -277,7 +277,7 @@ function IntroCard({ scenario, onSelect }: { scenario: ScenarioId; onSelect: (s:
           <p className="text-base text-slate-500 leading-relaxed">Every static request hits origin. Distant users wait for the full round trip.</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
-          <p className="text-base font-bold uppercase tracking-widest text-slate-500">With CDN</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">With CDN</p>
           <div className="flex items-center gap-2 text-base font-mono flex-wrap">
             <span className="px-2 py-1 rounded bg-slate-200 text-slate-700">User</span>
             <span className="text-slate-300">—</span>
@@ -291,11 +291,11 @@ function IntroCard({ scenario, onSelect }: { scenario: ScenarioId; onSelect: (s:
       </div>
 
       <div>
-        <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500 mb-2">Choose a scenario</p>
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500 mb-2">Choose a scenario</p>
         <div className="flex flex-wrap gap-2">
           {SCENARIOS.map((sc) => (
             <button key={sc.id} onClick={() => onSelect(sc.id)}
-              className={cn("px-4 py-1.5 rounded-full text-base font-semibold border transition-all",
+              className={cn("px-4 py-1.5 rounded-full text-sm font-semibold border transition-all",
                 sc.id === scenario ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-200 hover:border-slate-400 hover:text-slate-900")}>
               {sc.label}
             </button>
@@ -326,25 +326,25 @@ function ControlsCard(p: ControlsProps) {
       </div>
 
       <div className="space-y-1">
-        <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">CDN Mode</p>
+        <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">CDN Mode</p>
         <SegmentedControl
           options={[{ key: "off", label: "CDN Off" }, { key: "on", label: "CDN On" }, { key: "ttl", label: "With TTL" }, { key: "failure", label: "Failure" }]}
           value={p.mode} onChange={p.setMode} />
       </div>
 
       <div className="space-y-1">
-        <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">User Location</p>
+        <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">User Location</p>
         <Pill options={["us", "europe", "india", "australia"] as Location[]} value={p.location} onChange={p.setLocation} />
       </div>
 
       <div className="space-y-1">
-        <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Asset Type</p>
+        <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Asset Type</p>
         <Pill options={["logo.png", "app.js", "hero.jpg", "video.mp4"] as AssetType[]} value={p.asset} onChange={p.setAsset} />
       </div>
 
       {p.mode !== "off" && p.mode !== "failure" && (
         <div className="space-y-1">
-          <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Cache State</p>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Cache State</p>
           <SegmentedControl
             options={[{ key: "hit", label: "Hit" }, { key: "miss", label: "Miss" }, { key: "expired", label: "Expired" }]}
             value={p.cacheState} onChange={p.setCacheState} />
@@ -353,13 +353,13 @@ function ControlsCard(p: ControlsProps) {
 
       {(p.mode === "ttl" || p.mode === "on") && (
         <div className="space-y-1">
-          <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">TTL Setting</p>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">TTL Setting</p>
           <Pill options={["10s", "1m", "1h", "1d"] as TTLValue[]} value={p.ttl} onChange={p.setTtl} />
         </div>
       )}
 
       <div className="space-y-1">
-        <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider">
+        <div className="flex justify-between text-xs font-semibold text-slate-600 uppercase tracking-wider">
           <span>Traffic</span><span className="text-slate-800 tabular-nums">{p.traffic.toLocaleString()} req/hr</span>
         </div>
         <input type="range" min={10} max={100000} step={10} value={p.traffic} onChange={e => p.setTraffic(+e.target.value)}
@@ -367,7 +367,7 @@ function ControlsCard(p: ControlsProps) {
       </div>
 
       <div className="space-y-1">
-        <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider">
+        <div className="flex justify-between text-xs font-semibold text-slate-600 uppercase tracking-wider">
           <span>Asset Size</span><span className="text-slate-800 tabular-nums">{p.assetSizeMB >= 1 ? `${p.assetSizeMB} MB` : `${Math.round(p.assetSizeMB * 1000)} KB`}</span>
         </div>
         <input type="range" min={0.1} max={500} step={0.1} value={p.assetSizeMB} onChange={e => p.setAssetSize(+e.target.value)}
@@ -389,7 +389,7 @@ function CanvasCard({ mode, cache, fallback, newlyAdded }: { mode: CDNMode; cach
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-base font-bold text-slate-500 uppercase tracking-wider">Live</span>
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Live</span>
         </div>
       </div>
       <div className="relative px-3 pb-3">
@@ -470,12 +470,12 @@ function TTLFreshnessPanel({ onChallengeComplete }: { onChallengeComplete: (id: 
 
       <div className="grid grid-cols-2 gap-3">
         <div className={cn("rounded-xl border-2 p-3 space-y-1 transition-colors", "border-indigo-300 bg-indigo-50")}>
-          <p className="text-base font-bold uppercase tracking-wider text-indigo-500">Origin Server</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-indigo-500">Origin Server</p>
           <p className="text-base font-bold font-mono text-slate-800">logo-v{originVersion}.png</p>
           <p className="text-base text-slate-600">Current version</p>
         </div>
         <div className={cn("rounded-xl border-2 p-3 space-y-1 transition-colors", isStale ? "border-amber-400 bg-amber-50" : "border-sky-300 bg-sky-50")}>
-          <p className={cn("text-base font-bold uppercase tracking-wider", isStale ? "text-amber-600" : "text-sky-600")}>CDN Edge</p>
+          <p className={cn("text-xs font-bold uppercase tracking-wider", isStale ? "text-amber-600" : "text-sky-600")}>CDN Edge</p>
           <p className="text-base font-bold font-mono text-slate-800">logo-v{cdnVersion}.png</p>
           <p className={cn("text-base", isStale ? "text-amber-600 font-semibold" : "text-slate-600")}>{isStale ? "Stale — serving old version" : "Fresh"}</p>
         </div>
@@ -489,7 +489,7 @@ function TTLFreshnessPanel({ onChallengeComplete }: { onChallengeComplete: (id: 
       )}
 
       <div className="space-y-1">
-        <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">TTL Setting</p>
+        <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">TTL Setting</p>
         <Pill options={["10s", "1m", "1h", "1d"] as TTLValue[]} value={ttl} onChange={setTtl} />
         <p className="text-base text-slate-500 mt-1">
           {ttl === "10s" && "TTL 10s — edge revalidates every 10 seconds. Freshness high, origin load higher."}
@@ -500,8 +500,8 @@ function TTLFreshnessPanel({ onChallengeComplete }: { onChallengeComplete: (id: 
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button onClick={updateOrigin} className="px-3 py-2 rounded-xl bg-slate-900 text-white text-base font-semibold hover:bg-slate-800">Update origin asset</button>
-        <button onClick={handleInvalidate} disabled={!isStale} className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-base font-semibold hover:bg-slate-50 disabled:opacity-40">Invalidate CDN object</button>
+        <button onClick={updateOrigin} className="px-3 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800">Update origin asset</button>
+        <button onClick={handleInvalidate} disabled={!isStale} className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 disabled:opacity-40">Invalidate CDN object</button>
         <button onClick={() => { setOriginVersion(1); setCdnVersion(1); setState("idle"); }} className="px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-base font-semibold hover:bg-slate-50">
           <RotateCcw className="w-3 h-3 inline mr-1" />Reset
         </button>
@@ -540,12 +540,12 @@ function FailurePanel({ onChallengeComplete }: { onChallengeComplete: (id: strin
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">CDN Status</p>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">CDN Status</p>
           <SegmentedControl options={[{ key: "true", label: "Healthy" }, { key: "false", label: "Outage" }] as { key: string; label: string }[]}
             value={String(cdnHealthy)} onChange={v => setCdnHealthy(v === "true")} />
         </div>
         <div className="space-y-1">
-          <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Fallback</p>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Fallback</p>
           <SegmentedControl options={[{ key: "true", label: "Enabled" }, { key: "false", label: "Disabled" }] as { key: string; label: string }[]}
             value={String(fallback)} onChange={v => setFallback(v === "true")} />
         </div>
@@ -697,7 +697,7 @@ function SolutionPanel({ onClose }: { onClose: () => void }) {
       <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
         {(["walkthrough", "compare", "interview"] as SolutionTab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={cn("flex-1 py-2 rounded-lg text-base font-semibold transition-all capitalize",
+            className={cn("flex-1 py-2 rounded-lg text-sm font-semibold transition-all capitalize",
               tab === t ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700")}>
             {t}
           </button>
@@ -751,7 +751,7 @@ function SolutionPanel({ onClose }: { onClose: () => void }) {
               { label: "Cost",              without: "Origin bandwidth only",  with: "CDN fees + origin savings" },
             ].map(row => (
               <div key={row.label}>
-                <p className="text-base font-bold text-slate-500 uppercase tracking-wider mb-0.5">{row.label}</p>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-0.5">{row.label}</p>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-base text-slate-700">{row.without}</div>
                   <div className="px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-base text-emerald-800 font-medium">{row.with}</div>
@@ -776,7 +776,7 @@ function SolutionPanel({ onClose }: { onClose: () => void }) {
                 { label: "Be careful with", items: ["Frequently changing HTML", "Short-lived content", "User-specific responses", "Very low traffic files"] },
               ].map(({ label, items }) => (
                 <div key={label} className="p-3 rounded-xl bg-white border border-slate-200 space-y-2">
-                  <p className="text-base font-bold uppercase tracking-wider text-slate-600">{label}</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-600">{label}</p>
                   {items.map(item => (
                     <div key={item} className="flex items-center gap-2 text-base text-slate-700">
                       <div className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />{item}
@@ -897,7 +897,7 @@ export function CDNVisual() {
           <p className="text-base text-slate-700">Walkthrough, comparison, and interview answer.</p>
         </div>
         <button onClick={() => setShowSolution(s => !s)}
-          className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-base font-semibold border transition-all",
+          className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-all",
             showSolution ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300 hover:border-slate-700")}>
           {showSolution ? "Hide" : "Open Solution"}
         </button>

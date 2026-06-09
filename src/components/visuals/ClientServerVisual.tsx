@@ -368,7 +368,7 @@ function ConceptSnapshot() {
   return (
     <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-4">
       <div>
-        <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">The core idea</p>
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">The core idea</p>
         <p className="text-base text-slate-700 mt-1 leading-relaxed max-w-2xl">
           A client asks for something. A server processes the request, queries a database if needed, and sends a response back. This cycle — repeated billions of times per day — is the foundation of every web application.
         </p>
@@ -486,7 +486,7 @@ function RequestFlowSim() {
       <div className="flex flex-wrap gap-2">
         {REQUEST_TYPES.map(r => (
           <button key={r.id} onClick={() => { setReqTypeId(r.id); setPackets([]); }}
-            className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-base font-semibold border transition-all",
+            className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-all",
               r.id === reqTypeId
                 ? "bg-slate-900 text-white border-slate-900"
                 : "bg-white text-slate-700 border-slate-200 hover:border-slate-400"
@@ -501,7 +501,7 @@ function RequestFlowSim() {
         <div className="space-y-3">
           <div className="rounded-xl border border-slate-200 bg-[#f9f9f6] p-4 space-y-3">
             <div>
-              <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">{req.icon} {req.label}</p>
+              <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">{req.icon} {req.label}</p>
               <p className="text-base text-slate-600 mt-1 leading-relaxed">{req.description}</p>
             </div>
 
@@ -542,7 +542,7 @@ function RequestFlowSim() {
               { label: "Last size",  value: metrics.lastSize || "—",      sub: "response" },
             ].map(m => (
               <div key={m.label} className="rounded-xl bg-slate-50 border border-slate-100 p-2.5 space-y-0.5">
-                <p className="text-base font-bold uppercase tracking-wider text-slate-500">{m.label}</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{m.label}</p>
                 <motion.p key={m.value} initial={{ opacity: 0, y: -2 }} animate={{ opacity: 1, y: 0 }}
                   className="text-base font-bold text-slate-900 tabular-nums leading-none">
                   {m.value}
@@ -556,7 +556,7 @@ function RequestFlowSim() {
         {/* SVG canvas */}
         <div className="rounded-xl border border-slate-200 bg-[#f9f9f6] overflow-hidden relative">
           <div className="px-4 pt-3 pb-2 flex items-center justify-between">
-            <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Request path — hover nodes for details</p>
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Request path — hover nodes for details</p>
             <div className="flex items-center gap-1.5">
               <div className={cn("w-1.5 h-1.5 rounded-full", packets.length > 0 ? "bg-emerald-500 animate-pulse" : "bg-slate-300")} />
               <span className="text-base font-bold text-slate-500">{packets.length > 0 ? "Active" : "Idle"}</span>
@@ -652,7 +652,7 @@ function OverloadSim() {
         {/* Controls */}
         <div className="space-y-3">
           <div className="rounded-xl border border-slate-200 bg-[#f9f9f6] p-4 space-y-4">
-            <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Traffic controls</p>
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Traffic controls</p>
 
             <div className="space-y-2">
               <div className="flex justify-between text-base font-medium">
@@ -665,13 +665,13 @@ function OverloadSim() {
             </div>
 
             <div className="space-y-2">
-              <p className="text-base font-bold uppercase tracking-wider text-slate-500">Infrastructure</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Infrastructure</p>
               {[
                 { label: "Cache (Redis)", val: cacheEnabled, set: setCacheEnabled },
                 { label: "Load Balancer", val: lbEnabled,    set: setLbEnabled    },
               ].map(({ label, val, set }) => (
                 <button key={label} onClick={() => set(!val)}
-                  className={cn("w-full flex items-center justify-between px-3 py-2 rounded-lg border text-base font-semibold transition-all",
+                  className={cn("w-full flex items-center justify-between px-3 py-2 rounded-lg border text-sm font-semibold transition-all",
                     val ? "bg-white border-slate-300 text-slate-800" : "bg-slate-100 border-slate-200 text-slate-500"
                   )}>
                   {label}
@@ -716,7 +716,7 @@ function OverloadSim() {
               { label: "Fail rate", value: failRate > 0 ? `${failRate}%` : "0%", extra: failRate > 0 ? "text-red-600" : "text-emerald-600" },
             ].map(m => (
               <div key={m.label} className="rounded-xl bg-slate-50 border border-slate-100 p-2.5 space-y-0.5">
-                <p className="text-base font-bold uppercase tracking-wider text-slate-500">{m.label}</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{m.label}</p>
                 <motion.p key={m.value} initial={{ opacity: 0, y: -2 }} animate={{ opacity: 1, y: 0 }}
                   className={cn("text-base font-bold tabular-nums leading-none", m.extra)}>
                   {m.value}
@@ -730,7 +730,7 @@ function OverloadSim() {
         <div className="space-y-3">
           <div className="rounded-xl border border-slate-200 bg-[#f9f9f6] overflow-hidden relative">
             <div className="px-4 pt-3 pb-1 flex items-center justify-between">
-              <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Architecture under load</p>
+              <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Architecture under load</p>
               {overloaded && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   className="flex items-center gap-1.5 text-base font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded-lg">
@@ -820,7 +820,7 @@ function OverloadSim() {
             {overloaded && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 className="p-4 rounded-xl bg-white border-2 border-red-200 space-y-2">
-                <p className="text-base font-bold text-red-700 uppercase tracking-wider">How to fix this</p>
+                <p className="text-xs font-bold text-red-700 uppercase tracking-wider">How to fix this</p>
                 {!lbEnabled && <p className="text-base text-slate-700 flex gap-2"><span className="text-red-500 font-bold">→</span> Enable Load Balancer to distribute traffic across multiple servers</p>}
                 {serverLoad > 1 && serverCount < 3 && <p className="text-base text-slate-700 flex gap-2"><span className="text-red-500 font-bold">→</span> Add more app servers (click + above)</p>}
                 {!cacheEnabled && <p className="text-base text-slate-700 flex gap-2"><span className="text-red-500 font-bold">→</span> Enable Cache — it absorbs ~75% of reads, dramatically reducing server pressure</p>}
@@ -931,7 +931,7 @@ function SolutionWalkthrough({ onClose }: { onClose: () => void }) {
       {/* Navigation */}
       <div className="flex items-center justify-between pt-1">
         <button onClick={() => setStepIdx(i => Math.max(0, i - 1))} disabled={stepIdx === 0}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-base font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
           <ChevronLeft className="w-4 h-4" /> Previous
         </button>
         {stepIdx === SOLUTION_STEPS.length - 1 ? (
@@ -940,7 +940,7 @@ function SolutionWalkthrough({ onClose }: { onClose: () => void }) {
           </div>
         ) : (
           <button onClick={() => setStepIdx(i => i + 1)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-base font-semibold hover:bg-slate-800 transition-all">
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-all">
             Next <ChevronRight className="w-4 h-4" />
           </button>
         )}
@@ -961,7 +961,7 @@ function MiniChallenges() {
   return (
     <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-3">
       <div>
-        <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Mini Challenges</p>
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Mini Challenges</p>
         <p className="text-base text-slate-600 mt-0.5">Apply what you&apos;ve learned by solving these hands-on problems.</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -992,7 +992,7 @@ function MiniChallenges() {
 
               <div className="flex gap-1.5">
                 <button onClick={() => toggle(ch.id, setShownHints)}
-                  className={cn("flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-base font-semibold border transition-all flex-1",
+                  className={cn("flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-sm font-semibold border transition-all flex-1",
                     hintShown ? "bg-sky-100 text-sky-700 border-sky-200" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                   )}>
                   {hintShown ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
@@ -1038,7 +1038,7 @@ export function ClientServerVisual() {
               { key: "overload" as const, label: "Overload & Scaling",  icon: "Load" },
             ]).map(t => (
               <button key={t.key} onClick={() => setTab(t.key)}
-                className={cn("flex items-center gap-2 px-4 py-2 rounded-lg text-base font-semibold transition-all",
+                className={cn("flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
                   tab === t.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700"
                 )}>
                 <span>{t.icon}</span>{t.label}
@@ -1064,7 +1064,7 @@ export function ClientServerVisual() {
       {/* Section 4: Solution Walkthrough toggle */}
       <div className="flex justify-center">
         <button onClick={() => setShowSolution(s => !s)}
-          className={cn("flex items-center gap-2 px-5 py-2.5 rounded-xl text-base font-semibold border transition-all",
+          className={cn("flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all",
             showSolution ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300 hover:border-slate-700"
           )}>
           <Target className="w-4 h-4" />

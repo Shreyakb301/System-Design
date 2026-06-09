@@ -38,7 +38,7 @@ function DashboardCard({ className, children }: { className?: string; children: 
 function SectionHeader({ eyebrow, title, subtitle }: { eyebrow?: string; title: string; subtitle?: string }) {
   return (
     <div className="mb-5">
-      {eyebrow && <p className="text-base font-semibold uppercase tracking-[0.16em] text-slate-500">{eyebrow}</p>}
+      {eyebrow && <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{eyebrow}</p>}
       <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">{title}</h2>
       {subtitle && <p className="mt-2 max-w-[720px] text-base leading-7 text-slate-600">{subtitle}</p>}
     </div>
@@ -77,7 +77,7 @@ function ToggleChip({ active, label, onClick }: { active: boolean; label: string
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "min-h-11 rounded-full border px-4 py-2 text-base font-semibold transition",
+        "min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition",
         active ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
       )}
     >
@@ -397,7 +397,7 @@ function ConceptSnapshot({ workload, onWorkload }: { workload: Workload; onWorkl
       <div className="grid items-stretch gap-4 lg:grid-cols-2">
         {/* Replication */}
         <div className="flex min-h-[220px] flex-col rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="flex items-center gap-2"><Copy className="h-5 w-5 text-cyan-600" /><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Replication</p></div>
+          <div className="flex items-center gap-2"><Copy className="h-5 w-5 text-cyan-600" /><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Replication</p></div>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <NodeBox styleKey="primary" icon={Database} title="DB" />
             <Arrow />
@@ -410,7 +410,7 @@ function ConceptSnapshot({ workload, onWorkload }: { workload: Workload; onWorkl
         </div>
         {/* Sharding */}
         <div className="flex min-h-[220px] flex-col rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="flex items-center gap-2"><Split className="h-5 w-5 text-purple-600" /><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Sharding</p></div>
+          <div className="flex items-center gap-2"><Split className="h-5 w-5 text-purple-600" /><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Sharding</p></div>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {["A", "B", "C"].map((k) => <NodeBox key={k} compact styleKey="shard" icon={Layers} title={`Shard ${k}`} />)}
           </div>
@@ -420,15 +420,15 @@ function ConceptSnapshot({ workload, onWorkload }: { workload: Workload; onWorkl
       </div>
 
       <div className="mt-5">
-        <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Pick a workload</p>
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Pick a workload</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {(Object.keys(WORKLOADS) as Workload[]).map((id) => (
             <ToggleChip key={id} active={workload === id} label={WORKLOADS[id].label} onClick={() => onWorkload(id)} />
           ))}
         </div>
         <div className="mt-4 grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
-          <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-1 text-base leading-7 text-slate-700">{active.changed}</p></div>
-          <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-1 text-base leading-7 text-slate-700">{active.matters}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-1 text-base leading-7 text-slate-700">{active.changed}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-1 text-base leading-7 text-slate-700">{active.matters}</p></div>
         </div>
       </div>
     </DashboardCard>
@@ -447,7 +447,7 @@ function ModeTabs({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void })
           key={id}
           type="button"
           onClick={() => setMode(id)}
-          className={cn("min-w-[120px] flex-1 rounded-xl px-3 py-2 text-base font-semibold transition", mode === id ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+          className={cn("min-w-[120px] flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition", mode === id ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-700")}
         >
           {label}
         </button>
@@ -479,14 +479,14 @@ function Controls(props: {
       </div>
       <div className="mt-4 space-y-3">
         <div>
-          <p className="mb-2 text-base font-bold uppercase tracking-[0.12em] text-slate-500">Node health</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Node health</p>
           <div className="flex flex-wrap gap-2">
             <ToggleChip active={!failure} label="Healthy" onClick={() => setFailure(false)} />
             <ToggleChip active={failure} label="Node failure" onClick={() => setFailure(true)} />
           </div>
         </div>
         <div>
-          <p className="mb-2 text-base font-bold uppercase tracking-[0.12em] text-slate-500">Consistency</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Consistency</p>
           <div className="flex flex-wrap gap-2">
             {(["high", "medium", "low"] as Consistency[]).map((c) => (
               <ToggleChip key={c} active={consistency === c} label={c[0].toUpperCase() + c.slice(1)} onClick={() => setConsistency(c)} />
@@ -507,9 +507,9 @@ function InsightPanel({ mode, warning }: { mode: Mode; warning: string | null })
     <DashboardCard>
       <SectionHeader eyebrow="Step 05–09 · Cause and effect" title="What just happened?" />
       <div className="grid gap-4 md:grid-cols-3">
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-2 text-base leading-7 text-slate-700">{meta.changed}</p></div>
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-2 text-base leading-7 text-slate-700">{meta.matters}</p></div>
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Where&apos;s the bottleneck</p><p className="mt-2 text-base leading-7 text-slate-700">{meta.bottleneck}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-2 text-base leading-7 text-slate-700">{meta.changed}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-2 text-base leading-7 text-slate-700">{meta.matters}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Where&apos;s the bottleneck</p><p className="mt-2 text-base leading-7 text-slate-700">{meta.bottleneck}</p></div>
       </div>
       <AnimatePresence>
         {warning && (
@@ -543,7 +543,7 @@ function Challenges({ mode }: { mode: Mode }) {
                 </span>
                 <p className="text-base font-semibold leading-6 text-slate-800">{c.prompt}</p>
               </div>
-              <p className={cn("mt-3 text-base font-bold uppercase tracking-wide", solved ? "text-emerald-700" : "text-slate-400")}>{c.answerLabel}</p>
+              <p className={cn("mt-3 text-xs font-bold uppercase tracking-wide", solved ? "text-emerald-700" : "text-slate-400")}>{c.answerLabel}</p>
             </motion.div>
           );
         })}
@@ -591,11 +591,11 @@ function SolutionPanel({ tab, setTab }: { tab: SolTab; setTab: (t: SolTab) => vo
               <div key={k} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                 <div className="flex items-center gap-2">
                   {k === "replication" ? <Copy className="h-5 w-5 text-cyan-600" /> : <Split className="h-5 w-5 text-purple-600" />}
-                  <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">{k}</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{k}</p>
                 </div>
-                <p className="mt-3 text-base font-bold uppercase tracking-wide text-emerald-700">Pros</p>
+                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-emerald-700">Pros</p>
                 <ul className="mt-1 space-y-1">{pros[k].map((p) => <li key={p} className="flex items-center gap-2 text-base text-slate-700"><Check className="h-4 w-4 text-emerald-600" />{p}</li>)}</ul>
-                <p className="mt-3 text-base font-bold uppercase tracking-wide text-red-600">Cons</p>
+                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-red-600">Cons</p>
                 <ul className="mt-1 space-y-1">{cons[k].map((c) => <li key={c} className="flex items-center gap-2 text-base text-slate-700"><AlertTriangle className="h-4 w-4 text-red-500" />{c}</li>)}</ul>
               </div>
             ))}

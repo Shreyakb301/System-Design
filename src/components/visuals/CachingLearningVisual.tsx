@@ -37,7 +37,7 @@ function DashboardCard({ className, children }: { className?: string; children: 
 function SectionHeader({ eyebrow, title, subtitle }: { eyebrow?: string; title: string; subtitle?: string }) {
   return (
     <div className="mb-5">
-      {eyebrow && <p className="text-base font-semibold uppercase tracking-[0.16em] text-slate-500">{eyebrow}</p>}
+      {eyebrow && <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{eyebrow}</p>}
       <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">{title}</h2>
       {subtitle && <p className="mt-2 max-w-[720px] text-base leading-7 text-slate-600">{subtitle}</p>}
     </div>
@@ -64,7 +64,7 @@ function ToggleChip({ active, label, onClick }: { active: boolean; label: string
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "min-h-11 rounded-full border px-4 py-2 text-base font-semibold transition",
+        "min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition",
         active ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
       )}
     >
@@ -76,7 +76,7 @@ function ToggleChip({ active, label, onClick }: { active: boolean; label: string
 function SegChips<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
   return (
     <div>
-      <p className="mb-2 text-base font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+      <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
       <div className="flex flex-wrap gap-2">
         {options.map(([id, l]) => <ToggleChip key={id} active={value === id} label={l} onClick={() => onChange(id)} />)}
       </div>
@@ -332,11 +332,11 @@ function ArchitectureCanvas({ mode, model, reqLevel, noCacheModel, cacheModel }:
               {mode === "compare" ? (
                 <div className="space-y-5">
                   <div>
-                    <p className="mb-2 text-base font-bold uppercase tracking-[0.12em] text-slate-500">Without cache</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Without cache</p>
                     <FlowRow mode="no-cache" model={noCacheModel} />
                   </div>
                   <div className="border-t border-dashed border-slate-300 pt-5">
-                    <p className="mb-2 text-base font-bold uppercase tracking-[0.12em] text-slate-500">With cache</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">With cache</p>
                     <FlowRow mode="cache" model={cacheModel} />
                   </div>
                 </div>
@@ -387,7 +387,7 @@ function ConceptSnapshot({ scenario, onScenario }: { scenario: Scenario; onScena
       <SectionHeader eyebrow="Step 01 · Concept snapshot" title="Store expensive work closer" subtitle="See how a cache changes latency, database load, and system behavior." />
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-          <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Without cache</p>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Without cache</p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <NodeBox compact styleKey="users" icon={Users} title="User" />
             <Arrow />
@@ -399,7 +399,7 @@ function ConceptSnapshot({ scenario, onScenario }: { scenario: Scenario; onScena
           <p className="mt-1 text-base text-slate-600">Every request performs the work again — the database handles everything.</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-          <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">With cache</p>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">With cache</p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <NodeBox compact styleKey="users" icon={Users} title="User" />
             <Arrow />
@@ -415,15 +415,15 @@ function ConceptSnapshot({ scenario, onScenario }: { scenario: Scenario; onScena
       </div>
 
       <div className="mt-5">
-        <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Pick a scenario</p>
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Pick a scenario</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {(Object.keys(SCENARIOS) as Scenario[]).map((id) => (
             <ToggleChip key={id} active={scenario === id} label={SCENARIOS[id].label} onClick={() => onScenario(id)} />
           ))}
         </div>
         <div className="mt-4 grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
-          <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-1 text-base leading-7 text-slate-700">{active.changed}</p></div>
-          <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-1 text-base leading-7 text-slate-700">{active.matters}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-1 text-base leading-7 text-slate-700">{active.changed}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-1 text-base leading-7 text-slate-700">{active.matters}</p></div>
         </div>
       </div>
     </DashboardCard>
@@ -438,7 +438,7 @@ function ModeTabs({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void })
   return (
     <div className="flex flex-wrap gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1">
       {tabs.map(([id, label]) => (
-        <button key={id} type="button" onClick={() => setMode(id)} className={cn("min-w-[120px] flex-1 rounded-xl px-3 py-2 text-base font-semibold transition", mode === id ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-700")}>{label}</button>
+        <button key={id} type="button" onClick={() => setMode(id)} className={cn("min-w-[120px] flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition", mode === id ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-700")}>{label}</button>
       ))}
     </div>
   );
@@ -469,7 +469,7 @@ function Controls(props: {
         {showCache && <SegChips label="Cache size" value={size} options={[["small", "Small"], ["medium", "Medium"], ["large", "Large"]]} onChange={setSize} />}
         {showCache && (
           <div>
-            <p className="mb-2 text-base font-bold uppercase tracking-[0.12em] text-slate-500">Cache health</p>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Cache health</p>
             <div className="flex flex-wrap gap-2">
               <ToggleChip active={!failure} label="Healthy" onClick={() => setFailure(false)} />
               <ToggleChip active={failure} label="Cache failure" onClick={() => setFailure(true)} />
@@ -478,7 +478,7 @@ function Controls(props: {
         )}
         {showCache && failure && (
           <div>
-            <p className="mb-2 text-base font-bold uppercase tracking-[0.12em] text-slate-500">On failure</p>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">On failure</p>
             <div className="flex flex-wrap gap-2">
               <ToggleChip active={fallback} label="Fallback to DB" onClick={() => setFallback(true)} />
               <ToggleChip active={!fallback} label="No fallback" onClick={() => setFallback(false)} />
@@ -527,8 +527,8 @@ function StalePanel({ ttl, setTtl }: { ttl: number; setTtl: (v: number) => void 
         </div>
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-1 text-base leading-7 text-slate-700">{stale ? "The database changed but the cache still serves the old value." : "Cache and database agree."}</p></div>
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-1 text-base leading-7 text-slate-700">Caching introduces freshness problems — readers can see old data until the TTL expires.</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-1 text-base leading-7 text-slate-700">{stale ? "The database changed but the cache still serves the old value." : "Cache and database agree."}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-1 text-base leading-7 text-slate-700">Caching introduces freshness problems — readers can see old data until the TTL expires.</p></div>
       </div>
       <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
@@ -571,8 +571,8 @@ function EvictionPanel() {
       <div className="mt-3 flex items-center gap-3">
         <input type="range" min={2} max={8} step={1} value={slots} onChange={(e) => { const v = Number(e.target.value); setSlots(v); setItems((prev) => prev.slice(-v)); }} className="w-40 accent-slate-900" />
         <span className="text-base font-semibold text-slate-700">{slots} slots</span>
-        <button type="button" onClick={insert} className="min-h-9 rounded-full border border-slate-900 bg-slate-900 px-3 py-1.5 text-base font-semibold text-white">Insert next</button>
-        <button type="button" onClick={reset} className="min-h-9 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-base font-semibold text-slate-600 hover:border-slate-300">Reset</button>
+        <button type="button" onClick={insert} className="min-h-9 rounded-full border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white">Insert next</button>
+        <button type="button" onClick={reset} className="min-h-9 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 hover:border-slate-300">Reset</button>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         {Array.from({ length: slots }).map((_, i) => {
@@ -602,9 +602,9 @@ function InsightPanel({ model }: { model: Model }) {
     <DashboardCard>
       <SectionHeader eyebrow="Steps 05 / 08 / 09 · Cause and effect" title="What just happened?" />
       <div className="grid gap-4 md:grid-cols-3">
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-2 text-base leading-7 text-slate-700">{model.changed}</p></div>
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-2 text-base leading-7 text-slate-700">{model.matters}</p></div>
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Where&apos;s the bottleneck</p><p className="mt-2 text-base leading-7 text-slate-700">{model.bottleneck}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-2 text-base leading-7 text-slate-700">{model.changed}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-2 text-base leading-7 text-slate-700">{model.matters}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Where&apos;s the bottleneck</p><p className="mt-2 text-base leading-7 text-slate-700">{model.bottleneck}</p></div>
       </div>
       <AnimatePresence>
         {model.warning && (
@@ -633,7 +633,7 @@ function Challenges({ model, mode, ttlLevel, size, failure, fallback }: { model:
                 </span>
                 <p className="text-base font-semibold leading-6 text-slate-800">{c.prompt}</p>
               </div>
-              <p className={cn("mt-3 text-base font-bold uppercase tracking-wide", solved ? "text-emerald-700" : "text-slate-400")}>{c.answer}</p>
+              <p className={cn("mt-3 text-xs font-bold uppercase tracking-wide", solved ? "text-emerald-700" : "text-slate-400")}>{c.answer}</p>
             </motion.div>
           );
         })}
@@ -677,11 +677,11 @@ function SolutionPanel({ tab, setTab }: { tab: SolTab; setTab: (t: SolTab) => vo
               <div key={k} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                 <div className="flex items-center gap-2">
                   {k === "without" ? <Database className="h-5 w-5 text-purple-600" /> : <Layers className="h-5 w-5 text-amber-600" />}
-                  <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">{k === "without" ? "Without cache" : "With cache"}</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{k === "without" ? "Without cache" : "With cache"}</p>
                 </div>
-                <p className="mt-3 text-base font-bold uppercase tracking-wide text-emerald-700">Pros</p>
+                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-emerald-700">Pros</p>
                 <ul className="mt-1 space-y-1">{pros[k].map((p) => <li key={p} className="flex items-center gap-2 text-base text-slate-700"><Check className="h-4 w-4 text-emerald-600" />{p}</li>)}</ul>
-                <p className="mt-3 text-base font-bold uppercase tracking-wide text-red-600">Cons</p>
+                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-red-600">Cons</p>
                 <ul className="mt-1 space-y-1">{cons[k].map((c) => <li key={c} className="flex items-center gap-2 text-base text-slate-700"><AlertTriangle className="h-4 w-4 text-red-500" />{c}</li>)}</ul>
               </div>
             ))}

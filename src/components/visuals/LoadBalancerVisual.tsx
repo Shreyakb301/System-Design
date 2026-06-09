@@ -87,7 +87,7 @@ function DashboardCard({ className, children }: { className?: string; children: 
 function SectionHeader({ eyebrow, title, subtitle }: { eyebrow?: string; title: string; subtitle?: string }) {
   return (
     <div className="mb-5">
-      {eyebrow && <p className="text-base font-semibold uppercase tracking-[0.16em] text-slate-500">{eyebrow}</p>}
+      {eyebrow && <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{eyebrow}</p>}
       <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">{title}</h2>
       {subtitle && <p className="mt-2 max-w-[720px] text-base leading-7 text-slate-600">{subtitle}</p>}
     </div>
@@ -116,7 +116,7 @@ function ToggleChip({ active, label, onClick }: { active: boolean; label: string
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "min-h-11 rounded-full border px-4 py-2 text-base font-semibold transition",
+        "min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition",
         active ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
       )}
     >
@@ -221,7 +221,7 @@ function ScenarioHero({ scenario, onScenario }: { scenario: Scenario; onScenario
               <span className="text-base font-bold text-slate-950">{scenarios[id].label}</span>
               <span className="mt-1 block text-base leading-6 text-slate-600">{scenarios[id].note}</span>
               <span className="mt-auto pt-4">
-                <span className="block text-base font-semibold uppercase tracking-wider text-slate-400">Recommended</span>
+                <span className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Recommended</span>
                 <span className="mt-1 inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-base font-semibold text-slate-700">
                   {algorithms[scenarios[id].algorithm].label}
                 </span>
@@ -439,9 +439,9 @@ function InsightPanel({ algorithm }: { algorithm: Algorithm }) {
     <DashboardCard>
       <h2 className="text-2xl font-bold text-slate-950">Insight</h2>
       <div className="mt-4 grid gap-4 md:grid-cols-3">
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-2 text-base leading-7 text-slate-700">{item.changed}</p></div>
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-2 text-base leading-7 text-slate-700">{item.matters}</p></div>
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Tradeoff</p><p className="mt-2 text-base leading-7 text-slate-700">{item.tradeoff}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-2 text-base leading-7 text-slate-700">{item.changed}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-2 text-base leading-7 text-slate-700">{item.matters}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Tradeoff</p><p className="mt-2 text-base leading-7 text-slate-700">{item.tradeoff}</p></div>
       </div>
     </DashboardCard>
   );

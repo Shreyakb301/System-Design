@@ -79,7 +79,7 @@ function fmtTraffic(n: number): string {
 
 // ─── Shared components ─────────────────────────────────────────────────────────
 function Eyebrow({ children }: { children: string }) {
-  return <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500 mb-1">{children}</p>;
+  return <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500 mb-1">{children}</p>;
 }
 
 function MetricCard({ label, value, higherIsBetter, suffix = "%" }: { label: string; value: number; higherIsBetter: boolean; suffix?: string }) {
@@ -87,7 +87,7 @@ function MetricCard({ label, value, higherIsBetter, suffix = "%" }: { label: str
   const good = score >= 66, warn = score >= 40;
   return (
     <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-      <p className="text-base font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
       <motion.p key={value} initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }}
         className={cn("text-lg font-bold tabular-nums leading-none", good ? "text-emerald-600" : warn ? "text-amber-600" : "text-red-500")}>
         {value}{suffix}
@@ -122,7 +122,7 @@ function SegmentedControl<T extends string | number>({ options, value, onChange 
     <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
       {options.map((o) => (
         <button key={String(o.key)} onClick={() => onChange(o.key)}
-          className={cn("flex-1 py-1.5 px-2 rounded-lg text-base font-semibold transition-all",
+          className={cn("flex-1 py-1.5 px-2 rounded-lg text-sm font-semibold transition-all",
             value === o.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700")}>
           {o.label}
         </button>
@@ -136,7 +136,7 @@ function Pill<T extends string | number>({ options, value, onChange }: { options
     <div className="flex flex-wrap gap-1.5">
       {options.map((o) => (
         <button key={String(o.key)} onClick={() => onChange(o.key)}
-          className={cn("px-3 py-1 rounded-full text-base font-semibold border transition-all",
+          className={cn("px-3 py-1 rounded-full text-sm font-semibold border transition-all",
             value === o.key ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-200 hover:border-slate-400")}>
           {o.label}
         </button>
@@ -264,7 +264,7 @@ function IntroCard({ scenario, onSelect }: { scenario: ScenarioId; onSelect: (s:
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
-          <div className="flex items-center gap-1.5"><Box className="w-3.5 h-3.5 text-slate-700" /><span className="text-base font-bold uppercase tracking-widest text-slate-600">Monolith</span></div>
+          <div className="flex items-center gap-1.5"><Box className="w-3.5 h-3.5 text-slate-700" /><span className="text-xs font-bold uppercase tracking-widest text-slate-600">Monolith</span></div>
           <div className="rounded-lg border-2 border-slate-700 bg-white p-1.5 space-y-1">
             {["Auth", "Payments", "Orders", "Users", "Inventory"].map(m => (
               <div key={m} className="rounded bg-slate-100 text-base font-semibold text-slate-700 text-center py-0.5">{m}</div>
@@ -273,7 +273,7 @@ function IntroCard({ scenario, onSelect }: { scenario: ScenarioId; onSelect: (s:
           <p className="text-base text-slate-500">Everything ships together.</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
-          <div className="flex items-center gap-1.5"><Boxes className="w-3.5 h-3.5 text-indigo-600" /><span className="text-base font-bold uppercase tracking-widest text-indigo-500">Microservices</span></div>
+          <div className="flex items-center gap-1.5"><Boxes className="w-3.5 h-3.5 text-indigo-600" /><span className="text-xs font-bold uppercase tracking-widest text-indigo-500">Microservices</span></div>
           <div className="grid grid-cols-2 gap-1">
             {["Auth", "Orders", "Payments", "Inventory"].map(m => (
               <div key={m} className="rounded border border-indigo-300 bg-white text-base font-semibold text-indigo-700 text-center py-1">{m}</div>
@@ -283,11 +283,11 @@ function IntroCard({ scenario, onSelect }: { scenario: ScenarioId; onSelect: (s:
         </div>
       </div>
       <div>
-        <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500 mb-2">Choose a context</p>
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500 mb-2">Choose a context</p>
         <div className="flex flex-wrap gap-2">
           {SCENARIOS.map((s) => (
             <button key={s.id} onClick={() => onSelect(s.id)}
-              className={cn("px-4 py-1.5 rounded-full text-lg font-semibold border transition-all",
+              className={cn("px-4 py-1.5 rounded-full text-base font-semibold border transition-all",
                 s.id === scenario ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-200 hover:border-slate-400 hover:text-slate-900")}>
               {s.label}
             </button>
@@ -331,7 +331,7 @@ function DeploymentPanel({ mode, services }: { mode: Exclude<Mode, "compare">; s
           <div className="h-3 bg-slate-200 rounded-full overflow-hidden"><motion.div animate={{ width: `${progress}%` }} className="h-full bg-slate-700 rounded-full" /></div>
           <div className="grid grid-cols-5 gap-1">
             {["Auth", "Payments", "Orders", "Users", "Inventory"].map(m => (
-              <div key={m} className={cn("text-base font-semibold text-center py-1 rounded transition-colors", deploying ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600")}>{m}</div>
+              <div key={m} className={cn("text-sm font-semibold text-center py-1 rounded transition-colors", deploying ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600")}>{m}</div>
             ))}
           </div>
         </div>
@@ -350,7 +350,7 @@ function DeploymentPanel({ mode, services }: { mode: Exclude<Mode, "compare">; s
           })}
         </div>
       )}
-      <button onClick={runDeploy} disabled={deploying} className="px-4 py-2 rounded-xl bg-slate-900 text-white text-lg font-semibold hover:bg-slate-800 disabled:opacity-40">
+      <button onClick={runDeploy} disabled={deploying} className="px-4 py-2 rounded-xl bg-slate-900 text-white text-base font-semibold hover:bg-slate-800 disabled:opacity-40">
         {deploying ? "Deploying..." : "Deploy new feature"}
       </button>
       <InsightPanel type={mode === "monolith" ? "warning" : "success"} text={mode === "monolith"
@@ -398,7 +398,7 @@ function FailurePanel({ mode, killed, setKilled }: { mode: Exclude<Mode, "compar
           : <MicroCanvas serviceCount={18} killed={killed} scaledService={null} onTooltip={() => {}} />}
       </div>
       <div>
-        <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider mb-0.5"><span>Availability</span><span className={cn("tabular-nums", availability > 80 ? "text-emerald-600" : availability > 40 ? "text-amber-600" : "text-red-500")}>{availability}%</span></div>
+        <div className="flex justify-between text-xs font-semibold text-slate-600 uppercase tracking-wider mb-0.5"><span>Availability</span><span className={cn("tabular-nums", availability > 80 ? "text-emerald-600" : availability > 40 ? "text-amber-600" : "text-red-500")}>{availability}%</span></div>
         <div className="h-2 bg-slate-100 rounded-full overflow-hidden"><motion.div animate={{ width: `${availability}%` }} className={cn("h-full rounded-full", availability > 80 ? "bg-emerald-500" : availability > 40 ? "bg-amber-500" : "bg-red-500")} /></div>
       </div>
       <InsightPanel type={effect.type} text={effect.text} />
@@ -481,7 +481,7 @@ function CommunicationPanel({ services, setServices }: { services: number; setSe
         </div>
         <div className="space-y-3">
           <div className="space-y-1">
-            <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Service count</span><span className="text-slate-800 tabular-nums">{services}</span></div>
+            <div className="flex justify-between text-xs font-semibold text-slate-600 uppercase tracking-wider"><span>Service count</span><span className="text-slate-800 tabular-nums">{services}</span></div>
             <input type="range" min={1} max={30} step={1} value={services} onChange={e => setServices(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
           </div>
           <div className="grid grid-cols-2 gap-2.5">
@@ -525,7 +525,7 @@ function ChallengeCards() {
               <div className="flex gap-2">
                 {ch.options.map((opt, i) => (
                   <button key={i} onClick={() => setAnswers(p => ({ ...p, [ch.id]: i }))}
-                    className={cn("flex-1 px-3 py-2 rounded-lg border text-lg font-semibold transition-all",
+                    className={cn("flex-1 px-3 py-2 rounded-lg border text-base font-semibold transition-all",
                       picked === i && i === ch.correct ? "border-emerald-400 bg-emerald-100 text-emerald-800" :
                       picked === i ? "border-red-300 bg-red-50 text-red-700" :
                       "border-slate-200 bg-white text-slate-700 hover:border-slate-300")}>{opt}</button>
@@ -565,7 +565,7 @@ function SolutionPanel({ onClose }: { onClose: () => void }) {
       </div>
       <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
         {(["walkthrough", "compare", "interview"] as SolutionTab[]).map(t => (
-          <button key={t} onClick={() => setTab(t)} className={cn("flex-1 py-2 rounded-lg text-base font-semibold transition-all capitalize", tab === t ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700")}>{t}</button>
+          <button key={t} onClick={() => setTab(t)} className={cn("flex-1 py-2 rounded-lg text-sm font-semibold transition-all capitalize", tab === t ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700")}>{t}</button>
         ))}
       </div>
       <AnimatePresence mode="wait">
@@ -592,13 +592,13 @@ function SolutionPanel({ onClose }: { onClose: () => void }) {
         {tab === "compare" && (
           <motion.div key="cmp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <p className="text-base font-bold uppercase tracking-wider text-slate-700">Monolith</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-700">Monolith</p>
               {([["Simpler architecture", true], ["Easier deployment initially", true], ["Easier debugging", true], ["Fewer moving parts", true], ["Difficult to scale", false], ["Large deployments", false], ["Lower team independence", false], ["Larger blast radius", false]] as [string, boolean][]).map(([t, good]) => (
                 <div key={t} className="flex items-center gap-2 text-base text-slate-700"><div className={cn("w-1.5 h-1.5 rounded-full shrink-0", good ? "bg-emerald-500" : "bg-red-400")} />{t}</div>
               ))}
             </div>
             <div className="space-y-2">
-              <p className="text-base font-bold uppercase tracking-wider text-indigo-600">Microservices</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Microservices</p>
               {([["Independent scaling", true], ["Independent deployments", true], ["Team ownership", true], ["Better isolation", true], ["Operational complexity", false], ["Networking overhead", false], ["Distributed debugging", false], ["Service coordination", false]] as [string, boolean][]).map(([t, good]) => (
                 <div key={t} className="flex items-center gap-2 text-base text-slate-700"><div className={cn("w-1.5 h-1.5 rounded-full shrink-0", good ? "bg-emerald-500" : "bg-red-400")} />{t}</div>
               ))}
@@ -675,25 +675,25 @@ export function ArchitectureComparisonVisual() {
           </div>
           <SegmentedControl options={[{ key: "monolith", label: "Monolith" }, { key: "microservices", label: "Microservices" }, { key: "compare", label: "Compare" }]} value={mode} onChange={setMode} />
           <div className="space-y-1">
-            <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Traffic</span><span className="text-slate-800 tabular-nums">{fmtTraffic(traffic)}/sec</span></div>
+            <div className="flex justify-between text-xs font-semibold text-slate-600 uppercase tracking-wider"><span>Traffic</span><span className="text-slate-800 tabular-nums">{fmtTraffic(traffic)}/sec</span></div>
             <input type="range" min={100} max={1000000} step={100} value={traffic} onChange={e => setTraffic(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
           </div>
           <div className="space-y-1">
-            <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Team size</span><span className="text-slate-800 tabular-nums">{teamSize} eng</span></div>
+            <div className="flex justify-between text-xs font-semibold text-slate-600 uppercase tracking-wider"><span>Team size</span><span className="text-slate-800 tabular-nums">{teamSize} eng</span></div>
             <input type="range" min={2} max={500} step={1} value={teamSize} onChange={e => setTeamSize(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
           </div>
           <div className="space-y-1">
-            <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Deployment frequency</p>
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Deployment frequency</p>
             <SegmentedControl options={[{ key: "weekly", label: "Weekly" }, { key: "daily", label: "Daily" }, { key: "hourly", label: "Hourly" }, { key: "continuous", label: "Cont." }]} value={deploy} onChange={setDeploy} />
           </div>
           {mode !== "monolith" && (
             <div className="space-y-1">
-              <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Service count</span><span className="text-slate-800 tabular-nums">{services}</span></div>
+              <div className="flex justify-between text-xs font-semibold text-slate-600 uppercase tracking-wider"><span>Service count</span><span className="text-slate-800 tabular-nums">{services}</span></div>
               <input type="range" min={1} max={30} step={1} value={services} onChange={e => setServices(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
             </div>
           )}
           <div className="space-y-1">
-            <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Feature growth</p>
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Feature growth</p>
             <SegmentedControl options={[{ key: "low", label: "Low" }, { key: "medium", label: "Medium" }, { key: "high", label: "High" }]} value={growth} onChange={setGrowth} />
           </div>
         </div>
@@ -705,18 +705,18 @@ export function ArchitectureComparisonVisual() {
                 <Eyebrow>Step 03 · Live System View</Eyebrow>
                 <p className="text-base text-slate-600">{mode === "compare" ? "Both architectures shown." : "Hover any node."}</p>
               </div>
-              <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /><span className="text-base font-bold text-slate-500 uppercase tracking-wider">Live</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /><span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Live</span></div>
             </div>
             <div className="relative px-3 pb-3">
               {mode === "compare" ? (
                 <div className="grid grid-cols-2 gap-2">
                   <div className="relative rounded-xl overflow-hidden border border-slate-100" style={{ aspectRatio: "760/420" }}>
                     <MonolithCanvas growth={growth} killed={false} scaledUp={false} onTooltip={setTooltip} />
-                    <span className="absolute top-2 left-2 text-base font-bold uppercase tracking-widest text-slate-500">Monolith</span>
+                    <span className="absolute top-2 left-2 text-xs font-bold uppercase tracking-widest text-slate-500">Monolith</span>
                   </div>
                   <div className="relative rounded-xl overflow-hidden border border-slate-100" style={{ aspectRatio: "760/420" }}>
                     <MicroCanvas serviceCount={services} killed="none" scaledService={null} onTooltip={setTooltip} />
-                    <span className="absolute top-2 left-2 text-base font-bold uppercase tracking-widest text-indigo-400">Microservices</span>
+                    <span className="absolute top-2 left-2 text-xs font-bold uppercase tracking-widest text-indigo-400">Microservices</span>
                   </div>
                 </div>
               ) : (
@@ -743,7 +743,7 @@ export function ArchitectureComparisonVisual() {
               <div className="grid grid-cols-2 gap-3 mt-1">
                 {([["Monolith", monoM], ["Microservices", microM]] as [string, Metrics][]).map(([label, m]) => (
                   <div key={label} className="space-y-2">
-                    <p className="text-base font-bold uppercase tracking-wider text-slate-500">{label}</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
                     <div className="grid grid-cols-2 gap-2">
                       <MetricCard label="Deploy Cmplx" value={m.deployComplexity} higherIsBetter={false} />
                       <MetricCard label="Scalability" value={m.scalability} higherIsBetter={true} />
@@ -794,7 +794,7 @@ export function ArchitectureComparisonVisual() {
           <p className="text-base text-slate-700">Walkthrough, comparison, and interview answer.</p>
         </div>
         <button onClick={() => setShowSolution(s => !s)}
-          className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-lg font-semibold border transition-all",
+          className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-base font-semibold border transition-all",
             showSolution ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300 hover:border-slate-700")}>
           {showSolution ? "Hide" : "Open Solution"}
         </button>

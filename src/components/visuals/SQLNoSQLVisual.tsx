@@ -315,7 +315,7 @@ function OutOfScopeChip({ req, selected, onToggle }: { req: Req; selected: boole
         selected ? "bg-slate-100 border-slate-200 text-slate-500" : "bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50")}>
       <div className={cn("w-2 h-2 rounded-full shrink-0", selected ? "bg-slate-400" : "bg-slate-300")} />
       <span className={cn("flex-1", selected && "line-through")}>{req.label}</span>
-      {selected && <span className="text-base font-bold text-slate-500 uppercase tracking-wide shrink-0">Deferred</span>}
+      {selected && <span className="text-xs font-bold text-slate-500 uppercase tracking-wide shrink-0">Deferred</span>}
     </button>
   );
 }
@@ -324,7 +324,7 @@ function OutOfScopeChip({ req, selected, onToggle }: { req: Req; selected: boole
 function MetricCard({ label, value, good, warn }: { label: string; value: string; good: boolean; warn: boolean }) {
   return (
     <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-      <p className="text-base font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
       <motion.p key={value} initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }}
         className={cn("text-base font-bold tabular-nums leading-none",
           good ? "text-emerald-600" : warn ? "text-amber-600" : "text-red-500")}>
@@ -372,7 +372,7 @@ function WalkthroughView({ scenarioId }: { scenarioId: string }) {
           <button key={i} onClick={() => setStepIdx(i)}
             className={cn("h-2 rounded-full transition-all", i === stepIdx ? "bg-slate-900 w-6" : i < stepIdx ? "bg-slate-400 w-2" : "bg-slate-200 w-2")} />
         ))}
-        <span className="ml-auto text-base font-bold text-slate-500 uppercase tracking-wider">{stepIdx + 1} / {solution.steps.length}</span>
+        <span className="ml-auto text-xs font-bold text-slate-500 uppercase tracking-wider">{stepIdx + 1} / {solution.steps.length}</span>
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.5fr] gap-4">
         <AnimatePresence mode="wait">
@@ -435,7 +435,7 @@ function CompareView() {
     <div className="space-y-2">
       {COMPARE_ROWS.map((row) => (
         <div key={row.key}>
-          <p className="text-base font-bold text-slate-500 uppercase tracking-wider mb-0.5">{row.key}</p>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-0.5">{row.key}</p>
           <div className="grid grid-cols-2 gap-2">
             <div className="px-2.5 py-1.5 rounded-lg bg-sky-50 border border-sky-200 text-base font-semibold text-sky-800">{row.sql}</div>
             <div className="px-2.5 py-1.5 rounded-lg bg-purple-50 border border-purple-200 text-base font-semibold text-purple-800">{row.nosql}</div>
@@ -454,7 +454,7 @@ function CompareView() {
 function InterviewView() {
   return (
     <div className="space-y-4">
-      <p className="text-base font-bold uppercase tracking-wider text-slate-500">Standard interview answer</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Standard interview answer</p>
       <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-base text-slate-700 leading-relaxed">
         SQL databases store structured relational data and excel when relationships, joins, and transactions matter.
         NoSQL databases prioritize scalability, flexibility, and distribution — often sacrificing some consistency guarantees depending on design.
@@ -467,7 +467,7 @@ function InterviewView() {
           { label: "Use NoSQL when", items: ["Write volume is very high", "Schema evolves frequently", "Global distribution needed", "Horizontal scale is priority"] },
         ].map(({ label, items }) => (
           <div key={label} className="p-3 rounded-xl bg-white border border-slate-200 space-y-2">
-            <p className="text-base font-bold uppercase tracking-wider text-slate-600">{label}</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-600">{label}</p>
             {items.map((item) => (
               <div key={item} className="flex items-center gap-2 text-base text-slate-700">
                 <div className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />{item}
@@ -500,7 +500,7 @@ function SolutionPanel({ scenarioId, onClose }: { scenarioId: string; onClose: (
       <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
         {([["walkthrough", "Walkthrough"], ["compare", "Compare"], ["interview", "Interview"]] as [SolutionMode, string][]).map(([key, label]) => (
           <button key={key} onClick={() => setMode(key)}
-            className={cn("flex-1 py-2 rounded-lg text-base font-semibold transition-all",
+            className={cn("flex-1 py-2 rounded-lg text-sm font-semibold transition-all",
               mode === key ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700")}>
             {label}
           </button>
@@ -573,7 +573,7 @@ export function SQLNoSQLVisual() {
       <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Step 1 — Pick a scenario</p>
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Step 1 — Pick a scenario</p>
             <p className="text-base text-slate-600 mt-0.5">Your requirements will shape the architecture recommendation.</p>
           </div>
           <button onClick={() => selectScenario(currentScenario)}
@@ -584,7 +584,7 @@ export function SQLNoSQLVisual() {
         <div className="flex flex-wrap gap-2">
           {SCENARIOS.map((sc) => (
             <button key={sc.id} onClick={() => selectScenario(sc)}
-              className={cn("px-4 py-1.5 rounded-full text-base font-semibold border transition-all",
+              className={cn("px-4 py-1.5 rounded-full text-sm font-semibold border transition-all",
                 sc.id === scenarioId ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-200 hover:border-slate-400 hover:text-slate-900")}>
               {sc.label}
             </button>
@@ -601,14 +601,14 @@ export function SQLNoSQLVisual() {
         {/* Left: requirement chips */}
         <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm flex flex-col gap-4">
           <div>
-            <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Step 2 — Set requirements</p>
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Step 2 — Set requirements</p>
             <p className="text-base text-slate-600 mt-0.5">Toggle on/off — the recommendation updates live.</p>
           </div>
 
           <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
             {tabs.map((tab) => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                className={cn("flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-base font-semibold transition-all",
+                className={cn("flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-sm font-semibold transition-all",
                   activeTab === tab.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700")}>
                 {tab.label}
                 {tab.count > 0 && (
@@ -645,11 +645,11 @@ export function SQLNoSQLVisual() {
           {/* Recommendation */}
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-3">
             <div>
-              <p className="text-base font-bold uppercase tracking-wider text-slate-500 mb-1">Recommendation</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Recommendation</p>
               <RecommendationBadge rec={rec} />
             </div>
             <button onClick={() => setShowSolution((s) => !s)}
-              className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-base font-semibold border transition-all",
+              className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-all",
                 showSolution ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300 hover:border-slate-700")}>
               <Info className="w-3.5 h-3.5" />{showSolution ? "Hide Solution" : "Explain Design"}
             </button>
@@ -661,12 +661,12 @@ export function SQLNoSQLVisual() {
           <div className="rounded-[1.5rem] border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="px-5 pt-4 pb-2 flex items-center justify-between">
               <div>
-                <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Step 3 — Architecture</p>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Step 3 — Architecture</p>
                 <p className="text-base text-slate-600 mt-0.5">Hover any node to understand its role.</p>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-base font-bold text-slate-500 uppercase tracking-wider">Live</span>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Live</span>
               </div>
             </div>
             <div className="relative px-3 pb-3">
@@ -686,7 +686,7 @@ export function SQLNoSQLVisual() {
 
           {/* Metrics */}
           <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500 mb-3">System metrics</p>
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500 mb-3">System metrics</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <MetricCard label="Consistency"      value={`${metrics.consistency}%`}      good={metrics.consistency >= 80} warn={metrics.consistency >= 60} />
               <MetricCard label="Scalability"      value={`${metrics.scalability}%`}      good={metrics.scalability >= 70} warn={metrics.scalability >= 50} />
@@ -700,7 +700,7 @@ export function SQLNoSQLVisual() {
       {/* Step 4 — Insights */}
       {(insights.length > 0 || warnings.length > 0) && (
         <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-          <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Step 4 — Design insights</p>
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Step 4 — Design insights</p>
           <div className="space-y-2">
             <AnimatePresence>
               {warnings.map((w) => (
@@ -722,7 +722,7 @@ export function SQLNoSQLVisual() {
 
       {/* Mini challenges */}
       <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-        <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500">Mini Challenges</p>
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Mini Challenges</p>
         <div className="grid gap-3 sm:grid-cols-3">
           {challenges.map((ch) => (
             <motion.div key={ch.id} animate={{ borderColor: ch.solved ? "#86efac" : "#e2e8f0" }}

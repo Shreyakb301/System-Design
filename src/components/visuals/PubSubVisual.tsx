@@ -53,7 +53,7 @@ function DashboardCard({ className, children }: { className?: string; children: 
 function SectionHeader({ eyebrow, title, subtitle }: { eyebrow?: string; title: string; subtitle?: string }) {
   return (
     <div className="mb-5">
-      {eyebrow && <p className="text-base font-semibold uppercase tracking-[0.16em] text-slate-600">{eyebrow}</p>}
+      {eyebrow && <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">{eyebrow}</p>}
       <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">{title}</h2>
       {subtitle && <p className="mt-2 max-w-[720px] text-base leading-7 text-slate-700">{subtitle}</p>}
     </div>
@@ -167,7 +167,7 @@ export function PubSubVisual() {
           >
             {/* Publishers */}
             <div className="space-y-2">
-              <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-600">Publishers</p>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-600">Publishers</p>
               {publishers.map((pub) => (
                 <div key={pub.id} className="flex items-center gap-3 rounded-2xl border-2 border-sky-300 bg-sky-50 px-3 py-2.5">
                   <Send className="h-5 w-5 text-sky-600" />
@@ -181,7 +181,7 @@ export function PubSubVisual() {
 
             {/* Topics */}
             <div className="space-y-2">
-              <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-600">Topics</p>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-600">Topics</p>
               {topics.map((topic) => {
                 const active = messages.filter((m) => m.topicId === topic.id);
                 const subCount = (topicSubscribers[topic.id] ?? []).length;
@@ -211,7 +211,7 @@ export function PubSubVisual() {
 
             {/* Subscribers */}
             <div className="space-y-2">
-              <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-600">Subscribers</p>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-600">Subscribers</p>
               {subscribers.map((sub) => {
                 const isActive = messages.some((m) => m.deliveredTo.includes(sub.id));
                 return (
@@ -235,7 +235,7 @@ export function PubSubVisual() {
                           <button
                             key={t.id}
                             onClick={() => toggleSubscription(sub.id, t.id)}
-                            className={cn("rounded-full border px-2.5 py-1 text-base font-semibold transition", subscribed ? topicChipActive[t.color] : "border-slate-200 bg-white text-slate-600 hover:border-slate-300")}
+                            className={cn("rounded-full border px-2.5 py-1 text-sm font-semibold transition", subscribed ? topicChipActive[t.color] : "border-slate-200 bg-white text-slate-600 hover:border-slate-300")}
                           >
                             {t.name}
                           </button>
@@ -262,25 +262,25 @@ export function PubSubVisual() {
           <SectionHeader eyebrow="Controls" title="Drive the simulation" subtitle="Subscribe or unsubscribe each subscriber to topics above, then publish and watch the fan-out." />
           <div className="grid gap-5 md:grid-cols-2">
             <div className="space-y-3">
-              <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-600">Auto-publish</p>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-600">Auto-publish</p>
               <div className="flex flex-wrap gap-2">
                 <button onClick={() => setIsAutoRunning((v) => !v)} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-base font-semibold text-white">
                   {isAutoRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                   {isAutoRunning ? "Pause" : "Resume"}
                 </button>
-                <button onClick={() => publishers.length < 3 && setPublishers((prev) => [...prev, { id: `p${prev.length + 1}`, name: `Pub ${prev.length + 1}`, publishedCount: 0 }])} disabled={publishers.length >= 3} className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-base font-semibold text-slate-700 transition hover:border-slate-300 disabled:opacity-40">
+                <button onClick={() => publishers.length < 3 && setPublishers((prev) => [...prev, { id: `p${prev.length + 1}`, name: `Pub ${prev.length + 1}`, publishedCount: 0 }])} disabled={publishers.length >= 3} className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 disabled:opacity-40">
                   <Plus className="h-4 w-4" /> Publisher
                 </button>
-                <button onClick={() => subscribers.length < 4 && setSubscribers((prev) => [...prev, { id: `s${prev.length + 1}`, name: `Sub ${prev.length + 1}`, topicIds: [], receivedCount: 0 }])} disabled={subscribers.length >= 4} className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-base font-semibold text-slate-700 transition hover:border-slate-300 disabled:opacity-40">
+                <button onClick={() => subscribers.length < 4 && setSubscribers((prev) => [...prev, { id: `s${prev.length + 1}`, name: `Sub ${prev.length + 1}`, topicIds: [], receivedCount: 0 }])} disabled={subscribers.length >= 4} className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 disabled:opacity-40">
                   <Plus className="h-4 w-4" /> Subscriber
                 </button>
               </div>
             </div>
             <div className="space-y-3">
-              <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-600">Manual publish</p>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-600">Manual publish</p>
               <div className="flex flex-wrap gap-2">
                 {topics.map((t) => (
-                  <button key={t.id} onClick={() => publishMessage(publishers[0]?.id ?? "p1", t.id)} className={cn("inline-flex min-h-11 items-center gap-2 rounded-full border-2 px-4 py-2 text-base font-semibold transition hover:opacity-90", topicNode[t.color], topicText[t.color])}>
+                  <button key={t.id} onClick={() => publishMessage(publishers[0]?.id ?? "p1", t.id)} className={cn("inline-flex min-h-11 items-center gap-2 rounded-full border-2 px-4 py-2 text-sm font-semibold transition hover:opacity-90", topicNode[t.color], topicText[t.color])}>
                     <Send className="h-4 w-4" /> {t.name}
                   </button>
                 ))}
@@ -294,11 +294,11 @@ export function PubSubVisual() {
           <SectionHeader eyebrow="Why it matters" title="One-to-many, loosely coupled" />
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-600">What&apos;s happening</p>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-600">What&apos;s happening</p>
               <p className="mt-2 text-base leading-7 text-slate-700">Publishers send events to a topic. Every subscriber on that topic receives its own copy — delivery fans out to all of them at once.</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-600">Why it matters</p>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-600">Why it matters</p>
               <p className="mt-2 text-base leading-7 text-slate-700">Unlike a queue (one consumer per message), Pub/Sub broadcasts to many. Publishers stay decoupled from subscribers — the model behind Kafka topics, Google Pub/Sub, and real-time notifications.</p>
             </div>
           </div>

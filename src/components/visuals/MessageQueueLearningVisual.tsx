@@ -38,7 +38,7 @@ function DashboardCard({ className, children }: { className?: string; children: 
 function SectionHeader({ eyebrow, title, subtitle }: { eyebrow?: string; title: string; subtitle?: string }) {
   return (
     <div className="mb-5">
-      {eyebrow && <p className="text-base font-semibold uppercase tracking-[0.16em] text-slate-500">{eyebrow}</p>}
+      {eyebrow && <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{eyebrow}</p>}
       <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">{title}</h2>
       {subtitle && <p className="mt-2 max-w-[720px] text-base leading-7 text-slate-600">{subtitle}</p>}
     </div>
@@ -77,7 +77,7 @@ function ToggleChip({ active, label, onClick }: { active: boolean; label: string
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "min-h-11 rounded-full border px-4 py-2 text-base font-semibold transition",
+        "min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition",
         active ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
       )}
     >
@@ -360,11 +360,11 @@ function ArchitectureCanvas({ mode, model, incLevel, consumers, noQueueModel, qu
               {mode === "compare" ? (
                 <div className="space-y-5">
                   <div>
-                    <p className="mb-2 text-base font-bold uppercase tracking-[0.12em] text-slate-500">Without queue</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Without queue</p>
                     <FlowRow mode="no-queue" model={noQueueModel} consumers={consumers} />
                   </div>
                   <div className="border-t border-dashed border-slate-300 pt-5">
-                    <p className="mb-2 text-base font-bold uppercase tracking-[0.12em] text-slate-500">With queue</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">With queue</p>
                     <FlowRow mode="queue" model={queueModel} consumers={consumers} />
                   </div>
                 </div>
@@ -415,7 +415,7 @@ function ConceptSnapshot({ scenario, onScenario }: { scenario: Scenario; onScena
       <SectionHeader eyebrow="Step 01 · Concept snapshot" title="Buffer work instead of blocking everything" subtitle="See how queues change traffic spikes, reliability, latency, and service communication." />
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-          <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Without queue</p>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Without queue</p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <NodeBox compact styleKey="users" icon={Users} title="User" />
             <Arrow />
@@ -429,7 +429,7 @@ function ConceptSnapshot({ scenario, onScenario }: { scenario: Scenario; onScena
           <p className="mt-1 text-base text-slate-600">Work happens immediately — every component blocks the user.</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-          <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">With queue</p>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">With queue</p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <NodeBox compact styleKey="users" icon={Users} title="User" />
             <Arrow />
@@ -445,15 +445,15 @@ function ConceptSnapshot({ scenario, onScenario }: { scenario: Scenario; onScena
       </div>
 
       <div className="mt-5">
-        <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Pick a scenario</p>
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Pick a scenario</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {(Object.keys(SCENARIOS) as Scenario[]).map((id) => (
             <ToggleChip key={id} active={scenario === id} label={SCENARIOS[id].label} onClick={() => onScenario(id)} />
           ))}
         </div>
         <div className="mt-4 grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
-          <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-1 text-base leading-7 text-slate-700">{active.changed}</p></div>
-          <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-1 text-base leading-7 text-slate-700">{active.matters}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-1 text-base leading-7 text-slate-700">{active.changed}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-1 text-base leading-7 text-slate-700">{active.matters}</p></div>
         </div>
       </div>
     </DashboardCard>
@@ -468,7 +468,7 @@ function ModeTabs({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void })
   return (
     <div className="flex flex-wrap gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1">
       {tabs.map(([id, label]) => (
-        <button key={id} type="button" onClick={() => setMode(id)} className={cn("min-w-[120px] flex-1 rounded-xl px-3 py-2 text-base font-semibold transition", mode === id ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-700")}>{label}</button>
+        <button key={id} type="button" onClick={() => setMode(id)} className={cn("min-w-[120px] flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition", mode === id ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-700")}>{label}</button>
       ))}
     </div>
   );
@@ -477,7 +477,7 @@ function ModeTabs({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void })
 function SegChips<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
   return (
     <div>
-      <p className="mb-2 text-base font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+      <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
       <div className="flex flex-wrap gap-2">
         {options.map(([id, l]) => <ToggleChip key={id} active={value === id} label={l} onClick={() => onChange(id)} />)}
       </div>
@@ -511,7 +511,7 @@ function Controls(props: {
         {showQueue && <SegChips label="Queue capacity" value={capacity} options={[["small", "Small"], ["medium", "Medium"], ["large", "Large"]]} onChange={setCapacity} />}
         {showQueue && (
           <div>
-            <p className="mb-2 text-base font-bold uppercase tracking-[0.12em] text-slate-500">Dead-letter queue</p>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Dead-letter queue</p>
             <div className="flex flex-wrap gap-2">
               <ToggleChip active={dlq} label="On" onClick={() => setDlq(true)} />
               <ToggleChip active={!dlq} label="Off" onClick={() => setDlq(false)} />
@@ -543,8 +543,8 @@ function SyncAsyncPanel() {
         <p className="mt-2 text-base text-slate-500">{sync ? "User waits for all work to finish." : "Request returns quickly; work continues in the background."}</p>
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-1 text-base leading-7 text-slate-700">{sync ? "The user waits for all work." : "Work moved into the background."}</p></div>
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-1 text-base leading-7 text-slate-700">{sync ? "Simple but slower — and immediately consistent." : "Improves responsiveness, at the cost of eventual consistency."}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-1 text-base leading-7 text-slate-700">{sync ? "The user waits for all work." : "Work moved into the background."}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-1 text-base leading-7 text-slate-700">{sync ? "Simple but slower — and immediately consistent." : "Improves responsiveness, at the cost of eventual consistency."}</p></div>
       </div>
     </DashboardCard>
   );
@@ -585,8 +585,8 @@ function EventualConsistencyPanel() {
         })}
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-1 text-base leading-7 text-slate-700">The system returned before the work finished.</p></div>
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-1 text-base leading-7 text-slate-700">Asynchronous systems often become eventually consistent.</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-1 text-base leading-7 text-slate-700">The system returned before the work finished.</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-1 text-base leading-7 text-slate-700">Asynchronous systems often become eventually consistent.</p></div>
       </div>
       <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
@@ -604,9 +604,9 @@ function InsightPanel({ model }: { model: Model }) {
     <DashboardCard>
       <SectionHeader eyebrow="Steps 06–10 · Cause and effect" title="What just happened?" />
       <div className="grid gap-4 md:grid-cols-3">
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-2 text-base leading-7 text-slate-700">{model.changed}</p></div>
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-2 text-base leading-7 text-slate-700">{model.matters}</p></div>
-        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Where&apos;s the bottleneck</p><p className="mt-2 text-base leading-7 text-slate-700">{model.bottleneck}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-2 text-base leading-7 text-slate-700">{model.changed}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-2 text-base leading-7 text-slate-700">{model.matters}</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Where&apos;s the bottleneck</p><p className="mt-2 text-base leading-7 text-slate-700">{model.bottleneck}</p></div>
       </div>
       <AnimatePresence>
         {model.warning && (
@@ -643,7 +643,7 @@ function Challenges({ model, mode, consumers, dlq, failure }: { model: Model; mo
                 </span>
                 <p className="text-base font-semibold leading-6 text-slate-800">{c.prompt}</p>
               </div>
-              <p className={cn("mt-3 text-base font-bold uppercase tracking-wide", solved ? "text-emerald-700" : "text-slate-400")}>{c.answer}</p>
+              <p className={cn("mt-3 text-xs font-bold uppercase tracking-wide", solved ? "text-emerald-700" : "text-slate-400")}>{c.answer}</p>
             </motion.div>
           );
         })}
@@ -687,11 +687,11 @@ function SolutionPanel({ tab, setTab }: { tab: SolTab; setTab: (t: SolTab) => vo
               <div key={k} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                 <div className="flex items-center gap-2">
                   {k === "without" ? <Server className="h-5 w-5 text-sky-600" /> : <Inbox className="h-5 w-5 text-amber-600" />}
-                  <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">{k === "without" ? "Without queue" : "With queue"}</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{k === "without" ? "Without queue" : "With queue"}</p>
                 </div>
-                <p className="mt-3 text-base font-bold uppercase tracking-wide text-emerald-700">Pros</p>
+                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-emerald-700">Pros</p>
                 <ul className="mt-1 space-y-1">{pros[k].map((p) => <li key={p} className="flex items-center gap-2 text-base text-slate-700"><Check className="h-4 w-4 text-emerald-600" />{p}</li>)}</ul>
-                <p className="mt-3 text-base font-bold uppercase tracking-wide text-red-600">Cons</p>
+                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-red-600">Cons</p>
                 <ul className="mt-1 space-y-1">{cons[k].map((c) => <li key={c} className="flex items-center gap-2 text-base text-slate-700"><AlertTriangle className="h-4 w-4 text-red-500" />{c}</li>)}</ul>
               </div>
             ))}

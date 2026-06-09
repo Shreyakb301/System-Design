@@ -88,13 +88,13 @@ function getActiveNodes(payloadKB: PayloadKB, readRatio: ReadRatio): Set<NodeId>
 
 // ─── Shared components ─────────────────────────────────────────────────────────
 function Eyebrow({ children }: { children: string }) {
-  return <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500 mb-1">{children}</p>;
+  return <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500 mb-1">{children}</p>;
 }
 
 function MetricCard({ label, value, good, warn }: { label: string; value: string; good: boolean; warn: boolean }) {
   return (
     <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-      <p className="text-base font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
       <motion.p key={value} initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }}
         className={cn("text-base font-bold tabular-nums leading-none", good ? "text-emerald-600" : warn ? "text-amber-600" : "text-red-500")}>
         {value}
@@ -129,7 +129,7 @@ function SegmentedControl<T extends string | number>({ options, value, onChange 
     <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
       {options.map((o) => (
         <button key={String(o.key)} onClick={() => onChange(o.key)}
-          className={cn("flex-1 py-1.5 px-2 rounded-lg text-base font-semibold transition-all",
+          className={cn("flex-1 py-1.5 px-2 rounded-lg text-sm font-semibold transition-all",
             value === o.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700")}>
           {o.label}
         </button>
@@ -143,7 +143,7 @@ function Pill<T extends string | number>({ options, value, onChange }: { options
     <div className="flex flex-wrap gap-1.5">
       {options.map((o) => (
         <button key={String(o.key)} onClick={() => onChange(o.key)}
-          className={cn("px-3 py-1 rounded-full text-base font-semibold border transition-all",
+          className={cn("px-3 py-1 rounded-full text-sm font-semibold border transition-all",
             value === o.key ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-200 hover:border-slate-400")}>
           {o.label}
         </button>
@@ -266,11 +266,11 @@ function IntroCard({ scenario, onSelect }: { scenario: ScenarioId; onSelect: (s:
       </p>
 
       <div>
-        <p className="text-base font-bold uppercase tracking-[0.3em] text-slate-500 mb-2">Choose a scenario</p>
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500 mb-2">Choose a scenario</p>
         <div className="flex flex-wrap gap-2">
           {SCENARIOS.map((sc) => (
             <button key={sc.id} onClick={() => onSelect(sc.id)}
-              className={cn("px-4 py-1.5 rounded-full text-base font-semibold border transition-all",
+              className={cn("px-4 py-1.5 rounded-full text-sm font-semibold border transition-all",
                 sc.id === scenario ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-200 hover:border-slate-400 hover:text-slate-900")}>
               {sc.label}
             </button>
@@ -298,12 +298,12 @@ function AssumptionCard(p: AssumptionProps) {
       </div>
 
       <div className="space-y-1">
-        <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Monthly active users</p>
+        <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Monthly active users</p>
         <Pill options={[{ key: 1e6, label: "1M" }, { key: 10e6, label: "10M" }, { key: 100e6, label: "100M" }, { key: 1e9, label: "1B" }]} value={p.mau} onChange={p.setMau} />
       </div>
 
       <div className="space-y-1">
-        <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider">
+        <div className="flex justify-between text-xs font-semibold text-slate-600 uppercase tracking-wider">
           <span>Daily active %</span><span className="text-slate-800 tabular-nums">{p.dauPct}%</span>
         </div>
         <input type="range" min={10} max={80} step={5} value={p.dauPct} onChange={e => p.setDauPct(+e.target.value)}
@@ -311,7 +311,7 @@ function AssumptionCard(p: AssumptionProps) {
       </div>
 
       <div className="space-y-1">
-        <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider">
+        <div className="flex justify-between text-xs font-semibold text-slate-600 uppercase tracking-wider">
           <span>Actions / user / day</span><span className="text-slate-800 tabular-nums">{p.actions}</span>
         </div>
         <input type="range" min={1} max={100} step={1} value={p.actions} onChange={e => p.setActions(+e.target.value)}
@@ -319,17 +319,17 @@ function AssumptionCard(p: AssumptionProps) {
       </div>
 
       <div className="space-y-1">
-        <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Read : Write ratio</p>
+        <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Read : Write ratio</p>
         <SegmentedControl options={[{ key: 1, label: "1:1" }, { key: 10, label: "10:1" }, { key: 100, label: "100:1" }]} value={p.readRatio} onChange={p.setReadRatio} />
       </div>
 
       <div className="space-y-1">
-        <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Average payload</p>
+        <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Average payload</p>
         <Pill options={[{ key: 1, label: "1KB" }, { key: 10, label: "10KB" }, { key: 100, label: "100KB" }, { key: 1000, label: "1MB" }]} value={p.payloadKB} onChange={p.setPayloadKB} />
       </div>
 
       <div className="space-y-1">
-        <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Data retention</p>
+        <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Data retention</p>
         <Pill options={[{ key: 30, label: "30 days" }, { key: 365, label: "1 year" }, { key: 1825, label: "5 years" }, { key: 3650, label: "10 years" }]} value={p.retention} onChange={p.setRetention} />
       </div>
     </div>
@@ -373,11 +373,11 @@ function QpsSimPanel({ avgQps, peakMult, setPeakMult, pattern, setPattern }: {
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Peak multiplier</p>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Peak multiplier</p>
           <Pill options={[{ key: 2, label: "2x" }, { key: 3, label: "3x" }, { key: 5, label: "5x" }, { key: 10, label: "10x" }]} value={peakMult} onChange={setPeakMult} />
         </div>
         <div className="space-y-1">
-          <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Traffic pattern</p>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Traffic pattern</p>
           <Pill options={[{ key: "flat", label: "Flat" }, { key: "workday", label: "Workday" }, { key: "evening", label: "Evening" }, { key: "flash", label: "Flash" }]} value={pattern} onChange={setPattern} />
         </div>
       </div>
@@ -428,19 +428,19 @@ function StoragePanel({ writesPerDay, retention }: { writesPerDay: number; reten
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3">
             <div className="space-y-1">
-              <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Record size</span><span className="text-slate-800 tabular-nums">{recordKB} KB</span></div>
+              <div className="flex justify-between text-xs font-semibold text-slate-600 uppercase tracking-wider"><span>Record size</span><span className="text-slate-800 tabular-nums">{recordKB} KB</span></div>
               <input type="range" min={0.5} max={20} step={0.5} value={recordKB} onChange={e => setRecordKB(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
             </div>
             <div className="space-y-1">
-              <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Media %</span><span className="text-slate-800 tabular-nums">{mediaPct}%</span></div>
+              <div className="flex justify-between text-xs font-semibold text-slate-600 uppercase tracking-wider"><span>Media %</span><span className="text-slate-800 tabular-nums">{mediaPct}%</span></div>
               <input type="range" min={0} max={100} step={5} value={mediaPct} onChange={e => setMediaPct(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
             </div>
             <div className="space-y-1">
-              <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Media size</span><span className="text-slate-800 tabular-nums">{mediaMB} MB</span></div>
+              <div className="flex justify-between text-xs font-semibold text-slate-600 uppercase tracking-wider"><span>Media size</span><span className="text-slate-800 tabular-nums">{mediaMB} MB</span></div>
               <input type="range" min={0.1} max={50} step={0.1} value={mediaMB} onChange={e => setMediaMB(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
             </div>
             <div className="space-y-1">
-              <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">Replication</p>
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Replication</p>
               <SegmentedControl options={[{ key: 1, label: "1x" }, { key: 2, label: "2x" }, { key: 3, label: "3x" }]} value={replication} onChange={v => setReplication(v as 1 | 2 | 3)} />
             </div>
           </div>
@@ -496,15 +496,15 @@ function BandwidthPanel({ avgQps }: { avgQps: number }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3">
         <div className="space-y-1">
-          <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Response size</span><span className="text-slate-800 tabular-nums">{responseKB} KB</span></div>
+          <div className="flex justify-between text-xs font-semibold text-slate-600 uppercase tracking-wider"><span>Response size</span><span className="text-slate-800 tabular-nums">{responseKB} KB</span></div>
           <input type="range" min={1} max={2000} step={1} value={responseKB} onChange={e => setResponseKB(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
         </div>
         <div className="space-y-1">
-          <div className="flex justify-between text-base font-semibold text-slate-600 uppercase tracking-wider"><span>Cache hit rate</span><span className="text-slate-800 tabular-nums">{cacheHit}%</span></div>
+          <div className="flex justify-between text-xs font-semibold text-slate-600 uppercase tracking-wider"><span>Cache hit rate</span><span className="text-slate-800 tabular-nums">{cacheHit}%</span></div>
           <input type="range" min={0} max={95} step={5} value={cacheHit} onChange={e => setCacheHit(+e.target.value)} className="w-full h-1 rounded-full bg-slate-200 appearance-none cursor-pointer accent-slate-700" />
         </div>
         <div className="space-y-1 sm:col-span-2">
-          <p className="text-base font-semibold text-slate-600 uppercase tracking-wider">CDN</p>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">CDN</p>
           <SegmentedControl options={[{ key: "on", label: "Enabled" }, { key: "off", label: "Disabled" }]} value={cdnEnabled ? "on" : "off"} onChange={v => setCdnEnabled(v === "on")} />
         </div>
       </div>
@@ -657,7 +657,7 @@ function SolutionPanel({ onClose }: { onClose: () => void }) {
       <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
         {(["walkthrough", "compare", "interview"] as SolutionTab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={cn("flex-1 py-2 rounded-lg text-base font-semibold transition-all capitalize",
+            className={cn("flex-1 py-2 rounded-lg text-sm font-semibold transition-all capitalize",
               tab === t ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-700")}>{t}</button>
         ))}
       </div>
@@ -692,13 +692,13 @@ function SolutionPanel({ onClose }: { onClose: () => void }) {
         {tab === "compare" && (
           <motion.div key="cmp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <p className="text-base font-bold uppercase tracking-wider text-red-500">Weak estimation</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-red-500">Weak estimation</p>
               {["Jumps into architecture", "No written assumptions", "No labeled units", "Ignores peak traffic", "Ignores storage growth"].map(t => (
                 <div key={t} className="flex items-center gap-2 text-base text-slate-700"><div className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />{t}</div>
               ))}
             </div>
             <div className="space-y-2">
-              <p className="text-base font-bold uppercase tracking-wider text-emerald-600">Strong estimation</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-600">Strong estimation</p>
               {["Writes assumptions first", "Rounds to clean numbers", "Labels every unit", "Estimates QPS + storage", "Discusses bottlenecks & tradeoffs"].map(t => (
                 <div key={t} className="flex items-center gap-2 text-base text-slate-700"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />{t}</div>
               ))}
@@ -776,7 +776,7 @@ export function CapacityEstimationVisual() {
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-base font-bold text-slate-500 uppercase tracking-wider">Live</span>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Live</span>
               </div>
             </div>
             <div className="relative px-3 pb-3">
@@ -838,7 +838,7 @@ export function CapacityEstimationVisual() {
           <p className="text-base text-slate-700">Method walkthrough, weak-vs-strong, and interview answer.</p>
         </div>
         <button onClick={() => setShowSolution(s => !s)}
-          className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-base font-semibold border transition-all",
+          className={cn("flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-all",
             showSolution ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300 hover:border-slate-700")}>
           {showSolution ? "Hide" : "Open Solution"}
         </button>

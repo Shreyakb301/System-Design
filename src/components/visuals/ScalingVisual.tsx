@@ -48,7 +48,7 @@ function DashboardCard({ className, children }: { className?: string; children: 
 function SectionHeader({ eyebrow, title, subtitle }: { eyebrow?: string; title: string; subtitle?: string }) {
   return (
     <div className="mb-5">
-      {eyebrow && <p className="text-base font-semibold uppercase tracking-[0.16em] text-slate-500">{eyebrow}</p>}
+      {eyebrow && <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{eyebrow}</p>}
       <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">{title}</h2>
       {subtitle && <p className="mt-2 max-w-[760px] text-base leading-7 text-slate-600">{subtitle}</p>}
     </div>
@@ -63,7 +63,7 @@ function ToggleChip({ active, label, onClick }: { active: boolean; label: string
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "min-h-11 rounded-full border px-4 py-2 text-base font-semibold transition",
+        "min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition",
         active ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
       )}
     >
@@ -374,15 +374,15 @@ function InsightPanel({ mode }: { mode: ScalingMode }) {
       <h2 className="text-2xl font-bold text-slate-950">Insight</h2>
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         <div>
-          <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p>
           <p className="mt-2 text-base leading-7 text-slate-700">{mode === "vertical" ? "The same server receives more CPU and memory." : "Requests are distributed across more servers."}</p>
         </div>
         <div>
-          <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p>
           <p className="mt-2 text-base leading-7 text-slate-700">{mode === "vertical" ? "Scale-up is simple and keeps architecture small." : "Scale-out raises capacity and improves fault tolerance."}</p>
         </div>
         <div>
-          <p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Tradeoff</p>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Tradeoff</p>
           <p className="mt-2 text-base leading-7 text-slate-700">{mode === "vertical" ? "Eventually hardware hits a ceiling and one server remains a failure point." : "More nodes need load balancing, coordination, and deployment discipline."}</p>
         </div>
       </div>
