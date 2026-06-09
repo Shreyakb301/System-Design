@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 
@@ -10,6 +10,14 @@ export const metadata: Metadata = {
     shortcut: "/logo.png",
     apple: "/logo.png",
   },
+};
+
+// Ensure phones render at device width (not zoomed-out desktop). Zoom left
+// enabled for accessibility. themeColor improves the mobile browser chrome.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#f8fafc",
 };
 
 export default function RootLayout({

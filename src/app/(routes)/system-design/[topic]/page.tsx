@@ -214,7 +214,7 @@ export default async function SystemDesignTopicPage(props: { params: Promise<{ t
                 <section className="space-y-6 pt-2">
                     <div className="space-y-2">
                         <h2 className="text-xl font-semibold tracking-tight">Why this exists</h2>
-                        <p className="text-lg leading-8 text-muted-foreground max-w-3xl">
+                        <p className="text-base leading-7 text-muted-foreground max-w-3xl">
                             {lesson.coreIdea}
                         </p>
                     </div>
@@ -237,7 +237,7 @@ export default async function SystemDesignTopicPage(props: { params: Promise<{ t
                             <p className="text-base font-semibold uppercase tracking-widest text-muted-foreground mb-3">Key takeaways</p>
                             <ul className="space-y-2.5">
                                 {lesson.takeaways.map((takeaway) => (
-                                    <li key={takeaway} className="flex gap-3 text-lg leading-8 text-muted-foreground">
+                                    <li key={takeaway} className="flex gap-3 text-base leading-7 text-muted-foreground">
                                         <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                                         <span>{takeaway}</span>
                                     </li>

@@ -121,7 +121,22 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    /* Stop iOS Safari from auto-inflating text in landscape. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Smooth momentum scrolling on iOS. */
+    -webkit-overflow-scrolling: touch;
+  }
   body {
     @apply bg-background text-foreground;
+    /* Remove the gray tap flash on mobile; keep focus rings for a11y. */
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Media never forces horizontal overflow on small screens. */
+  img,
+  svg,
+  video {
+    max-width: 100%;
   }
 }

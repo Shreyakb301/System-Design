@@ -33,8 +33,8 @@ export function SystemDesignSimulationShell({
     <section className="space-y-4">
       {/* Compact hint bar */}
       <div className="flex flex-wrap gap-x-6 gap-y-1.5 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/50">
-        <span className="text-lg leading-8 text-slate-500"><span className="font-semibold text-slate-700">Goal:</span> {goal}</span>
-        <span className="text-lg leading-8 text-slate-500"><span className="font-semibold text-slate-700">Try:</span> {firstAction}</span>
+        <span className="text-sm leading-6 text-slate-500"><span className="font-semibold text-slate-700">Goal:</span> {goal}</span>
+        <span className="text-sm leading-6 text-slate-500"><span className="font-semibold text-slate-700">Try:</span> {firstAction}</span>
       </div>
 
       <div className="space-y-4">
