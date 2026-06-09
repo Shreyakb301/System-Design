@@ -3,13 +3,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CapacityEstimationVisual } from "@/components/visuals/CapacityEstimationVisual";
 import { ArchitectureComparisonVisual } from "@/components/visuals/ArchitectureComparisonVisual";
 import { ApiComparisonVisual } from "@/components/visuals/ApiComparisonVisual";
+// import { RestVsGrpcVisual } from "@/components/visuals/RestVsGrpcVisual";
 import { ScalingVisual } from "@/components/visuals/ScalingVisual";
 import { LoadBalancerVisual } from "@/components/visuals/LoadBalancerVisual";
-import { CachingVisual } from "@/components/visuals/CachingVisual";
+import { CachingLearningVisual } from "@/components/visuals/CachingLearningVisual";
 import { CDNVisual } from "@/components/visuals/CDNVisual";
 import { SQLNoSQLVisual } from "@/components/visuals/SQLNoSQLVisual";
-import { ReplicationVisual } from "@/components/visuals/ReplicationVisual";
-import { MessageQueueVisual } from "@/components/visuals/MessageQueueVisual";
+import { ReplicationShardingVisual } from "@/components/visuals/ReplicationShardingVisual";
+import { MessageQueueLearningVisual } from "@/components/visuals/MessageQueueLearningVisual";
 import { PubSubVisual } from "@/components/visuals/PubSubVisual";
 import { RequirementsVisual } from "@/components/visuals/RequirementsVisual";
 import { ClientServerVisual } from "@/components/visuals/ClientServerVisual";
@@ -53,9 +54,9 @@ const SIMULATION_GUIDES: Record<string, { goal: string; firstAction: string; suc
         successSignal: "Healthy routing should avoid failed nodes; without health checks, failed targets should start hurting the system.",
     },
     "caching": {
-        goal: "See how hits shorten the read path and how stale data appears when invalidation is weak.",
-        firstAction: "Warm a few keys with reads, switch to stale-cache mode, update a DB value, then read the same key again.",
-        successSignal: "A stale read should appear only when the cache is allowed to drift away from the source of truth.",
+        goal: "Feel the difference between hitting the database directly and reusing cached work — then see where staleness and load tradeoffs appear.",
+        firstAction: "Pick a scenario, then push the request rate and repeated-request percentage up while switching between No Cache, Cache, and Compare.",
+        successSignal: "A high repeat rate should drive the hit rate up and database load down; a long TTL should raise stale-data risk.",
     },
     "cdn": {
         goal: "See how edge caches cut latency and protect the origin during static-content traffic.",
@@ -68,14 +69,14 @@ const SIMULATION_GUIDES: Record<string, { goal: string; firstAction: string; suc
         successSignal: "SQL should surface joins and stronger structure, while NoSQL should emphasize flexibility and scaling.",
     },
     "replication": {
-        goal: "Compare read replicas, multi-master sync, and sharding without treating them as interchangeable.",
-        firstAction: "Cycle through each topology and watch how writes move, where copies appear, and what the consistency note changes to.",
-        successSignal: "Replication should duplicate data for availability, while sharding should split it for scale.",
+        goal: "Feel replication and sharding as two competing tools first — copy data vs split data — before combining them.",
+        firstAction: "Pick a workload, then switch between Single, Replication, Sharding, and Combined while pushing read, write, and storage traffic up.",
+        successSignal: "Replication should scale reads but not writes; sharding should scale writes and storage but not reliability — and Combined should do both.",
     },
     "queues": {
-        goal: "See how queues absorb bursts and let consumers work asynchronously.",
-        firstAction: "Raise the producer rate, then add consumers and compare queue growth against throughput.",
-        successSignal: "The queue should build up under pressure and then drain as you increase consumer capacity.",
+        goal: "Feel the difference between a direct synchronous chain and a buffered, asynchronous queue — then see where the backlog moves.",
+        firstAction: "Pick a scenario, then push incoming requests up and switch between No Queue, Queue, and Compare while adjusting consumers, retries, and failure rate.",
+        successSignal: "Without a queue a spike should overload the chain immediately; with a queue the backlog should build and then drain as you scale consumers.",
     },
     "pub-sub": {
         goal: "See how a single publish fans out to every subscriber on the topic.",
@@ -98,8 +99,8 @@ const DEMO_CONFIGS: Record<string, { title: string; description: string; visual?
     },
     "caching": {
         title: "Caching",
-        description: "Explore how high-speed data storage improves performance, and the challenges of invalidation and eviction.",
-        visual: <CachingVisual />,
+        description: "Store expensive work closer. Compare a direct database path with a cached path — and watch hit rate, latency, database load, and stale-data risk move as you change traffic.",
+        visual: <CachingLearningVisual />,
     },
     "cdn": {
         title: "Content Delivery Network (CDN)",
@@ -112,14 +113,14 @@ const DEMO_CONFIGS: Record<string, { title: string; description: string; visual?
         visual: <SQLNoSQLVisual />,
     },
     "replication": {
-        title: "Replication & Sharding",
-        description: "Understand data replication strategies (master-slave, master-master) and horizontal partitioning (sharding) for scalability.",
-        visual: <ReplicationVisual />,
+        title: "Replication vs Sharding",
+        description: "Two different tools solving different bottlenecks. Replication copies data to scale reads and availability; sharding splits data to scale writes and storage. See where the bottleneck moves — and why large systems combine both.",
+        visual: <ReplicationShardingVisual />,
     },
     "queues": {
         title: "Message Queues",
-        description: "Explore asynchronous message processing, queue types (FIFO, priority, delayed), and producer-consumer patterns.",
-        visual: <MessageQueueVisual />,
+        description: "Buffer work instead of blocking everything. Compare a direct synchronous chain with a queued, asynchronous system — and watch where the backlog and bottlenecks move.",
+        visual: <MessageQueueLearningVisual />,
     },
     "pub-sub": {
         title: "Pub-Sub (Publish-Subscribe)",
@@ -136,11 +137,11 @@ const DEMO_CONFIGS: Record<string, { title: string; description: string; visual?
         description: "Explore the differences between upgrading a single server and adding multiple servers to a cluster.",
         visual: <ScalingVisual />,
     },
-    "apis": {
-        title: "REST vs gRPC",
-        description: "Compare communication protocols, payload efficiency, and transport optimizations in modern APIs.",
-        visual: <ApiComparisonVisual />,
-    },
+    // "apis": {
+    //     title: "REST vs gRPC",
+    //     description: "Compare communication protocols, payload efficiency, and transport optimizations in modern APIs.",
+    //     visual: <RestVsGrpcVisual />,
+    // },
     "microservices": {
         title: "Monolith vs Microservices",
         description: "Explore the trade-offs between a single unified codebase and a distributed collection of isolated services.",
@@ -180,16 +181,16 @@ export default async function SystemDesignTopicPage(props: { params: Promise<{ t
         );
     }
 
-    if (topicId === "load-balancing") {
-        return <LoadBalancerVisual />;
-    }
+    // if (topicId === "apis") {
+    //     return <RestVsGrpcVisual />;
+    // }
 
     return (
         <div className="space-y-8 max-w-5xl">
             {/* Compact header */}
             <div className="space-y-1.5">
                 <h1 className="text-2xl font-bold tracking-tight">{content.title}</h1>
-                <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">
+                <p className="text-lg leading-8 text-muted-foreground max-w-2xl">
                     {content.description}
                 </p>
             </div>
@@ -212,8 +213,8 @@ export default async function SystemDesignTopicPage(props: { params: Promise<{ t
             {lesson ? (
                 <section className="space-y-6 pt-2">
                     <div className="space-y-2">
-                        <h2 className="text-lg font-semibold tracking-tight">Why this exists</h2>
-                        <p className="text-sm leading-7 text-muted-foreground max-w-3xl">
+                        <h2 className="text-xl font-semibold tracking-tight">Why this exists</h2>
+                        <p className="text-lg leading-8 text-muted-foreground max-w-3xl">
                             {lesson.coreIdea}
                         </p>
                     </div>
@@ -222,8 +223,8 @@ export default async function SystemDesignTopicPage(props: { params: Promise<{ t
                         {lesson.concepts.map((concept) => (
                             <Card key={concept.title}>
                                 <CardContent className="space-y-2 pt-5 pb-5">
-                                    <h3 className="text-sm font-semibold tracking-tight">{concept.title}</h3>
-                                    <p className="text-xs leading-6 text-muted-foreground">
+                                    <h3 className="text-base font-semibold tracking-tight">{concept.title}</h3>
+                                    <p className="text-base leading-7 text-muted-foreground">
                                         {concept.body}
                                     </p>
                                 </CardContent>
@@ -233,10 +234,10 @@ export default async function SystemDesignTopicPage(props: { params: Promise<{ t
 
                     <Card>
                         <CardContent className="pt-5 pb-5">
-                            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Key takeaways</p>
+                            <p className="text-base font-semibold uppercase tracking-widest text-muted-foreground mb-3">Key takeaways</p>
                             <ul className="space-y-2.5">
                                 {lesson.takeaways.map((takeaway) => (
-                                    <li key={takeaway} className="flex gap-3 text-sm text-muted-foreground">
+                                    <li key={takeaway} className="flex gap-3 text-lg leading-8 text-muted-foreground">
                                         <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                                         <span>{takeaway}</span>
                                     </li>
