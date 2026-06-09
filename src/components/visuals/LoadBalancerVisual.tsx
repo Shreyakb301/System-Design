@@ -87,7 +87,7 @@ function DashboardCard({ className, children }: { className?: string; children: 
 function SectionHeader({ eyebrow, title, subtitle }: { eyebrow?: string; title: string; subtitle?: string }) {
   return (
     <div className="mb-5">
-      {eyebrow && <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">{eyebrow}</p>}
+      {eyebrow && <p className="text-base font-semibold uppercase tracking-[0.16em] text-slate-500">{eyebrow}</p>}
       <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">{title}</h2>
       {subtitle && <p className="mt-2 max-w-[720px] text-base leading-7 text-slate-600">{subtitle}</p>}
     </div>
@@ -97,7 +97,7 @@ function SectionHeader({ eyebrow, title, subtitle }: { eyebrow?: string; title: 
 function RangeControl({ label, value, min, max, step, suffix, onChange }: { label: string; value: number; min: number; max: number; step: number; suffix?: string; onChange: (value: number) => void }) {
   return (
     <label className="block rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <span className="flex items-center justify-between gap-4 text-sm font-semibold text-slate-700">
+      <span className="flex items-center justify-between gap-4 text-base font-semibold text-slate-700">
         <span>{label}</span>
         <motion.span key={value} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="tabular-nums text-slate-950">
           {value}{suffix}
@@ -116,7 +116,7 @@ function ToggleChip({ active, label, onClick }: { active: boolean; label: string
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition",
+        "min-h-11 rounded-full border px-4 py-2 text-base font-semibold transition",
         active ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
       )}
     >
@@ -219,10 +219,10 @@ function ScenarioHero({ scenario, onScenario }: { scenario: Scenario; onScenario
               )}
             >
               <span className="text-base font-bold text-slate-950">{scenarios[id].label}</span>
-              <span className="mt-1 block text-sm leading-6 text-slate-600">{scenarios[id].note}</span>
+              <span className="mt-1 block text-base leading-6 text-slate-600">{scenarios[id].note}</span>
               <span className="mt-auto pt-4">
-                <span className="block text-[0.7rem] font-semibold uppercase tracking-wider text-slate-400">Recommended</span>
-                <span className="mt-1 inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-sm font-semibold text-slate-700">
+                <span className="block text-base font-semibold uppercase tracking-wider text-slate-400">Recommended</span>
+                <span className="mt-1 inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-base font-semibold text-slate-700">
                   {algorithms[scenarios[id].algorithm].label}
                 </span>
               </span>
@@ -322,11 +322,11 @@ function ServerNode({ server }: { server: ServerState }) {
           transition={{ duration: 0.28, ease: "easeInOut" }}
         />
       </div>
-      <div className="mt-2 flex justify-between text-sm text-slate-600">
+      <div className="mt-2 flex justify-between text-base text-slate-600">
         <span>{server.load} rps</span>
         <span>{server.utilization}%</span>
       </div>
-      <div className="pointer-events-none absolute right-4 top-12 z-20 hidden w-56 rounded-2xl border border-slate-200 bg-white p-3 text-sm shadow-lg group-hover:block">
+      <div className="pointer-events-none absolute right-4 top-12 z-20 hidden w-56 rounded-2xl border border-slate-200 bg-white p-3 text-base shadow-lg group-hover:block">
         <p className="font-bold text-slate-950">{server.name}</p>
         <p className="mt-1 text-slate-600">Load: {server.load} rps</p>
         <p className="text-slate-600">Connections: {server.activeConnections}</p>
@@ -347,13 +347,13 @@ function ArchitectureCanvas({ servers, requestRate, healthChecks }: { servers: S
           <h2 className="text-2xl font-bold text-slate-950">Live architecture</h2>
           <p className="text-base text-slate-600">Traffic dots move toward the servers receiving load.</p>
         </div>
-        <span className={cn("rounded-full border px-3 py-1.5 text-sm font-semibold", healthChecks ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700")}>
+        <span className={cn("rounded-full border px-3 py-1.5 text-base font-semibold", healthChecks ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700")}>
           {healthChecks ? "Health checks enabled" : "Health checks disabled"}
         </span>
       </div>
       <div
-        className="relative min-h-[390px] overflow-hidden rounded-[1.25rem] border border-slate-200 bg-slate-50 p-5"
-        style={{ backgroundImage: "radial-gradient(circle, rgba(100,116,139,0.18) 1px, transparent 1px)", backgroundSize: "18px 18px" }}
+        className="relative min-h-[390px] overflow-hidden rounded-[1.25rem] border border-slate-200 bg-amber-50/40 p-5"
+        style={{ backgroundImage: "radial-gradient(circle, rgba(120,113,108,0.16) 1px, transparent 1px)", backgroundSize: "18px 18px" }}
       >
         <svg className="absolute inset-0 h-full w-full" viewBox="0 0 820 390" preserveAspectRatio="none" aria-hidden="true">
           <path d="M130 185 C220 185 250 185 320 185" stroke="#94a3b8" strokeWidth="2" strokeDasharray="6 8" fill="none" />
@@ -367,12 +367,12 @@ function ArchitectureCanvas({ servers, requestRate, healthChecks }: { servers: S
         <div className="absolute left-5 top-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <Users className="h-6 w-6 text-slate-700" />
           <p className="mt-2 text-base font-bold text-slate-950">Clients</p>
-          <p className="text-sm text-slate-600">{requestRate}/sec</p>
+          <p className="text-base text-slate-600">{requestRate}/sec</p>
         </div>
         <div className="absolute left-[44%] top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-xl border-2 border-slate-900 bg-white p-3 shadow-lg">
           <GitBranch className="h-5 w-5 text-slate-800" />
-          <p className="mt-1 text-sm font-bold text-slate-950">Load Balancer</p>
-          <p className="text-xs text-slate-600">routes requests</p>
+          <p className="mt-1 text-base font-bold text-slate-950">Load Balancer</p>
+          <p className="text-base text-slate-600">routes requests</p>
         </div>
         <div className="absolute inset-y-5 right-5 flex w-[34%] flex-col justify-around gap-3">
           <AnimatePresence initial={false}>
@@ -407,7 +407,7 @@ function MetricCard({ icon: Icon, label, value, tone }: { icon: typeof Activity;
         tone === "neutral" && "border-slate-200 text-slate-900",
       )}
     >
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+      <div className="flex items-center gap-2 text-base font-semibold text-slate-600">
         <Icon className="h-4 w-4" />
         {label}
       </div>
@@ -439,9 +439,9 @@ function InsightPanel({ algorithm }: { algorithm: Algorithm }) {
     <DashboardCard>
       <h2 className="text-2xl font-bold text-slate-950">Insight</h2>
       <div className="mt-4 grid gap-4 md:grid-cols-3">
-        <div><p className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-2 text-base leading-7 text-slate-700">{item.changed}</p></div>
-        <div><p className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-2 text-base leading-7 text-slate-700">{item.matters}</p></div>
-        <div><p className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">Tradeoff</p><p className="mt-2 text-base leading-7 text-slate-700">{item.tradeoff}</p></div>
+        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">What changed</p><p className="mt-2 text-base leading-7 text-slate-700">{item.changed}</p></div>
+        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Why it matters</p><p className="mt-2 text-base leading-7 text-slate-700">{item.matters}</p></div>
+        <div><p className="text-base font-bold uppercase tracking-[0.12em] text-slate-500">Tradeoff</p><p className="mt-2 text-base leading-7 text-slate-700">{item.tradeoff}</p></div>
       </div>
     </DashboardCard>
   );
@@ -521,7 +521,7 @@ function SolutionPanel({ tab, setTab }: { tab: Tab; setTab: (tab: Tab) => void }
         )}
         {tab === "compare" && (
           <motion.div key="compare" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
-            <table className="w-full text-left text-sm">
+            <table className="w-full text-left text-base">
               <thead className="bg-slate-50 text-slate-600"><tr>{["Algorithm", "Best for", "Weakness", "State required?"].map((head) => <th key={head} className="p-4 font-bold">{head}</th>)}</tr></thead>
               <tbody>{rows.map((row) => <tr key={row[0]} className="border-t border-slate-200">{row.map((cell) => <td key={cell} className="p-4 text-slate-700">{cell}</td>)}</tr>)}</tbody>
             </table>

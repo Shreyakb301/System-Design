@@ -1,26 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useMemo, useState, useRef, useCallback, useEffect } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+    Zap, ZapOff, CheckCircle2, Users, Clock, Database, RotateCcw,
+    Search, ShieldCheck, ShieldAlert, Timer, AlertCircle, Info, Flame,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-    Database,
-    Zap,
-    ZapOff,
-    Clock,
-    ShieldCheck,
-    ShieldAlert,
-    Timer,
-    Flame,
-    Users,
-    Search,
-    AlertCircle,
-    CheckCircle2,
-    RotateCcw,
-    Info,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CacheEntry {
