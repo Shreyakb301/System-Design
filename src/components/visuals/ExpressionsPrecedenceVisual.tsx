@@ -232,6 +232,27 @@ export function ExpressionsPrecedenceVisual() {
               <p className="text-sm font-semibold text-muted-foreground">
                 Evaluation Order
               </p>
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+                  <span>Step {stepIndex + 1}</span>
+                  <span>{scenario.steps.length} total</span>
+                </div>
+                <div
+                  role="progressbar"
+                  aria-label="Evaluation progress"
+                  aria-valuemin={1}
+                  aria-valuemax={scenario.steps.length}
+                  aria-valuenow={stepIndex + 1}
+                  className="h-2 overflow-hidden rounded-full bg-slate-100"
+                >
+                  <div
+                    className="h-full rounded-full bg-sky-600 transition-[width]"
+                    style={{
+                      width: `${((stepIndex + 1) / scenario.steps.length) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
               <div className="mt-4 space-y-3">
                 {scenario.steps.map((item, index) => {
                   const reached = index <= stepIndex;
