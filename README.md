@@ -75,6 +75,7 @@ ProtoPlay does not currently ship with a trained machine learning model or infer
 | --- | --- |
 | System Architect Challenge | Lets learners design systems while balancing latency, reliability, and cost |
 | Algorithm Arena | Turns data structure operations into guided visual puzzles |
+| Expression Evaluator | Demonstrates grouping rules through interactive steps |
 | Interactive Lessons | Explains concepts with live diagrams instead of static notes |
 | Real-Time Metrics | Shows how architecture choices affect simulated system behavior |
 | Topic Tracks | Organizes content into system design, data structures, and programming languages |
