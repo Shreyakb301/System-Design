@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Check, RotateCcw, StepForward } from "lucide-react";
+import { Check, RotateCcw, StepBack, StepForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -131,6 +131,10 @@ export function ExpressionsPrecedenceVisual() {
     );
   }
 
+  function retreat() {
+    setStepIndex((current) => Math.max(current - 1, 0));
+  }
+
   function reset() {
     setStepIndex(0);
   }
@@ -205,6 +209,16 @@ export function ExpressionsPrecedenceVisual() {
             </div>
 
             <div className="mt-8 flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={retreat}
+                disabled={stepIndex === 0}
+                className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              >
+                <StepBack className="h-4 w-4" />
+                Previous
+              </Button>
               <Button
                 type="button"
                 onClick={advance}
