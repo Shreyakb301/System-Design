@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Check, RotateCcw, StepForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -111,6 +111,7 @@ const SCENARIOS: Scenario[] = [
 ];
 
 export function ExpressionsPrecedenceVisual() {
+  const shouldReduceMotion = useReducedMotion();
   const [scenarioId, setScenarioId] = useState<ScenarioId>("precedence");
   const [stepIndex, setStepIndex] = useState(0);
 
@@ -184,7 +185,9 @@ export function ExpressionsPrecedenceVisual() {
 
               <motion.div
                 key={`${scenarioId}-${stepIndex}`}
-                initial={{ opacity: 0, y: 10 }}
+                initial={
+                  shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 10 }
+                }
                 animate={{ opacity: 1, y: 0 }}
                 aria-live="polite"
                 aria-atomic="true"
