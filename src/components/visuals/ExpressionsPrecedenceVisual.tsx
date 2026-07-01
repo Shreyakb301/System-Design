@@ -186,6 +186,8 @@ export function ExpressionsPrecedenceVisual() {
                 key={`${scenarioId}-${stepIndex}`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
+                aria-live="polite"
+                aria-atomic="true"
                 className="flex min-h-32 items-center justify-center rounded-lg border border-white/10 bg-white/5 px-5 py-8"
               >
                 <code className="break-words text-center text-3xl font-bold text-white sm:text-4xl">
