@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   BookOpenText,
+  Calculator,
   Cpu,
   FileCode2,
   Type,
@@ -10,6 +11,12 @@ import { Card } from "@/components/ui/card";
 import { TOPICS } from "@/lib/topics";
 
 const LIVE_LESSONS = [
+  {
+    title: "Expressions and Precedence",
+    description: "Step through grouping, association, and explicit parentheses.",
+    href: "/programming-languages/expressions-precedence",
+    icon: Calculator,
+  },
   {
     title: "Static vs Dynamic Types",
     description: "Watch the same program fail before execution versus during execution.",
