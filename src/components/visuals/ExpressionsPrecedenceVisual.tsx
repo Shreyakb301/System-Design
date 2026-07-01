@@ -146,6 +146,8 @@ export function ExpressionsPrecedenceVisual() {
             key={item.id}
             type="button"
             role="tab"
+            id={`rule-tab-${item.id}`}
+            aria-controls={`rule-panel-${item.id}`}
             aria-selected={item.id === scenarioId}
             onClick={() => selectScenario(item.id)}
             className={cn(
@@ -164,7 +166,12 @@ export function ExpressionsPrecedenceVisual() {
         ))}
       </div>
 
-      <Card className="overflow-hidden border-slate-200">
+      <Card
+        id={`rule-panel-${scenarioId}`}
+        role="tabpanel"
+        aria-labelledby={`rule-tab-${scenarioId}`}
+        className="overflow-hidden border-slate-200"
+      >
         <div className="grid min-h-[360px] lg:grid-cols-[minmax(0,1.35fr)_minmax(260px,0.65fr)]">
           <div className="flex flex-col justify-between bg-slate-950 p-6 text-white sm:p-8">
             <div className="space-y-6">
