@@ -3,7 +3,6 @@ import {
   BookOpenText,
   Cpu,
   FileCode2,
-  Scale,
   Type,
   Waypoints,
 } from "lucide-react";
@@ -60,10 +59,6 @@ export default function ProgrammingLanguagesPage() {
           <Card className="group cursor-pointer overflow-hidden border-none bg-gradient-to-r from-amber-500 to-orange-500 p-8 text-white shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl">
             <div className="flex items-start justify-between gap-6">
               <div className="max-w-2xl space-y-4">
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-sm font-medium backdrop-blur-sm">
-                  <Scale className="h-4 w-4" />
-                  Core tradeoffs
-                </div>
                 <h2 className="text-3xl font-bold">
                   Sebesta-style Programming Languages Track
                 </h2>

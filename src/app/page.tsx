@@ -19,7 +19,6 @@ const spaceGrotesk = Space_Grotesk({
 const tracks = [
   {
     href: "/system-design",
-    challengeHref: "/system-design/challenge",
     eyebrow: "Track 01",
     title: "System design studio",
     description:
@@ -29,11 +28,9 @@ const tracks = [
     iconClass: "border border-teal-100 bg-teal-50 text-teal-800",
     topics: ["Capacity", "Load Balancing", "Caching"],
     primaryLabel: "Explore system design",
-    secondaryLabel: "Play architect challenge",
   },
   {
     href: "/data-structures",
-    challengeHref: "/data-structures/challenge",
     eyebrow: "Track 02",
     title: "Algorithm lab",
     description:
@@ -43,11 +40,9 @@ const tracks = [
     iconClass: "border border-sky-100 bg-sky-50 text-sky-800",
     topics: ["Two Pointers", "Hash Tables", "BST"],
     primaryLabel: "Explore data structures",
-    secondaryLabel: "Enter arena mode",
   },
   {
     href: "/programming-languages",
-    challengeHref: "/programming-languages/language-evaluation",
     eyebrow: "Track 03",
     title: "Language design lab",
     description:
@@ -57,7 +52,6 @@ const tracks = [
     iconClass: "border border-amber-100 bg-amber-50 text-amber-800",
     topics: ["Readability", "Reliability", "Tradeoffs"],
     primaryLabel: "Explore language design",
-    secondaryLabel: "Open evaluation lesson",
   },
 ];
 
@@ -183,15 +177,6 @@ export default function Home() {
                         <ArrowRight className="h-4 w-4" />
                       </Link>
                     </Button>
-                    <Button
-                      asChild
-                      variant="outline"
-                      className="rounded-full border-black/10 bg-white px-6 text-slate-700 hover:bg-slate-50"
-                    >
-                      <Link href={track.challengeHref}>
-                        {track.secondaryLabel}
-                      </Link>
-                    </Button>
                   </div>
                 </div>
               </article>
@@ -203,9 +188,6 @@ export default function Home() {
       <section className="px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl space-y-10">
           <div className="max-w-3xl space-y-4">
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
-              Topic map
-            </p>
             <h2
               className={`${spaceGrotesk.className} text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl`}
             >
@@ -221,15 +203,8 @@ export default function Home() {
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-500">
-                      {section.id === "system-design"
-                        ? "Architecture track"
-                        : section.id === "data-structures"
-                          ? "Foundations track"
-                          : "Language track"}
-                    </p>
                     <h3
-                      className={`${spaceGrotesk.className} mt-2 text-3xl font-bold tracking-[-0.05em] text-slate-950`}
+                      className={`${spaceGrotesk.className} text-3xl font-bold tracking-[-0.05em] text-slate-950`}
                     >
                       {section.title}
                     </h3>
@@ -279,9 +254,6 @@ export default function Home() {
         <div className="mx-auto max-w-7xl rounded-[2.5rem] border border-black/5 bg-[#f4f4ef] px-8 py-12 text-slate-900 shadow-[0_16px_40px_rgba(15,23,42,0.04)]">
           <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
             <div className="max-w-3xl space-y-4">
-              <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
-                Ready to start
-              </p>
               <h2
                 className={`${spaceGrotesk.className} text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-5xl`}
               >

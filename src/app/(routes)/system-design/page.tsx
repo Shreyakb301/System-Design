@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { TOPICS } from "@/lib/topics";
 import Link from "next/link";
-import { Trophy, Sparkles, ArrowRight } from "lucide-react";
+import { Trophy } from "lucide-react";
 
 export default function SystemDesignPage() {
     const systemDesign = TOPICS.find((t) => t.id === "system-design");
@@ -23,19 +23,11 @@ export default function SystemDesignPage() {
                         </div>
                         <div className="relative z-10 flex items-start justify-between">
                             <div className="space-y-4 max-w-xl">
-                                <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm font-medium backdrop-blur-sm">
-                                    <Sparkles className="w-4 h-4" />
-                                    <span>Interactive prototype in progress</span>
-                                </div>
                                 <h2 className="text-3xl font-bold">System Architect Challenge</h2>
                                 <p className="text-lg text-white/90">
                                     Add components, adjust the architecture, and watch latency, reliability,
                                     and cost respond as the system changes.
                                 </p>
-                                <div className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 font-semibold text-slate-950 transition-colors group-hover:bg-slate-100">
-                                    Try the prototype
-                                    <ArrowRight className="w-4 h-4" />
-                                </div>
                             </div>
                             <div className="hidden rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm md:block">
                                 <Trophy className="w-16 h-16 text-emerald-200 drop-shadow-lg" />

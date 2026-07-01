@@ -165,6 +165,7 @@ export const TOPICS: TopicSection[] = [
           { id: "syntax-semantics", title: "Syntax vs Semantics", href: "/programming-languages/syntax-semantics" },
           { id: "variable-attributes", title: "Attributes of a Variable", href: "/programming-languages/variable-attributes" },
           { id: "scope-lifetime", title: "Scope and Lifetime", href: "/programming-languages/scope-lifetime" },
+          { id: "expressions-precedence", title: "Expressions and Precedence", href: "/programming-languages/expressions-precedence" },
         ]
       }
     ]

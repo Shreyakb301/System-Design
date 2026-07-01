@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
+import { PageTransition } from "@/components/layout/PageTransition";
 
 export const metadata: Metadata = {
   title: "Visual System Design",
@@ -30,7 +31,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <div className="relative flex min-h-screen flex-col">
           <Navbar />
-          <div className="flex-1">{children}</div>
+          <PageTransition>{children}</PageTransition>
         </div>
       </body>
     </html>

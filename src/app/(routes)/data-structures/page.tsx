@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { TOPICS } from "@/lib/topics";
 import Link from "next/link";
-import { Code, ArrowRight, Wrench } from "lucide-react";
+import { Code } from "lucide-react";
 
 export default function DataStructuresPage() {
     const dataStructures = TOPICS.find((t) => t.id === "data-structures");
@@ -23,19 +23,11 @@ export default function DataStructuresPage() {
                         </div>
                         <div className="relative z-10 flex items-start justify-between">
                             <div className="space-y-4 max-w-xl">
-                                <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm font-medium backdrop-blur-sm">
-                                    <Wrench className="w-4 h-4" />
-                                    <span>Visual puzzle prototype in development</span>
-                                </div>
                                 <h2 className="text-3xl font-bold">Linked List Connector</h2>
                                 <p className="text-lg text-white/90">
                                     Drag the nodes into place, connect the pointers, and restore the
                                     chain from 1 to 2 to 3 to 4.
                                 </p>
-                                <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 font-semibold text-slate-950 transition-colors group-hover:bg-slate-100">
-                                    Try the prototype
-                                    <ArrowRight className="w-4 h-4" />
-                                </div>
                             </div>
                             <div className="hidden rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm md:block">
                                 <Code className="w-16 h-16 text-sky-200 drop-shadow-lg" />

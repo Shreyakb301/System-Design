@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { CompilerPipelineVisual } from "@/components/visuals/CompilerPipelineVisual";
 import { ConcurrencyVisual } from "@/components/visuals/ConcurrencyVisual";
+import { ExpressionsPrecedenceVisual } from "@/components/visuals/ExpressionsPrecedenceVisual";
 import { ParameterPassingVisual } from "@/components/visuals/ParameterPassingVisual";
 import { TypeSystemsVisual } from "@/components/visuals/TypeSystemsVisual";
 import { LanguageCriteriaLesson } from "@/components/lessons/LanguageCriteriaLesson";
@@ -206,11 +207,11 @@ export const PROGRAMMING_LANGUAGE_CONTENT: Record<
       "Most real-world data models need both primitive and aggregate layers.",
     ],
   }),
-  "expressions-precedence": conceptLesson({
-    title: "Expressions, Precedence, and Association",
+  "expressions-precedence": interactiveLesson({
+    title: "Expressions and Precedence",
     description:
       "Expressions combine operands and operators, while precedence and associativity decide how the language groups them.",
-    summaryTitle: "Expression rules answer an invisible question: what gets grouped first?",
+    summaryTitle: "Grouping controls expression meaning.",
     summaryBody:
       "Languages must decide how to parse and evaluate dense expressions like a + b * c or a - b - c. Precedence ranks operators. Associativity breaks ties between operators at the same level.",
     whenToReach:
@@ -219,20 +220,44 @@ export const PROGRAMMING_LANGUAGE_CONTENT: Record<
       "Without explicit rules, expressions become ambiguous. Those rules shape both the parse tree and the meaning of the program.",
     cards: [
       {
-        title: "Precedence decides which operator binds tighter",
+        title: "Precedence sets priority",
         body: "Multiplication usually groups before addition, so a + b * c becomes a + (b * c) unless parentheses say otherwise.",
       },
       {
-        title: "Associativity resolves ties",
+        title: "Association breaks ties",
         body: "For operators with the same precedence, the language decides whether grouping happens left to right or right to left.",
       },
     ],
+    watchList: [
+      "Watch multiplication group before addition.",
+      "Compare equal-precedence subtraction operators.",
+      "See parentheses override default grouping.",
+    ],
+    comparison: {
+      title: "Three grouping rules",
+      columns: ["Rule", "Effect"],
+      rows: [
+        {
+          label: "Precedence",
+          values: ["Ranks operators", "Higher rank groups first"],
+        },
+        {
+          label: "Association",
+          values: ["Breaks equal-rank ties", "Chooses left or right"],
+        },
+        {
+          label: "Parentheses",
+          values: ["Creates explicit groups", "Overrides default rules"],
+        },
+      ],
+    },
     takeaways: [
       "Precedence answers which operator groups first.",
       "Associativity answers how equal-precedence operators group.",
       "Parentheses override both and improve readability when the expression is not obvious.",
       "These rules affect meaning, not just style.",
     ],
+    simulation: <ExpressionsPrecedenceVisual />,
   }),
   "assignment-statements": conceptLesson({
     title: "Assignment Statements",
