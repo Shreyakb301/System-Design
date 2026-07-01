@@ -301,10 +301,16 @@ export function ExpressionsPrecedenceVisual() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-              <p className="text-sm font-semibold text-emerald-700">
-                Correct Result
-              </p>
+            <div
+              aria-live="polite"
+              className="rounded-lg border border-emerald-200 bg-emerald-50 p-4"
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                {isComplete ? (
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                ) : null}
+                <span>{isComplete ? "Result Complete" : "Correct Result"}</span>
+              </div>
               <p className="mt-1 text-3xl font-bold text-emerald-950">
                 {isComplete ? scenario.answer : "Pending"}
               </p>
