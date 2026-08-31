@@ -127,6 +127,7 @@
     text-size-adjust: 100%;
     /* Smooth momentum scrolling on iOS. */
     -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
   }
   body {
     @apply bg-background text-foreground;
@@ -138,5 +139,16 @@
   svg,
   video {
     max-width: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
   }
 }

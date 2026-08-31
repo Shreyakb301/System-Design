@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -86,7 +87,7 @@ export function Navbar() {
           ))}
         </div>
 
-        <div className="ml-auto hidden items-center gap-2 sm:flex">
+        <div className="ml-auto hidden items-center gap-2 md:flex">
           <Button
             asChild
             variant="ghost"
@@ -107,11 +108,13 @@ export function Navbar() {
           </Button>
         </div>
 
-        <div className="ml-auto flex items-center gap-2 sm:hidden">
+        <div className="ml-auto flex items-center gap-2 md:hidden">
           <Button
             variant="ghost"
             size="sm"
             className="px-2"
+            aria-label={isOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={isOpen}
             onClick={() => setIsOpen((value) => !value)}
           >
             {isOpen ? (
@@ -123,34 +126,44 @@ export function Navbar() {
         </div>
       </div>
 
-      {isOpen ? (
-        <div className="space-y-2 border-t border-black/5 bg-white px-4 py-4 sm:hidden">
-          {routes.map((route) => (
-            <Link
-              key={route.href}
-              href={route.href}
-              onClick={() => setIsOpen(false)}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors",
-                route.active
-                  ? "bg-slate-100 text-slate-950"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
-              )}
-            >
-              <route.icon className="h-5 w-5" />
-              {route.label}
-            </Link>
-          ))}
-          <Link
-            href="/system-design/challenge"
-            onClick={() => setIsOpen(false)}
-            className="flex items-center justify-between rounded-lg bg-slate-900 px-4 py-3 text-sm font-medium text-white"
+      <AnimatePresence initial={false}>
+        {isOpen ? (
+          <motion.div
+            initial={{ opacity: 0, y: -10, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: "auto" }}
+            exit={{ opacity: 0, y: -8, height: 0 }}
+            transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden border-t border-black/5 bg-white md:hidden"
           >
-            Start challenge
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-      ) : null}
+            <div className="space-y-2 px-4 py-4">
+              {routes.map((route) => (
+                <Link
+                  key={route.href}
+                  href={route.href}
+                  onClick={() => setIsOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors duration-200",
+                    route.active
+                      ? "bg-slate-100 text-slate-950"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
+                  )}
+                >
+                  <route.icon className="h-5 w-5" />
+                  {route.label}
+                </Link>
+              ))}
+              <Link
+                href="/system-design/challenge"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center justify-between rounded-lg bg-slate-900 px-4 py-3 text-sm font-medium text-white transition-colors duration-200 hover:bg-slate-800"
+              >
+                Start challenge
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </nav>
   );
 }
